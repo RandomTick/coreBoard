@@ -60,6 +60,12 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
 
 void KeyboardWidget::changeKeyColor(const int &keyCode, const QColor &color) {
 
+
+    //make sure key is in the layout before accessing it:
+    if (keys[keyCode] == nullptr){
+        return;
+    }
+
     QLabel *key = keys[keyCode];
     key->setStyleSheet(QString("background-color: #%1%2%3; border: 1px solid black;")
                            .arg(color.red(), 2, 16, QChar('0'))
