@@ -17,6 +17,7 @@ public:
 private:
     void createKey(const QJsonObject &keyData);
     void changeKeyColor(const int &keyLabel, const QColor &color);
+    void resetCounter();
     KeyboardWidget *m_keyboardWidget; // Assuming this is your KeyboardWidget member
 
 

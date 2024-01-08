@@ -16,10 +16,6 @@ public:
 signals:
     void keyPressed(int key);
     void keyReleased(int key);
-
-private:
-         // Windows-specific members for the hook
-         // On Linux, this will be different
 };
 
 #endif // WINDOWSKEYLISTENER_H

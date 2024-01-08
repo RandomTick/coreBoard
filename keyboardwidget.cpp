@@ -9,8 +9,12 @@ KeyboardWidget::KeyboardWidget(QWidget *parent) : QWidget(parent)
     setMinimumSize(200, 200);
 }
 
-std::map<int,QLabel*> keys;
+std::map<int, QLabel*> keys;
+std::map<QString, int> keyCounter;
+
+//TODO: change colors to use from config
 QColor defaultColor = QColor(144,55,1);
+QColor hightlightedColor = Qt::red;
 
 void KeyboardWidget::loadLayout(const QString &fileName)
 {
@@ -42,9 +46,9 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     QLabel *keyLabel = new QLabel(this);
     keyLabel->setGeometry(geometry);
 
+    QString label = keyData.value("label").toString();
 
-
-    keyLabel->setText(keyData.value("label").toString());
+    keyLabel->setText(label);
     keyLabel->setStyleSheet(QString("background-color: #%1%2%3; border: 1px solid black;")
                            .arg(defaultColor.red(), 2, 16, QChar('0'))
                            .arg(defaultColor.green(), 2, 16, QChar('0'))
@@ -55,6 +59,7 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
 
 
     keys[keyCode] = keyLabel;
+    keyCounter[label] = 0;
 }
 
 
@@ -73,12 +78,17 @@ void KeyboardWidget::changeKeyColor(const int &keyCode, const QColor &color) {
                            .arg(color.blue(), 2, 16, QChar('0')));
 
 }
+void resetCounter(){
+    for (std::pair<const QString, int>  i : keyCounter){
+        i.second = 0;
+    }
+}
 
 void KeyboardWidget::onKeyPressed(int key) {
-    changeKeyColor(key, Qt::red); // Example: change to red when pressed
+    changeKeyColor(key, hightlightedColor);
 }
 
 void KeyboardWidget::onKeyReleased(int key) {
-    changeKeyColor(key, defaultColor); // Change back to original color
+    changeKeyColor(key, defaultColor);
 }
 
