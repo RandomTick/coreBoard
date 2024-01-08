@@ -30,7 +30,24 @@ void KeyboardWidget::loadLayout(const QString &fileName)
     for (const QJsonValue &value : keys) {
         createKey(value.toObject());
     }
+
+
+    //adjust size
+    int maxWidth = 0;
+    int maxHeight = 0;
+
+    for (const auto& keyLabel : findChildren<QLabel*>()) {
+        int rightEdge = keyLabel->geometry().right();
+        int bottomEdge = keyLabel->geometry().bottom();
+
+        maxWidth = qMax(maxWidth, rightEdge);
+        maxHeight = qMax(maxHeight, bottomEdge);
+    }
+
+    setMinimumSize(maxWidth + 1, maxHeight + 1); // +1 to ensure a margin
+
 }
+
 
 void KeyboardWidget::createKey(const QJsonObject &keyData)
 {
@@ -47,6 +64,9 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     keyLabel->setGeometry(geometry);
 
     QString label = keyData.value("label").toString();
+    qDebug(QString("keyCode: %1 for key %2").arg(keyCode).arg(label).toStdString().c_str());
+
+
 
     keyLabel->setText(label);
     keyLabel->setStyleSheet(QString("background-color: #%1%2%3; border: 1px solid black;")
