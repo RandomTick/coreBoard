@@ -1,0 +1,28 @@
+{
+    "keys": [
+        {
+            "label": "W",
+            "keyCode": 87,
+            "position": { "x": 100, "y": 100 },
+            "size": { "width": 50, "height": 50 }
+        },
+        {
+            "label": "A",
+            "keyCode": 65,
+            "position": { "x": 50, "y": 150 },
+            "size": { "width": 50, "height": 50 }
+        },
+        {
+            "label": "S",
+            "keyCode": 83,
+            "position": { "x": 100, "y": 150 },
+            "size": { "width": 50, "height": 50 }
+        },
+        {
+            "label": "D",
+            "keyCode": 68,
+            "position": { "x": 150, "y": 150 },
+            "size": { "width": 50, "height": 50 }
+        }
+    ]
+}

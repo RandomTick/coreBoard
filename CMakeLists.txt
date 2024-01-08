@@ -26,6 +26,11 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(CoreBoard
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
+        versioninfo.h
+        version_info.ui
+        keyboardwidget.h keyboardwidget.cpp
+        keyboard_layout.json
+        globalkeylistener.h globalkeylistener.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET CoreBoard APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
