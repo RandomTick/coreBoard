@@ -1,8 +1,8 @@
-#include "globalkeylistener.h"
+#include "windowskeylistener.h"
 #include <windows.h>
 
 HHOOK hHook;
-GlobalKeyListener* instance = nullptr;
+WindowsKeyListener* instance = nullptr;
 
 LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode >= 0 && instance) {
@@ -16,30 +16,32 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     return CallNextHookEx(hHook, nCode, wParam, lParam);
 }
 
-GlobalKeyListener::GlobalKeyListener(QObject *parent) : QObject(parent) {
+WindowsKeyListener::WindowsKeyListener(QObject *parent) : QObject(parent) {
     // Constructor
     instance = this;
 }
 
-GlobalKeyListener::~GlobalKeyListener() {
+WindowsKeyListener::~WindowsKeyListener() {
     stopListening(); // Ensure the hook is released
     instance = nullptr;
 }
 
-void GlobalKeyListener::startListening() {
+void WindowsKeyListener::startListening() {
     if (!hHook) {
+
         hHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, nullptr, 0);
         if (!hHook) {
             // Handle error
             qWarning("Failed to start listening to keyboard");
         }else{
-            qDebug("Startet listening");
+            //qDebug("Startet listening");
         }
     }
 }
 
-void GlobalKeyListener::stopListening() {
+void WindowsKeyListener::stopListening() {
     if (hHook) {
+        //qDebug("Stop listening");
         UnhookWindowsHookEx(hHook);
         hHook = nullptr;
     }

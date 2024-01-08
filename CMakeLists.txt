@@ -30,7 +30,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         version_info.ui
         keyboardwidget.h keyboardwidget.cpp
         keyboard_layout.json
-        globalkeylistener.h globalkeylistener.cpp
+        windowskeylistener.h windowskeylistener.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET CoreBoard APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

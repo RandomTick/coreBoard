@@ -1,14 +1,14 @@
-#ifndef GLOBALKEYLISTENER_H
-#define GLOBALKEYLISTENER_H
+#ifndef WINDOWSKEYLISTENER_H
+#define WINDOWSKEYLISTENER_H
 
 #include <QObject>
 
-class GlobalKeyListener : public QObject {
+class WindowsKeyListener : public QObject {
     Q_OBJECT
 
 public:
-    explicit GlobalKeyListener(QObject *parent = nullptr);
-    ~GlobalKeyListener();
+    explicit WindowsKeyListener(QObject *parent = nullptr);
+    ~WindowsKeyListener();
 
     void startListening();
     void stopListening();
@@ -22,4 +22,4 @@ private:
          // On Linux, this will be different
 };
 
-#endif // GLOBALKEYLISTENER_H
+#endif // WINDOWSKEYLISTENER_H
