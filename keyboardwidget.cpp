@@ -6,14 +6,13 @@
 
 KeyboardWidget::KeyboardWidget(QWidget *parent) : QWidget(parent)
 {
-    setMinimumSize(200, 200);
 }
 
 std::map<int, QLabel*> keys;
 std::map<QString, int> keyCounter;
 
 //TODO: change colors to use from config
-QColor defaultColor = QColor(144,55,1);
+QColor defaultColor = QColor(0,0,255);
 QColor hightlightedColor = Qt::red;
 
 void KeyboardWidget::loadLayout(const QString &fileName)
@@ -64,7 +63,7 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     keyLabel->setGeometry(geometry);
 
     QString label = keyData.value("label").toString();
-    qDebug(QString("keyCode: %1 for key %2").arg(keyCode).arg(label).toStdString().c_str());
+    //qDebug(QString("keyCode: %1 for key %2").arg(keyCode).arg(label).toStdString().c_str());
 
 
 

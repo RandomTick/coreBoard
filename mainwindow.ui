@@ -23,30 +23,36 @@
      <height>22</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuTest">
+   <widget class="QMenu" name="menuWindow">
     <property name="title">
-     <string>Config</string>
+     <string>Window</string>
     </property>
-    <addaction name="actionLayout"/>
-    <addaction name="actionBinding"/>
+    <addaction name="actionView"/>
+    <addaction name="actionEdit"/>
+    <addaction name="actionImport"/>
    </widget>
    <widget class="QMenu" name="menuInfo">
     <property name="title">
      <string>Info</string>
     </property>
    </widget>
-   <addaction name="menuTest"/>
+   <addaction name="menuWindow"/>
    <addaction name="menuInfo"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="actionLayout">
+  <action name="actionView">
    <property name="text">
-    <string>Layout</string>
+    <string>Visualization</string>
    </property>
   </action>
-  <action name="actionBinding">
+  <action name="actionEdit">
    <property name="text">
-    <string>Binding</string>
+    <string>Edit Layout</string>
+   </property>
+  </action>
+  <action name="actionImport">
+   <property name="text">
+    <string>Open Layout</string>
    </property>
   </action>
  </widget>
