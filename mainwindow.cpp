@@ -1,4 +1,5 @@
 #include <QStackedWidget>
+#include <QVBoxLayout>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "layouteditor.h"
@@ -18,6 +19,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_keyboardWidget->loadLayout("C:/Users/SV5237/Documents/CoreBoard/keyboard_layout.json");
 
     LayoutEditor *m_layoutEditor = new LayoutEditor(this);
+
 
     stackedWidget->addWidget(m_keyboardWidget);
     stackedWidget->addWidget(m_layoutEditor);

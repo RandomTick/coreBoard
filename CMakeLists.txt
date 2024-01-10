@@ -34,6 +34,10 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         keyitem.h keyitem.cpp
         layouteditor.h layouteditor.cpp
         undoredocommand.h undoredocommand.cpp
+        layouteditorgraphicsview.h layouteditorgraphicsview.cpp
+        icons/redo.png icons/undo.png
+        resources.qrc
+
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET CoreBoard APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

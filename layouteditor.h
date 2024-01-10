@@ -1,23 +1,25 @@
 #ifndef LAYOUTEDITOR_H
 #define LAYOUTEDITOR_H
 
+#include <QWidget>
 #include <QGraphicsView>
 #include <QGraphicsScene>
+#include <QPushButton>
+#include <QVBoxLayout>
 
-class LayoutEditor : public QGraphicsView
+class LayoutEditor : public QWidget
 {
     Q_OBJECT
 
 public:    
     explicit LayoutEditor(QWidget *parent = nullptr);
-protected:
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
-    void resizeEvent(QResizeEvent *event) override;
+
 
 private:
+    QGraphicsView *view;
     QGraphicsScene *scene;
+    QPushButton *undoButton;
+    QPushButton *redoButton;
 public slots:
     void addRectangle();
 
