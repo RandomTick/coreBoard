@@ -96,6 +96,7 @@ void KeyboardWidget::changeKeyColor(const int &keyCode, const QColor &color) {
                            .arg(color.green(), 2, 16, QChar('0'))
                            .arg(color.blue(), 2, 16, QChar('0')));
 
+    //somehow track count (no permanent increment, rather on rising edge)
 }
 void resetCounter(){
     for (std::pair<const QString, int>  i : keyCounter){

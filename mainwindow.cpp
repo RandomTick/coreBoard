@@ -29,6 +29,8 @@ MainWindow::MainWindow(QWidget *parent)
         stackedWidget->setCurrentIndex(1);
     });
 
+
+    m_layoutEditor->addRectangle();
 }
 
 MainWindow::~MainWindow()
