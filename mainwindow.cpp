@@ -24,6 +24,8 @@ MainWindow::MainWindow(QWidget *parent)
     stackedWidget->addWidget(m_keyboardWidget);
     stackedWidget->addWidget(m_layoutEditor);
 
+    stackedWidget->setCurrentIndex(1);
+
     connect(ui->actionView, &QAction::triggered, [stackedWidget](){
         stackedWidget->setCurrentIndex(0);
     });

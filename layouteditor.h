@@ -6,6 +6,7 @@
 #include <QGraphicsScene>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include "layouteditorgraphicsview.h"
 
 class LayoutEditor : public QWidget
 {
@@ -13,10 +14,10 @@ class LayoutEditor : public QWidget
 
 public:    
     explicit LayoutEditor(QWidget *parent = nullptr);
-
+    void updateButtons(bool undoCommandsExist, bool redoCommandsExist);
 
 private:
-    QGraphicsView *view;
+    LayoutEditorGraphicsView *view;
     QGraphicsScene *scene;
     QPushButton *undoButton;
     QPushButton *redoButton;

@@ -31,7 +31,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         keyboardwidget.h keyboardwidget.cpp
         keyboard_layout.json
         windowskeylistener.h windowskeylistener.cpp
-        keyitem.h keyitem.cpp
+
         layouteditor.h layouteditor.cpp
         undoredocommand.h undoredocommand.cpp
         layouteditorgraphicsview.h layouteditorgraphicsview.cpp

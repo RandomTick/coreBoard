@@ -2,17 +2,26 @@
 #include <QGraphicsItem>
 #include "layouteditorgraphicsview.h"
 
-LayoutEditorGraphicsView::LayoutEditorGraphicsView(QWidget *parent, QGraphicsScene *scene) : QGraphicsView(parent) {
-
+LayoutEditorGraphicsView::LayoutEditorGraphicsView(QWidget *parent) : QGraphicsView(parent) {
 }
 
 
+void LayoutEditorGraphicsView::setSceneAndStore(QGraphicsScene *externScene){
+    scene = externScene;
+    this->setScene(scene);
+}
+
 void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
-    // Logic to add/select a shape on mouse press
+    QGraphicsItem *item = scene->itemAt(mapToScene(event->pos()), QTransform());
     if (event->button() == Qt::RightButton) {
         //TODO: implement right click stuff, like changing bind/shape etc.
-    }else{
-        QGraphicsItem *item = scene->itemAt(mapToScene(event->pos()), QTransform());
+        qDebug("right test");
+        if(item){
+            //change item properties
+        }else{
+            //change background properties/general stuff
+        }
+    }else{        
         if (item) {
             currentItem = item;
             offset = mapToScene(event->pos()) - item->pos();
@@ -31,7 +40,6 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
         qreal minY = scene->sceneRect().top();
         qreal maxX = scene->sceneRect().right();
         qreal maxY = scene->sceneRect().bottom();
-        qDebug("?");
 
         // Get item's bounding rect
         QRectF rect = currentItem->boundingRect();
@@ -44,12 +52,36 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
-    currentItem = nullptr;
+    if (currentItem) {
+        QPointF newPos = mapToScene(event->pos()) - offset;
+
+        // Get the scene's boundaries
+        //qreal minX = scene->sceneRect().left();
+        //qreal minY = scene->sceneRect().top();
+        //qreal maxX = scene->sceneRect().right();
+        //qreal maxY = scene->sceneRect().bottom();
+
+        // Get item's bounding rect
+        //QRectF rect = currentItem->boundingRect();
+
+        // Adjust the position to keep the item within the boundaries
+        //qreal newX = qMax(minX, qMin(newPos.x(), maxX - rect.width()));
+        //qreal newY = qMax(minY, qMin(newPos.y(), maxY - rect.height()));
+
+        Actions move = Actions::Move;
+        Action *action = new Action(move, currentItem, offset, new QRectF());
+        undoActions.push_back(action);
+
+        action = nullptr;
+        currentItem = nullptr;
+    }
+
+
 }
 
 void LayoutEditorGraphicsView::resizeEvent(QResizeEvent *event) {
     QGraphicsView::resizeEvent(event);
-    if (scene) {
+    if (scene) {        
         QRectF newRect = QRectF(QPointF(0, 0), QSizeF(this->viewport()->size()));
         scene->setSceneRect(newRect);
     }

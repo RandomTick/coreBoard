@@ -2,6 +2,9 @@
 
 
 #include <QGraphicsItem>
+
+
+
 class MoveCommand : public UndoRedoCommand {
 public:
     MoveCommand(QGraphicsItem *item, const QPointF &oldPos, const QPointF &newPos)
@@ -14,6 +17,7 @@ public:
     void redo() override {
         item->setPos(newPos);
     }
+
 
 private:
     QGraphicsItem *item;
