@@ -40,8 +40,8 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     redoButton->setEnabled(false);
 
     // Connect button signals to slots
-    // connect(undoButton, &QPushButton::clicked, this, &LayoutEditor::undoAction);
-    // connect(redoButton, &QPushButton::clicked, this, &LayoutEditor::redoAction);
+    connect(undoButton, &QPushButton::clicked, view, &LayoutEditorGraphicsView::undoLastAction);
+    connect(redoButton, &QPushButton::clicked, view, &LayoutEditorGraphicsView::redoLastAction);
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(undoButton);

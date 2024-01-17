@@ -9,7 +9,7 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode >= 0 && instance) {
         KBDLLHOOKSTRUCT *pkbhs = (KBDLLHOOKSTRUCT *)lParam;
         if (wParam == WM_KEYDOWN) {
-            std::cout << "Key Pressed: " << pkbhs->vkCode << std::endl;
+            //std::cout << "Key Pressed: " << pkbhs->vkCode << std::endl;
             emit instance->keyPressed(pkbhs->vkCode);
         } else if (wParam == WM_KEYUP) {
             emit instance->keyReleased(pkbhs->vkCode);

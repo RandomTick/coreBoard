@@ -33,7 +33,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         windowskeylistener.h windowskeylistener.cpp
 
         layouteditor.h layouteditor.cpp
-        undoredocommand.h undoredocommand.cpp
+
         layouteditorgraphicsview.h layouteditorgraphicsview.cpp
         icons/redo.png icons/undo.png
         resources.qrc

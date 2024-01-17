@@ -18,22 +18,19 @@ public:
         ChangeKey
     };
     class Action{
-    private:
+    public:
         Actions actionType;
         QGraphicsItem *item;
         QPointF position;
         QRectF *size;
 
-    public:
         Action(Actions actionType, QGraphicsItem *item, QPointF position, QRectF *size)
             : actionType(actionType), item(item), position(position), size(size) {}
 
     };
-
     void doAction(Action action);
-    std::vector<Action*> undoActions;
-    std::vector<Action*> redoActions;
-
+    void undoLastAction();
+    void redoLastAction();
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
@@ -41,10 +38,16 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
+
 private:
     QGraphicsScene *scene;
     QGraphicsItem *currentItem;
+    QPointF startingPosition;
     QPointF offset;
+    std::vector<Action*> undoActions;
+    std::vector<Action*> redoActions;
+    void doAction(Action*);
+
 };
 
 #endif // LAYOUTEDITORGRAPHICSVIEW_H
