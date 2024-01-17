@@ -39,6 +39,9 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     redoButton->setStyleSheet(buttonStyleSheet);
     redoButton->setEnabled(false);
 
+    addButton = new QPushButton("Add Shape", this);
+    addButton->setStyleSheet(buttonStyleSheet);
+
     // Connect button signals to slots
     connect(undoButton, &QPushButton::clicked, view, &LayoutEditorGraphicsView::undoLastAction);
     connect(redoButton, &QPushButton::clicked, view, &LayoutEditorGraphicsView::redoLastAction);
@@ -46,6 +49,7 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(undoButton);
     buttonLayout->addWidget(redoButton);
+    buttonLayout->addWidget(addButton);
     buttonLayout->addStretch(1);
 
 

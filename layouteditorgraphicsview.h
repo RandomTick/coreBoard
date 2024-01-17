@@ -46,7 +46,7 @@ private:
     QPointF offset;
     std::vector<Action*> undoActions;
     std::vector<Action*> redoActions;
-    void doAction(Action*);
+    void doAction(Action* action);
 
 };
 

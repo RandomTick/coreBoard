@@ -24,17 +24,23 @@ void KeyboardWidget::loadLayout(const QString &fileName)
     }
 
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-    QJsonArray keys = doc.object().value("keys").toArray();
+    QJsonObject rootObject = doc.object();
+    QJsonArray elements = rootObject.value("Elements").toArray();
 
-    for (const QJsonValue &value : keys) {
-        createKey(value.toObject());
+    for (const QJsonValue &element : elements) {
+        if (element.toObject().value("__type").toString() == "KeyboardKey") {
+            createKey(element.toObject());
+        }
     }
 
 
-    //adjust size
-    int maxWidth = 0;
-    int maxHeight = 0;
 
+    //adjust size
+    int maxWidth = rootObject.value("Width").toInt();
+    int maxHeight = rootObject.value("Height").toInt();
+
+
+    /*
     for (const auto& keyLabel : findChildren<QLabel*>()) {
         int rightEdge = keyLabel->geometry().right();
         int bottomEdge = keyLabel->geometry().bottom();
@@ -42,28 +48,35 @@ void KeyboardWidget::loadLayout(const QString &fileName)
         maxWidth = qMax(maxWidth, rightEdge);
         maxHeight = qMax(maxHeight, bottomEdge);
     }
+    */
 
     setMinimumSize(maxWidth + 1, maxHeight + 1); // +1 to ensure a margin
+    this->window()->resize(maxWidth, maxHeight);
 
 }
 
 
 void KeyboardWidget::createKey(const QJsonObject &keyData)
 {
-    int keyCode = keyData.value("keyCode").toInt();
+    QJsonArray boundaries = keyData.value("Boundaries").toArray();
+    if (boundaries.size() < 4) {//TODO: Handle others than rectangles here!
+        qWarning("Invalid boundaries data.");
+        return;
+    }
 
-    QRect geometry(
-        keyData["position"].toObject()["x"].toInt(),
-        keyData["position"].toObject()["y"].toInt(),
-        keyData["size"].toObject()["width"].toInt(),
-        keyData["size"].toObject()["height"].toInt()
-        );
+    // Assuming rectangular shape and the points are given in order
+    int x = boundaries[0].toObject()["X"].toInt();
+    int y = boundaries[0].toObject()["Y"].toInt();
+    int width = boundaries[1].toObject()["X"].toInt() - x;
+    int height = boundaries[3].toObject()["Y"].toInt() - y;
 
+    QRect geometry(x, y, width, height);
     QLabel *keyLabel = new QLabel(this);
     keyLabel->setGeometry(geometry);
 
-    QString label = keyData.value("label").toString();
+    //QString label = keyData.value("label").toString();
     //qDebug(QString("keyCode: %1 for key %2").arg(keyCode).arg(label).toStdString().c_str());
+    QString label = keyData.value("Text").toString();
 
 
 
@@ -77,7 +90,12 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     keyLabel->update();
 
 
-    keys[keyCode] = keyLabel;
+    QJsonArray keyCodes = keyData.value("KeyCodes").toArray();
+    if (!keyCodes.isEmpty()) {
+        for (int i = 0; i < keyCodes.size(); i++){
+            keys[keyCodes[i].toInt()] = keyLabel;
+        }
+    }
     keyCounter[label] = 0;
 }
 

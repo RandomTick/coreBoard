@@ -16,8 +16,8 @@ MainWindow::MainWindow(QWidget *parent)
     setCentralWidget(stackedWidget);
 
     m_keyboardWidget = new KeyboardWidget(this);
-    m_keyboardWidget->loadLayout("C:/Users/SV5237/Documents/CoreBoard/keyboard_layout.json");
-
+    //m_keyboardWidget->loadLayout("C:/Users/SV5237/Documents/CoreBoard/keyboard_layout.json");
+    m_keyboardWidget->loadLayout("C:/Users/SV5237/Documents/CoreBoard/nohBoard_example.json");
     LayoutEditor *m_layoutEditor = new LayoutEditor(this);
 
 
@@ -45,4 +45,8 @@ MainWindow::~MainWindow()
 
 KeyboardWidget* MainWindow::keyboardWidget() const {
     return m_keyboardWidget;
+}
+
+void MainWindow::resize(int width, int height){
+    this->resize(width,height);
 }

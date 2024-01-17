@@ -18,6 +18,7 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     KeyboardWidget* keyboardWidget() const;
+    void resize(int width, int height);
 
 private:
     Ui::MainWindow *ui;

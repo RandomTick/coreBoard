@@ -21,6 +21,7 @@ private:
     QGraphicsScene *scene;
     QPushButton *undoButton;
     QPushButton *redoButton;
+    QPushButton *addButton;
 public slots:
     void addRectangle();
 

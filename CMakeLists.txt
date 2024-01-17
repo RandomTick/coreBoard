@@ -37,6 +37,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         layouteditorgraphicsview.h layouteditorgraphicsview.cpp
         icons/redo.png icons/undo.png
         resources.qrc
+        nohBoard_example.json
 
     )
 # Define target properties for Android with Qt 6 as:
