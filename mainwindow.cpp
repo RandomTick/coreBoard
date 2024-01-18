@@ -1,5 +1,6 @@
 #include <QStackedWidget>
 #include <QVBoxLayout>
+#include <QTranslator>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "layouteditor.h"
@@ -50,3 +51,13 @@ KeyboardWidget* MainWindow::keyboardWidget() const {
 void MainWindow::resize(int width, int height){
     this->resize(width,height);
 }
+
+void MainWindow::changeLanguage(const QString &languageCode) {
+    QTranslator translator;
+    translator.load(":/translations/translator_" + languageCode);
+    qApp->installTranslator(&translator);
+
+    // Update the UI to reflect the new language
+    ui->retranslateUi(this);
+}
+

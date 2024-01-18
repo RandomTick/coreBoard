@@ -19,6 +19,7 @@ public:
     ~MainWindow();
     KeyboardWidget* keyboardWidget() const;
     void resize(int width, int height);
+    void changeLanguage(const QString &languageCode);
 
 private:
     Ui::MainWindow *ui;

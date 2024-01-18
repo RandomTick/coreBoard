@@ -39,7 +39,7 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     redoButton->setStyleSheet(buttonStyleSheet);
     redoButton->setEnabled(false);
 
-    addButton = new QPushButton("Add Shape", this);
+    addButton = new QPushButton(tr("Add Shape"), this);
     addButton->setStyleSheet(buttonStyleSheet);
 
     // Connect button signals to slots

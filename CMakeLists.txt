@@ -12,40 +12,42 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets LinguistTools)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools)
 
-set(TS_FILES CoreBoard_en_GB.ts)
+set(TS_FILES translations/translation_en_US.ts translations/translation_fr_FR.ts translations/translation_de_DE.ts)
+
+set(TRANSLATABLE_SOURCES
+    mainwindow.ui
+    layouteditor.h layouteditor.cpp
+    main.cpp
+    mainwindow.cpp
+    mainwindow.h
+    versioninfo.h
+    version_info.ui
+    keyboardwidget.h keyboardwidget.cpp
+    keyboard_layout.json
+    windowskeylistener.h windowskeylistener.cpp
+    layouteditorgraphicsview.h layouteditorgraphicsview.cpp
+)
 
 set(PROJECT_SOURCES
-        main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        mainwindow.ui
+        icons/redo.png icons/undo.png
+        resources.qrc
+        nohBoard_example.json
+        ${TRANSLATABLE_SOURCES}
         ${TS_FILES}
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(CoreBoard
+
+qt_add_executable(CoreBoard
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        versioninfo.h
-        version_info.ui
-        keyboardwidget.h keyboardwidget.cpp
-        keyboard_layout.json
-        windowskeylistener.h windowskeylistener.cpp
-
-        layouteditor.h layouteditor.cpp
-
-        layouteditorgraphicsview.h layouteditorgraphicsview.cpp
-        icons/redo.png icons/undo.png
-        resources.qrc
-        nohBoard_example.json
-
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET CoreBoard APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
 #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 
-    qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+    qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TRANSLATABLE_SOURCES} ${TS_FILES})
 else()
     if(ANDROID)
         add_library(CoreBoard SHARED
@@ -59,8 +61,9 @@ else()
         )
     endif()
 
-    qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+    qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TRANSLATABLE_SOURCES} ${TS_FILES})
 endif()
+
 
 target_link_libraries(CoreBoard PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
