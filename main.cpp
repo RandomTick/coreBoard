@@ -3,7 +3,7 @@
 #include <QApplication>
 #include <QLocale>
 #include <QTranslator>
-#include <iostream>
+#include <QLocale>
 
 #include "windowskeylistener.h"
 #include "KeyboardWidget.h"
@@ -12,20 +12,13 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    QTranslator translator;
-    QString locale = QLocale::system().name();
-    translator.load(locale, ":/translations");
-    a.installTranslator(&translator);
-
-
-
     MainWindow w;
+    w.changeLanguage(&a, QLocale::system().name());
     w.show();
 
     //select system language
     //TODO: make a menu and config to handle this/set it to something else
-    //w.changeLanguage("de_DE");
-
+    //
     //Handling for Windows
     #ifdef Q_OS_WIN
     WindowsKeyListener keyListener;

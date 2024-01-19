@@ -19,9 +19,9 @@ public:
     ~MainWindow();
     KeyboardWidget* keyboardWidget() const;
     void resize(int width, int height);
-    void changeLanguage(const QString &languageCode);
-
-private:
+    bool changeLanguage(const QApplication *a, const QString languageCode);
     Ui::MainWindow *ui;
+signals:
+    void languageChanged();
 };
 #endif // MAINWINDOW_H

@@ -1,7 +1,7 @@
 #include <QMouseEvent>
 #include <QGraphicsItem>
 #include "layouteditor.h"
-
+#include "mainwindow.h"
 
 
 
@@ -11,6 +11,11 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     view = new LayoutEditorGraphicsView(this);
     scene = new QGraphicsScene(view);
     view->setSceneAndStore(scene);
+
+    //connect translators
+    MainWindow* myParentMainWindow = qobject_cast<MainWindow*>(this->parentWidget());
+    connect(myParentMainWindow, &MainWindow::languageChanged, this, &LayoutEditor::updateLanguage);
+
 
 
     // Initialize the scene's size
@@ -69,4 +74,10 @@ void LayoutEditor::updateButtons(bool undoCommandsExist, bool redoCommandsExist)
 void LayoutEditor::addRectangle() {
     QGraphicsRectItem *rect = new QGraphicsRectItem(QRectF(0, 0, 100, 100));
     scene->addItem(rect);
+}
+
+void LayoutEditor::updateLanguage() {
+    // Update the text of your widgets here
+    addButton->setText(tr("Add Shape"));
+    // ...
 }

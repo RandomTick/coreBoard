@@ -52,12 +52,36 @@ void MainWindow::resize(int width, int height){
     this->resize(width,height);
 }
 
-void MainWindow::changeLanguage(const QString &languageCode) {
-    QTranslator translator;
-    translator.load(":/translations/translator_" + languageCode);
-    qApp->installTranslator(&translator);
+bool MainWindow::changeLanguage(const QApplication *a, const QString languageCode) {
+    // Static pointer to ensure the translator persists
+    static QTranslator* translator = nullptr;
 
-    // Update the UI to reflect the new language
-    ui->retranslateUi(this);
+
+    // Delete the previous translator if it exists
+    if (translator) {
+        a->removeTranslator(translator);
+        delete translator;
+        translator = nullptr;
+    }
+
+    // Create a new translator
+    translator = new QTranslator;
+
+
+    QString fileName = QString(":/translations/CoreBoard_%1.qm").arg(languageCode);
+    if (!translator->load(fileName)){
+        delete translator;
+        translator = nullptr;
+        return false;
+    }
+
+    a->installTranslator(translator);
+
+
+    ui->retranslateUi(this); //this tranlsates the ui file
+
+    emit languageChanged();
+
+    return true;
 }
 

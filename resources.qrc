@@ -2,5 +2,12 @@
     <qresource prefix="/">
         <file>icons/redo.png</file>
         <file>icons/undo.png</file>
+        <file>translations/cmd.txt</file>
+        <file>translations/CoreBoard_de_DE.qm</file>
+        <file>translations/CoreBoard_de_DE.ts</file>
+        <file>translations/CoreBoard_en_US.qm</file>
+        <file>translations/CoreBoard_en_US.ts</file>
+        <file>translations/CoreBoard_fr_FR.qm</file>
+        <file>translations/CoreBoard_fr_FR.ts</file>
     </qresource>
 </RCC>

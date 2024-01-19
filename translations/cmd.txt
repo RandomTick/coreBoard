@@ -1,1 +1,3 @@
-lupdate CoreBoard -ts Coreboard/translations/translation_de.ts Coreboard/translations/translation_en.ts Coreboard/translations/translation_fr.ts
+lupdate CoreBoard -ts Coreboard/translations/CoreBoard_de_DE.ts Coreboard/translations/CoreBoard_en_US.ts Coreboard/translations/CoreBoard_fr_FR.ts
+
+lrelease translations/CoreBoard_fr_FR.ts

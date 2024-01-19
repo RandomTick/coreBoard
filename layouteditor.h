@@ -24,7 +24,7 @@ private:
     QPushButton *addButton;
 public slots:
     void addRectangle();
-
+    void updateLanguage();
 };
 
 #endif // LAYOUTEDITOR_H
