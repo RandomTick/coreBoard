@@ -32,8 +32,8 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
             currentItem = item;
             offset = mapToScene(event->pos()) - item->pos();
             startingPosition = item->pos();
-            startingBounds = item->boundingRect();
-
+            QRectF startingBoundsWrong = item->boundingRect();
+            startingBounds = QRectF(0, 0, startingBoundsWrong.width() - 1, startingBoundsWrong.height() - 1);
         }else{
             offset = QPointF();
             startingPosition = QPointF();
@@ -238,14 +238,18 @@ void LayoutEditorGraphicsView::doAction(Action *action){
         action->position = currentPos;
     }else if(action->actionType == Resize && rect){
         QPointF currentPos = rect->pos();
+        std::cout << currentPos.x() << ", " << currentPos.y() << std::endl;
         //move item
-        rect->setPos(action->position);
+        QPointF newPos = QPointF(action->position.x(), action->position.y());
+        rect->setPos(newPos);
         //update position in action
         action->position = currentPos;
 
 
         //get current size
-        QRectF currentBounds = rect->boundingRect();
+        QRectF startingBoundsWrong = rect->boundingRect();
+        QRectF currentBounds = QRectF(0, 0, startingBoundsWrong.width() - 1, startingBoundsWrong.height() - 1);
+        std::cout << currentBounds.width() << ", " << currentBounds.height() << std::endl;
         //resize
         qreal w = action->size.width();
         qreal h = action->size.height();
