@@ -22,9 +22,9 @@ public:
         Actions actionType;
         QGraphicsItem *item;
         QPointF position;
-        QRectF *size;
+        QRectF size;
 
-        Action(Actions actionType, QGraphicsItem *item, QPointF position, QRectF *size)
+        Action(Actions actionType, QGraphicsItem *item, QPointF position, QRectF size)
             : actionType(actionType), item(item), position(position), size(size) {}
 
     };
@@ -44,9 +44,11 @@ private:
     QGraphicsItem *currentItem;
     QPointF startingPosition;
     QPointF offset;
+    QRectF startingBounds;
     std::vector<Action*> undoActions;
     std::vector<Action*> redoActions;
     void doAction(Action* action);
+    int isOnEdgeOrCorner(QGraphicsItem *item, const QPointF &mousePos);
 
 };
 

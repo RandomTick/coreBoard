@@ -12,17 +12,24 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    MainWindow w;
-    w.changeLanguage(&a, QLocale::system().name());
+    MainWindow w;    
     w.show();
+
+
 
     //select system language
     //TODO: make a menu and config to handle this/set it to something else
-    //
+    //w.changeLanguage(&a, QLocale::system().name());
+
+
+    //Keyboard listener initialization:
+
     //Handling for Windows
     #ifdef Q_OS_WIN
     WindowsKeyListener keyListener;
     keyListener.startListening();
+
+
 
     // Connect signals to slots
     QObject::connect(&keyListener, &WindowsKeyListener::keyPressed,

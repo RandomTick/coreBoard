@@ -4,13 +4,13 @@
 #include "mainwindow.h"
 
 
-
 LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
 {
 
     view = new LayoutEditorGraphicsView(this);
     scene = new QGraphicsScene(view);
     view->setSceneAndStore(scene);
+    view->setMouseTracking(true);
 
     //connect translators
     MainWindow* myParentMainWindow = qobject_cast<MainWindow*>(this->parentWidget());
@@ -73,7 +73,11 @@ void LayoutEditor::updateButtons(bool undoCommandsExist, bool redoCommandsExist)
 
 void LayoutEditor::addRectangle() {
     QGraphicsRectItem *rect = new QGraphicsRectItem(QRectF(0, 0, 100, 100));
+    //scene->addItem(rect);
+
+    //ResizableRectItem *rect = new ResizableRectItem(QRectF(0, 0, 100, 100));
     scene->addItem(rect);
+    rect->setPos(50,50);
 }
 
 void LayoutEditor::updateLanguage() {

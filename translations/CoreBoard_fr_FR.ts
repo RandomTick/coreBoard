@@ -4,7 +4,8 @@
 <context>
     <name>LayoutEditor</name>
     <message>
-        <location filename="../layouteditor.cpp" line="42"/>
+        <location filename="../layouteditor.cpp" line="47"/>
+        <location filename="../layouteditor.cpp" line="81"/>
         <source>Add Shape</source>
         <translation type="unfinished"></translation>
     </message>

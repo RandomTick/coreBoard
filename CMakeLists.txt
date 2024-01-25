@@ -23,7 +23,6 @@ set(TRANSLATABLE_SOURCES
     versioninfo.h
     version_info.ui
     keyboardwidget.h keyboardwidget.cpp
-    keyboard_layout.json
     windowskeylistener.h windowskeylistener.cpp
     layouteditorgraphicsview.h layouteditorgraphicsview.cpp
 )
