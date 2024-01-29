@@ -32,8 +32,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
             currentItem = item;
             offset = mapToScene(event->pos()) - item->pos();
             startingPosition = item->pos();
-            QRectF startingBoundsWrong = item->boundingRect();
-            startingBounds = QRectF(0, 0, startingBoundsWrong.width() - 1, startingBoundsWrong.height() - 1);
+            startingBounds = getCorrectBoundingRect(item);
         }else{
             offset = QPointF();
             startingPosition = QPointF();
@@ -45,7 +44,7 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
     if (currentItem) {
 
         int edgeOrCorner = isOnEdgeOrCorner(currentItem, event->pos());
-        QRectF currentBounds = currentItem->boundingRect();
+        QRectF currentBounds = getCorrectBoundingRect(currentItem);
 
         if (edgeOrCorner != 0) {
             // Handle resizing for each shape differently
@@ -69,8 +68,8 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                 }
 
                 // Enforce minimum width and height of 20
-                newWidth = qMax(newWidth, 20.0);
-                newHeight = qMax(newHeight, 20.0);
+                newWidth = qMax(newWidth, 25.0);
+                newHeight = qMax(newHeight, 25.0);
 
 
 
@@ -80,13 +79,20 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
                 break;
             case 2: // Bottom-Left Corner
+
+                yOffset = startingPosition.y() - newPos.y() + startingBounds.height();
+
                 newWidth = startingBounds.width() + xOffset;
-                newHeight = startingBounds.height() + yOffset - currentBounds.height();
+                newHeight = startingBounds.height() - yOffset;
 
-                newWidth = qMax(newWidth, 20.0);
-                newHeight = qMax(newHeight, 20.0);
+                if (newWidth < 20.0 || newHeight < 20.0){
+                    currentItem = nullptr;
+                }
 
-                rect->setPos(newPos.x() + xOffset + offset.x(), newPos.y() + offset.y()); // Update X position
+                newWidth = qMax(newWidth, 25.0);
+                newHeight = qMax(newHeight, 25.0);
+
+                rect->setPos(newPos.x() - offset.x(), startingPosition.y()); // Update X position
                 rect->setRect(0, 0, newWidth, newHeight);
                 break;
 
@@ -238,7 +244,7 @@ void LayoutEditorGraphicsView::doAction(Action *action){
         action->position = currentPos;
     }else if(action->actionType == Resize && rect){
         QPointF currentPos = rect->pos();
-        std::cout << currentPos.x() << ", " << currentPos.y() << std::endl;
+        //std::cout << currentPos.x() << ", " << currentPos.y() << std::endl;
         //move item
         QPointF newPos = QPointF(action->position.x(), action->position.y());
         rect->setPos(newPos);
@@ -247,9 +253,8 @@ void LayoutEditorGraphicsView::doAction(Action *action){
 
 
         //get current size
-        QRectF startingBoundsWrong = rect->boundingRect();
-        QRectF currentBounds = QRectF(0, 0, startingBoundsWrong.width() - 1, startingBoundsWrong.height() - 1);
-        std::cout << currentBounds.width() << ", " << currentBounds.height() << std::endl;
+        QRectF currentBounds = getCorrectBoundingRect(rect);
+        //std::cout << currentBounds.width() << ", " << currentBounds.height() << std::endl;
         //resize
         qreal w = action->size.width();
         qreal h = action->size.height();
@@ -257,6 +262,11 @@ void LayoutEditorGraphicsView::doAction(Action *action){
         //update size in action
         action->size = currentBounds;
     }
+}
+
+QRectF LayoutEditorGraphicsView::getCorrectBoundingRect(QGraphicsItem *item){
+    QRectF startingBoundsWrong = item->boundingRect();
+    return QRectF(0, 0, startingBoundsWrong.width() - 1, startingBoundsWrong.height() - 1);
 }
 
 

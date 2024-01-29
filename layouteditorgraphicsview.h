@@ -49,6 +49,7 @@ private:
     std::vector<Action*> redoActions;
     void doAction(Action* action);
     int isOnEdgeOrCorner(QGraphicsItem *item, const QPointF &mousePos);
+    QRectF getCorrectBoundingRect(QGraphicsItem *item);
 
 };
 
