@@ -2,13 +2,15 @@
 #include <QGraphicsItem>
 #include "layouteditorgraphicsview.h"
 #include "layouteditor.h"
-#include <iostream>
+//#include <iostream>
 
 LayoutEditor *layoutEditor;
 
 LayoutEditorGraphicsView::LayoutEditorGraphicsView(QWidget *parent) : QGraphicsView(parent) {
     layoutEditor = (LayoutEditor*)parent;
     currentItem = nullptr;
+    activeAction = Actions::None;
+    edgeOffset = QPointF(0, 0);
 }
 
 
@@ -44,13 +46,15 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
     if (currentItem) {
 
         int edgeOrCorner = isOnEdgeOrCorner(currentItem, event->pos());
-        QRectF currentBounds = getCorrectBoundingRect(currentItem);
+        //QRectF currentBounds = getCorrectBoundingRect(currentItem);
 
-        if (edgeOrCorner != 0) {
+        if (edgeOrCorner != 0 && (activeAction == None || activeAction == Resize)) {
+            activeAction = Actions::Resize;
+
             // Handle resizing for each shape differently
             QPointF newPos = mapToScene(event->pos());
-            qreal xOffset = startingPosition.x() - newPos.x();
-            qreal yOffset = startingPosition.y() - newPos.y();
+            qreal xOffset = startingPosition.x() - newPos.x() + edgeOffset.x();
+            qreal yOffset = startingPosition.y() - newPos.y() + edgeOffset.y();
             qreal newWidth = 0;
             qreal newHeight = 0;
 
@@ -64,7 +68,29 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                 newHeight = startingBounds.height() + yOffset;
 
                 if (newWidth < 20.0 || newHeight < 20.0){
+                    //compensate for rectangle position
+
+                    newPos = QPointF(newPos.x(), newPos.y());
+                    Actions resize = Actions::Resize;
+                    Action *action = new Action(resize, currentItem, startingPosition, startingBounds);
+
+                    undoActions.push_back(action);
+                    redoActions.clear();
+
+                    action = nullptr;
                     currentItem = nullptr;
+                    activeAction = Actions::None;
+                    layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    setCursor(Qt::ArrowCursor);
+                }
+
+                if (newWidth < 25.0) {
+                    qreal deltaWidth = 25.0 - newWidth;
+                    newPos.setX(newPos.x() - deltaWidth);
+                }
+                if (newHeight < 25.0) {
+                    qreal deltaHeight = 25.0 - newHeight;
+                    newPos.setY(newPos.y() - deltaHeight);
                 }
 
                 // Enforce minimum width and height of 20
@@ -74,7 +100,7 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
 
                 // Update the rectangle's position and size
-                rect->setPos(newPos);
+                rect->setPos(newPos - edgeOffset);
                 rect->setRect(0, 0, newWidth, newHeight);
 
                 break;
@@ -83,16 +109,39 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                 yOffset = startingPosition.y() - newPos.y() + startingBounds.height();
 
                 newWidth = startingBounds.width() + xOffset;
-                newHeight = startingBounds.height() - yOffset;
+                newHeight = startingBounds.height() - yOffset - edgeOffset.y();
 
                 if (newWidth < 20.0 || newHeight < 20.0){
+                    //compensate for rectangle position
+
+                    newPos = QPointF(newPos.x(), newPos.y());
+                    Actions resize = Actions::Resize;
+                    Action *action = new Action(resize, currentItem, startingPosition, startingBounds);
+
+                    undoActions.push_back(action);
+                    redoActions.clear();
+
+                    action = nullptr;
                     currentItem = nullptr;
+                    activeAction = Actions::None;
+                    layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    setCursor(Qt::ArrowCursor);
                 }
+
+                if (newWidth < 25.0) {
+                    qreal deltaWidth = 25.0 - newWidth;
+                    newPos.setX(newPos.x() - deltaWidth);
+                }
+                if (newHeight < 25.0) {
+                    qreal deltaHeight = 25.0 - newHeight;
+                    newPos.setY(newPos.y() - deltaHeight);
+                }
+
 
                 newWidth = qMax(newWidth, 25.0);
                 newHeight = qMax(newHeight, 25.0);
 
-                rect->setPos(newPos.x() - offset.x(), startingPosition.y()); // Update X position
+                rect->setPos(newPos.x() - edgeOffset.x()  , startingPosition.y() );
                 rect->setRect(0, 0, newWidth, newHeight);
                 break;
 
@@ -127,8 +176,10 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
             }
             }
 
-        }else{
+        }else if (activeAction == None || activeAction == Move){
 
+            activeAction = Actions::Move;
+            //Move
             QPointF newPos = mapToScene(event->pos()) - offset;
 
             // Get the scene's boundaries
@@ -145,11 +196,9 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
             }
         }else{
-        //implement hover event for resize
+        //implement hover event for resize, need to do this seperately, because we do not have currentItem
         QGraphicsItem *item = scene->itemAt(mapToScene(event->pos()), QTransform());
         int testEdgeOrCorner = isOnEdgeOrCorner(item, event->pos());
-
-
 
         switch (testEdgeOrCorner) {
         case 1:
@@ -196,6 +245,7 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
 
         action = nullptr;
         currentItem = nullptr;
+        activeAction = Actions::None;
 
         layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
     }
@@ -288,32 +338,54 @@ int LayoutEditorGraphicsView::isOnEdgeOrCorner(QGraphicsItem *item, const QPoint
 
     const qreal margin = 10.0;
 
-    // Check corners
+    // Check corners and edges and set edgeOffset
     if (mousePos.x() >= rect.left() - margin && mousePos.x() <= rect.left() + margin) {
+        if (activeAction == Actions::None){
+            edgeOffset.setX(mousePos.x() - rect.left()); // Horizontal distance from left edge
+        }
         if (mousePos.y() >= rect.top() - margin && mousePos.y() <= rect.top() + margin) {
+            if (activeAction == Actions::None){
+                edgeOffset.setY(mousePos.y() - rect.top()); // Vertical distance from top edge
+            }
             return 1; // Top-left corner
         } else if (mousePos.y() >= rect.bottom() - margin && mousePos.y() <= rect.bottom() + margin) {
+            if (activeAction == Actions::None){
+                edgeOffset.setY(mousePos.y() - rect.bottom()); // Vertical distance from bottom edge
+            }
             return 2; // Bottom-left corner
         }
-    } else if (mousePos.x() >= rect.right() - margin && mousePos.x() <= rect.right() + margin) {
-        if (mousePos.y() >= rect.top() - margin && mousePos.y() <= rect.top() + margin) {
-            return 3; // Top-right corner
-        } else if (mousePos.y() >= rect.bottom() - margin && mousePos.y() <= rect.bottom() + margin) {
-            return 4; // Bottom-right corner
-        }
-    }
-
-    // Check edges
-    if (mousePos.x() >= rect.left() - margin && mousePos.x() <= rect.left() + margin) {
         return 5; // Left edge
     } else if (mousePos.x() >= rect.right() - margin && mousePos.x() <= rect.right() + margin) {
+        if (activeAction == Actions::None){
+            edgeOffset.setX(qAbs(mousePos.x() - rect.right())); // Horizontal distance from right edge
+        }
+        if (mousePos.y() >= rect.top() - margin && mousePos.y() <= rect.top() + margin) {
+            if (activeAction == Actions::None){
+                edgeOffset.setY(mousePos.y() - rect.top()); // Vertical distance from top edge
+            }
+            return 3; // Top-right corner
+        } else if (mousePos.y() >= rect.bottom() - margin && mousePos.y() <= rect.bottom() + margin) {
+            if (activeAction == Actions::None){
+                edgeOffset.setY(mousePos.y() - rect.bottom()); // Vertical distance from bottom edge
+            }
+            return 4; // Bottom-right corner
+        }
         return 6; // Right edge
-    } else if (mousePos.y() >= rect.top() - margin && mousePos.y() <= rect.top() + margin) {
+    }
+
+    if (mousePos.y() >= rect.top() - margin && mousePos.y() <= rect.top() + margin) {
+        if (activeAction == Actions::None){
+            edgeOffset.setY(mousePos.y() - rect.top()); // Vertical distance from top edge
+        }
         return 7; // Top edge
     } else if (mousePos.y() >= rect.bottom() - margin && mousePos.y() <= rect.bottom() + margin) {
+        if (activeAction == Actions::None){
+            edgeOffset.setY(mousePos.y() - rect.bottom()); // Vertical distance from bottom edge
+        }
         return 8; // Bottom edge
     }
 
     return 0; // Not on edge or corner
 }
+
 

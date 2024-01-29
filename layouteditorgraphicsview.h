@@ -10,6 +10,7 @@ public:
     void setSceneAndStore(QGraphicsScene *externScene);
     enum Actions
     {
+        None,
         Add,
         Remove,
         Move,
@@ -49,7 +50,9 @@ private:
     std::vector<Action*> redoActions;
     void doAction(Action* action);
     int isOnEdgeOrCorner(QGraphicsItem *item, const QPointF &mousePos);
+    QPointF edgeOffset;
     QRectF getCorrectBoundingRect(QGraphicsItem *item);
+    Actions activeAction;
 
 };
 
