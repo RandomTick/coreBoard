@@ -146,25 +146,81 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                 break;
 
             case 3: // Top-Right Corner
-                newWidth = startingBounds.width() + xOffset;
-                newHeight = startingBounds.height() + yOffset; // Height adjusts oppositely
+                xOffset = startingPosition.x() - newPos.x() + startingBounds.width();
+                newWidth = startingBounds.width() - xOffset - edgeOffset.x();
+                newHeight = startingBounds.height() + yOffset;
 
-                newWidth = qMax(newWidth, 20.0);
-                newHeight = qMax(newHeight, 20.0);
+                if (newWidth < 20.0 || newHeight < 20.0){
+                    //compensate for rectangle position
 
-                rect->setPos(startingBounds.topLeft().x() + offset.x(), startingBounds.topLeft().y() + yOffset); // Update Y position
+                    newPos = QPointF(newPos.x(), newPos.y());
+                    Actions resize = Actions::Resize;
+                    Action *action = new Action(resize, currentItem, startingPosition, startingBounds);
+
+                    undoActions.push_back(action);
+                    redoActions.clear();
+
+                    action = nullptr;
+                    currentItem = nullptr;
+                    activeAction = Actions::None;
+                    layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    setCursor(Qt::ArrowCursor);
+                }
+
+                if (newWidth < 25.0) {
+                    qreal deltaWidth = 25.0 - newWidth;
+                    newPos.setX(newPos.x() - deltaWidth);
+                }
+                if (newHeight < 25.0) {
+                    qreal deltaHeight = 25.0 - newHeight;
+                    newPos.setY(newPos.y() - deltaHeight);
+                }
+
+                newWidth = qMax(newWidth, 25.0);
+                newHeight = qMax(newHeight, 25.0);
+
+                rect->setPos(startingPosition.x(), newPos.y() - edgeOffset.y());
                 rect->setRect(0, 0, newWidth, newHeight);
                 break;
 
 
+
             case 4: // Bottom-Right Corner
-                newWidth = startingBounds.width() + xOffset;
-                newHeight = startingBounds.height() + yOffset;
+                xOffset = startingPosition.x() - newPos.x() + startingBounds.width();
+                yOffset = startingPosition.y() - newPos.y() + startingBounds.height();
+                newWidth = startingBounds.width() - xOffset - edgeOffset.x();
+                newHeight = startingBounds.height() - yOffset - edgeOffset.y();
 
-                newWidth = qMax(newWidth, 20.0);
-                newHeight = qMax(newHeight, 20.0);
+                if (newWidth < 20.0 || newHeight < 20.0){
+                    //compensate for rectangle position
 
-                // No position update needed
+                    newPos = QPointF(newPos.x(), newPos.y());
+                    Actions resize = Actions::Resize;
+                    Action *action = new Action(resize, currentItem, startingPosition, startingBounds);
+
+                    undoActions.push_back(action);
+                    redoActions.clear();
+
+                    action = nullptr;
+                    currentItem = nullptr;
+                    activeAction = Actions::None;
+                    layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    setCursor(Qt::ArrowCursor);
+                }
+
+
+                if (newWidth < 25.0) {
+                    qreal deltaWidth = 25.0 - newWidth;
+                    newPos.setX(newPos.x() - deltaWidth);
+                }
+                if (newHeight < 25.0) {
+                    qreal deltaHeight = 25.0 - newHeight;
+                    newPos.setY(newPos.y() - deltaHeight);
+                }
+
+                newWidth = qMax(newWidth, 25.0);
+                newHeight = qMax(newHeight, 25.0);
+
                 rect->setRect(0, 0, newWidth, newHeight);
                 break;
 
