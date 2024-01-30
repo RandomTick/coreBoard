@@ -75,6 +75,11 @@ void LayoutEditorGraphicsView::enforceRectSize(QPointF &newPos, qreal &newWidth,
 
 }
 
+QRectF LayoutEditorGraphicsView::getCorrectBoundingRect(QGraphicsItem *item){
+    QRectF startingBoundsWrong = item->boundingRect();
+    return QRectF(0, 0, startingBoundsWrong.width() - 1, startingBoundsWrong.height() - 1);
+}
+
 void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
     if (currentItem) {
 
@@ -287,6 +292,7 @@ void LayoutEditorGraphicsView::redoLastAction(){
 
 
 
+
 void LayoutEditorGraphicsView::doAction(Action *action){
     QGraphicsRectItem *rect = dynamic_cast<QGraphicsRectItem*>(action->item);
     if (action->actionType == Move){
@@ -318,10 +324,6 @@ void LayoutEditorGraphicsView::doAction(Action *action){
     }
 }
 
-QRectF LayoutEditorGraphicsView::getCorrectBoundingRect(QGraphicsItem *item){
-    QRectF startingBoundsWrong = item->boundingRect();
-    return QRectF(0, 0, startingBoundsWrong.width() - 1, startingBoundsWrong.height() - 1);
-}
 
 
 void LayoutEditorGraphicsView::resizeEvent(QResizeEvent *event) {
