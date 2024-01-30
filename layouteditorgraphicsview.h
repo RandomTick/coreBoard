@@ -53,6 +53,7 @@ private:
     QPointF edgeOffset;
     QRectF getCorrectBoundingRect(QGraphicsItem *item);
     Actions activeAction;
+    void enforceRectSize(QPointF &newPos, qreal &newWidth, qreal &newHeight);
 
 };
 
