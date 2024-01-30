@@ -147,7 +147,7 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
             case 3: // Top-Right Corner
                 xOffset = startingPosition.x() - newPos.x() + startingBounds.width();
-                newWidth = startingBounds.width() - xOffset - edgeOffset.x();
+                newWidth = startingBounds.width() - xOffset + edgeOffset.x();
                 newHeight = startingBounds.height() + yOffset;
 
                 if (newWidth < 20.0 || newHeight < 20.0){
@@ -188,7 +188,7 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
             case 4: // Bottom-Right Corner
                 xOffset = startingPosition.x() - newPos.x() + startingBounds.width();
                 yOffset = startingPosition.y() - newPos.y() + startingBounds.height();
-                newWidth = startingBounds.width() - xOffset - edgeOffset.x();
+                newWidth = startingBounds.width() - xOffset + edgeOffset.x();
                 newHeight = startingBounds.height() - yOffset - edgeOffset.y();
 
                 if (newWidth < 20.0 || newHeight < 20.0){
