@@ -12,13 +12,14 @@ class KeyboardWidget : public QWidget
 public:
     explicit KeyboardWidget(QWidget *parent = nullptr);
     void loadLayout(const QString &fileName);
-
+    QJsonArray elements;
+    KeyboardWidget *m_keyboardWidget; // Assuming this is your KeyboardWidget member
 
 private:
     void createKey(const QJsonObject &keyData);
     void changeKeyColor(const int &keyLabel, const QColor &color);
     void resetCounter();
-    KeyboardWidget *m_keyboardWidget; // Assuming this is your KeyboardWidget member
+
 
 
 public slots:

@@ -2,7 +2,9 @@
 #include <QGraphicsItem>
 #include "layouteditor.h"
 #include "mainwindow.h"
-
+#include <QJsonObject>
+#include <QLabel>
+#include <QFileDialog>
 
 LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
 {
@@ -30,6 +32,9 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
                                "background-color: rgba(150, 51, 150, 0.4);"
                                "}";
 
+    openButton = new QPushButton(tr("Open Layout"), this);
+    openButton->setStyleSheet(buttonStyleSheet);
+
     undoButton = new QPushButton("", this);
     undoButton->setIcon(QIcon(":/icons/undo.png"));
     undoButton->setIconSize(QSize(18,18));
@@ -48,10 +53,13 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     addButton->setStyleSheet(buttonStyleSheet);
 
     // Connect button signals to slots
+    connect(openButton, &QPushButton::clicked, this, &LayoutEditor::loadLayoutButton);
     connect(undoButton, &QPushButton::clicked, view, &LayoutEditorGraphicsView::undoLastAction);
     connect(redoButton, &QPushButton::clicked, view, &LayoutEditorGraphicsView::redoLastAction);
 
+
     QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(openButton);
     buttonLayout->addWidget(undoButton);
     buttonLayout->addWidget(redoButton);
     buttonLayout->addWidget(addButton);
@@ -71,6 +79,23 @@ void LayoutEditor::updateButtons(bool undoCommandsExist, bool redoCommandsExist)
 }
 
 
+
+void LayoutEditor::loadLayoutButton(){
+    QString filePath = QFileDialog::getOpenFileName(this, tr("Select Layout File to Edit"), "", tr("Layout Files (*.json);;All Files (*)"));
+
+    // Check if a file was selected (filePath is not empty)
+    if (!filePath.isEmpty()) {
+        // Call loadLayout with the selected file path
+        loadLayout(filePath);
+    }
+}
+
+
+void LayoutEditor::loadLayout(const QString &fileName){
+
+}
+
+
 void LayoutEditor::addRectangle() {
     QGraphicsRectItem *rect = new QGraphicsRectItem(QRectF(0, 0, 100, 100));
     //scene->addItem(rect);
@@ -83,5 +108,6 @@ void LayoutEditor::addRectangle() {
 void LayoutEditor::updateLanguage() {
     // Update the text of your widgets here
     addButton->setText(tr("Add Shape"));
+    openButton->setText(tr("Open Layout"));
     // ...
 }

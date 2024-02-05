@@ -25,7 +25,7 @@ void KeyboardWidget::loadLayout(const QString &fileName)
 
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
     QJsonObject rootObject = doc.object();
-    QJsonArray elements = rootObject.value("Elements").toArray();
+    elements = rootObject.value("Elements").toArray();
 
     for (const QJsonValue &element : elements) {
         if (element.toObject().value("__type").toString() == "KeyboardKey") {
@@ -50,7 +50,7 @@ void KeyboardWidget::loadLayout(const QString &fileName)
     }
     */
 
-    setMinimumSize(maxWidth + 1, maxHeight + 1); // +1 to ensure a margin
+    setMinimumSize(maxWidth, maxHeight + 20); // +20 to ensure a margin for layout editor
     this->window()->resize(maxWidth, maxHeight);
 
 }

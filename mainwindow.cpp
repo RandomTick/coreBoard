@@ -19,6 +19,9 @@ MainWindow::MainWindow(QWidget *parent)
     m_keyboardWidget = new KeyboardWidget(this);
     //m_keyboardWidget->loadLayout("C:/Users/SV5237/Documents/CoreBoard/keyboard_layout.json");
     m_keyboardWidget->loadLayout("C:/Users/SV5237/Documents/CoreBoard/nohBoard_example.json");
+
+    //KeyboardWidget *editKeyboard = new KeyboardWidget(this);
+    //editKeyboard->loadLayout("C:/Users/SV5237/Documents/CoreBoard/nohBoard_example.json");
     LayoutEditor *m_layoutEditor = new LayoutEditor(this);
 
 
@@ -34,8 +37,6 @@ MainWindow::MainWindow(QWidget *parent)
         stackedWidget->setCurrentIndex(1);
     });
 
-
-    m_layoutEditor->addRectangle();
 }
 
 MainWindow::~MainWindow()
