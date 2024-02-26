@@ -96,13 +96,22 @@ void LayoutEditor::loadLayout(const QString &fileName){
 }
 
 
-void LayoutEditor::addRectangle() {
-    QGraphicsRectItem *rect = new QGraphicsRectItem(QRectF(0, 0, 100, 100));
-    //scene->addItem(rect);
+void LayoutEditor::addLabel(QString text, int x, int y, int w, int h) {
+    QRect geometry(x, y, w, h);
+    QLabel *keyLabel = new QLabel(this);
+    keyLabel->setGeometry(geometry);
+    QString label = text;
 
-    //ResizableRectItem *rect = new ResizableRectItem(QRectF(0, 0, 100, 100));
-    scene->addItem(rect);
-    rect->setPos(50,50);
+    QColor defaultColor = QColor(125,125,125);
+    keyLabel->setText(label);
+    keyLabel->setStyleSheet(QString("background-color: #%1%2%3; border: 1px solid black;")
+                                .arg(defaultColor.red(), 2, 16, QChar('0'))
+                                .arg(defaultColor.green(), 2, 16, QChar('0'))
+                                .arg(defaultColor.blue(), 2, 16, QChar('0')));
+    keyLabel->setAlignment(Qt::AlignCenter); // Center the text
+    keyLabel->show();
+    keyLabel->update();
+
 }
 
 void LayoutEditor::updateLanguage() {

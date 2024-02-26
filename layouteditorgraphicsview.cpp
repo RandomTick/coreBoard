@@ -80,6 +80,10 @@ QRectF LayoutEditorGraphicsView::getCorrectBoundingRect(QGraphicsItem *item){
     return QRectF(0, 0, startingBoundsWrong.width() - 1, startingBoundsWrong.height() - 1);
 }
 
+void LayoutEditorGraphicsView::centerText(QGraphicsRectItem *rect){
+
+}
+
 void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
     if (currentItem) {
 

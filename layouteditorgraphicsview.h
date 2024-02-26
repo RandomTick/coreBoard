@@ -51,6 +51,7 @@ private:
     void doAction(Action* action);
     int isOnEdgeOrCorner(QGraphicsItem *item, const QPointF &mousePos);
     void enforceRectSize(QPointF &newPos, qreal &newWidth, qreal &newHeight);
+    void centerText(QGraphicsRectItem *rect);
     QRectF getCorrectBoundingRect(QGraphicsItem *item);
     QPointF edgeOffset;    
     Actions activeAction;
