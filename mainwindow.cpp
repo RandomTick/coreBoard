@@ -37,6 +37,8 @@ MainWindow::MainWindow(QWidget *parent)
         stackedWidget->setCurrentIndex(1);
     });
 
+    m_layoutEditor->addLabel("t",150,150,100,100);
+
 }
 
 MainWindow::~MainWindow()
