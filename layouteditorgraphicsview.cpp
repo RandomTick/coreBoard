@@ -6,6 +6,8 @@
 //#include <iostream>
 
 LayoutEditor *layoutEditor;
+QList<QGraphicsItem*> alignmentHelpers;
+
 
 LayoutEditorGraphicsView::LayoutEditorGraphicsView(QWidget *parent) : QGraphicsView(parent) {
     layoutEditor = (LayoutEditor*)parent;
@@ -30,7 +32,11 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
         }else{
             //change background properties/general stuff
         }
-    }else{        
+    }else{
+        QGraphicsRectItem* rectItem = dynamic_cast<QGraphicsRectItem*>(item);
+        if (!rectItem) {
+            return ; //only allow rectangles to be resized and moved for now, as otherwise it would move the label of the rectangle
+        }
         if (item) {
             currentItem = item;
             offset = mapToScene(event->pos()) - item->pos();
@@ -205,9 +211,11 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
             qreal newY = qMax(minY, qMin(newPos.y(), maxY - startingBounds.height()));
             currentItem->setPos(newX, newY);
 
+            updateAlignmentHelpers(currentItem);
+
             }
         }
-        //implement hover event for resize, need to do this seperately, because we do not have currentItem
+    //implement hover event for resize, need to do this seperately, because we do not have currentItem
 
     QGraphicsItem *item = scene->itemAt(mapToScene(event->pos()), QTransform());
     int testEdgeOrCorner = isOnEdgeOrCorner(item, event->pos());
@@ -234,9 +242,6 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                 setCursor(Qt::ArrowCursor); // Default cursor for no match
             }
     }
-
-
-
 }
 
 
@@ -250,6 +255,8 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
         if (!edgeOrCorner){
             Actions move = Actions::Move;
             action = new Action(move, currentItem, startingPosition, QRectF());
+            qDeleteAll(alignmentHelpers);
+            alignmentHelpers.clear();
         }else{
             Actions resize = Actions::Resize;
             action = new Action(resize, currentItem, startingPosition, startingBounds);
@@ -404,4 +411,134 @@ int LayoutEditorGraphicsView::isOnEdgeOrCorner(QGraphicsItem *item, const QPoint
     return 0; // Not on edge or corner
 }
 
+#include <float.h> // For FLT_MAX
+
+void LayoutEditorGraphicsView::updateAlignmentHelpers(QGraphicsItem* movingItem) {
+    // Clear existing alignment helpers
+    for (auto* item : alignmentHelpers) {
+        scene->removeItem(item);
+        delete item;
+    }
+    alignmentHelpers.clear();
+
+    qreal closestLeft = FLT_MAX;
+    qreal closestRight = FLT_MAX;
+    qreal closestTop = FLT_MAX;
+    qreal closestBottom = FLT_MAX;
+
+
+    QRectF movingRect = movingItem->boundingRect().translated(movingItem->pos());
+
+    // Find the closest items in each direction
+    for (QGraphicsItem* item : scene->items()) {
+        if (item == movingItem || item->type() == QGraphicsLineItem::Type || item->type() == QGraphicsTextItem::Type) continue;
+
+        QRectF itemRect = item->boundingRect().translated(item->pos());
+
+        // For left/right calculations, check if the y ranges overlap
+        if (rangesOverlap(movingRect.top(), movingRect.bottom(), itemRect.top(), itemRect.bottom())) {
+            // Check left
+            if (itemRect.right() < movingRect.left() && movingRect.left() - itemRect.right() < closestLeft) {
+                closestLeft = movingRect.left() - itemRect.right();
+            }
+            // Check right
+            if (itemRect.left() > movingRect.right() && itemRect.left() - movingRect.right() < closestRight) {
+                closestRight = itemRect.left() - movingRect.right();
+            }
+        }
+
+        // For top/bottom calculations, check if the x ranges overlap
+        if (rangesOverlap(movingRect.left(), movingRect.right(), itemRect.left(), itemRect.right())) {
+            // Check top
+            if (itemRect.bottom() < movingRect.top() && movingRect.top() - itemRect.bottom() < closestTop) {
+                closestTop = movingRect.top() - itemRect.bottom();
+            }
+            // Check bottom
+            if (itemRect.top() > movingRect.bottom() && itemRect.top() - movingRect.bottom() < closestBottom) {
+                closestBottom = itemRect.top() - movingRect.bottom();
+            }
+        }
+    }
+
+    // Check scene borders as potential closest edges
+    QRectF sceneRect = scene->sceneRect();
+    if (movingRect.left() - sceneRect.left() < closestLeft) {
+        closestLeft = movingRect.left() - sceneRect.left();
+    }
+    if (sceneRect.right() - movingRect.right() < closestRight) {
+        closestRight = sceneRect.right() - movingRect.right();
+    }
+    if (movingRect.top() - sceneRect.top() < closestTop) {
+        closestTop = movingRect.top() - sceneRect.top();
+    }
+    if (sceneRect.bottom() - movingRect.bottom() < closestBottom) {
+        closestBottom = sceneRect.bottom() - movingRect.bottom();
+    }
+
+    // Draw alignment lines for the closest items or borders
+    drawAlignmentLine(movingRect, closestLeft, Qt::Horizontal, true); // Left
+    drawAlignmentLine(movingRect, closestRight, Qt::Horizontal, false); // Right
+    drawAlignmentLine(movingRect, closestTop, Qt::Vertical, true); // Top
+    drawAlignmentLine(movingRect, closestBottom, Qt::Vertical, false); // Bottom
+}
+
+void LayoutEditorGraphicsView::drawAlignmentLine(const QRectF& movingRect, qreal distance, Qt::Orientation orientation, bool isStartSide) {
+    if (distance == FLT_MAX) return; // No close item in this direction
+
+    QPointF startPoint, endPoint, textPos;
+    if (orientation == Qt::Horizontal) {
+        qreal y = movingRect.top() + movingRect.height() / 2;
+        startPoint.setY(y);
+        endPoint.setY(y);
+        if (isStartSide) {
+            startPoint.setX(movingRect.left());
+            endPoint.setX(movingRect.left() - distance);
+            textPos = (startPoint + endPoint) / 2; // Default position for text
+            // Adjust if too close to the left edge
+            if (endPoint.x() < 0) textPos.setX(movingRect.left() - distance / 2);
+        } else {
+            startPoint.setX(movingRect.right());
+            endPoint.setX(movingRect.right() + distance);
+            textPos = (startPoint + endPoint) / 2;
+            // Adjust if too close to the right edge
+            if (endPoint.x() > scene->width() - 27) textPos.setX(movingRect.right() + distance / 2 - 27); // Assuming text width ~27px
+        }
+    } else { // Vertical
+        qreal x = movingRect.left() + movingRect.width() / 2;
+        startPoint.setX(x);
+        endPoint.setX(x);
+        if (isStartSide) {
+            startPoint.setY(movingRect.top());
+            endPoint.setY(movingRect.top() - distance);
+            textPos = (startPoint + endPoint) / 2;
+            // Adjust if too close to the top edge
+            if (endPoint.y() < 0) textPos.setY(movingRect.top() - distance / 2);
+        } else {
+            startPoint.setY(movingRect.bottom());
+            endPoint.setY(movingRect.bottom() + distance);
+            textPos = (startPoint + endPoint) / 2;
+            // Adjust if too close to the bottom edge
+            if (endPoint.y() > scene->height() - 20) textPos.setY(movingRect.bottom() + distance / 2 - 20); // Assuming text height ~20px
+        }
+    }
+
+    QGraphicsLineItem* line = scene->addLine(QLineF(startPoint, endPoint), QPen(Qt::red, 1, Qt::DashLine));
+    alignmentHelpers.append(line);
+
+    // Optionally, add distance text near the line
+    if (distance < 0) distance = 0; //avoid weird formatting
+    QGraphicsTextItem* textItem = scene->addText(QString::number(qRound(distance)) + " px");
+    textItem->setDefaultTextColor(Qt::red);
+    textItem->setPos(textPos);
+    alignmentHelpers.append(textItem);
+}
+
+bool LayoutEditorGraphicsView::rangesOverlap(qreal start1, qreal end1, qreal start2, qreal end2) {
+    //return std::max(start1, start2) <= std::min(end1, end2);
+
+    //this is better visually
+    qreal middle1 = (start1 + end1) / 2; // Calculate the middle point of the current item
+    return middle1 >= start2 && middle1 <= end2; // Check if the middle point lies within the bounds of the other item
+
+}
 

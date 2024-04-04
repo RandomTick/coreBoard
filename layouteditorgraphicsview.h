@@ -40,6 +40,7 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 
+
 private:
     QGraphicsScene *scene;
     QGraphicsItem *currentItem;
@@ -52,6 +53,9 @@ private:
     int isOnEdgeOrCorner(QGraphicsItem *item, const QPointF &mousePos);
     void enforceRectSize(QPointF &newPos, qreal &newWidth, qreal &newHeight);
     void centerText(QGraphicsRectItem *rect);
+    void updateAlignmentHelpers(QGraphicsItem* item);
+    void drawAlignmentLine(const QRectF& movingRect, qreal distance, Qt::Orientation orientation, bool isStartSide);
+    bool rangesOverlap(qreal start1, qreal end1, qreal start2, qreal end2);
     QRectF getCorrectBoundingRect(QGraphicsItem *item);
     QPointF edgeOffset;    
     Actions activeAction;

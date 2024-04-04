@@ -74,6 +74,7 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     setLayout(layout);
 
     addRectangle("T",150,150,50,50);
+    addRectangle("S",44,77,200,300);
 }
 
 void LayoutEditor::updateButtons(bool undoCommandsExist, bool redoCommandsExist){
