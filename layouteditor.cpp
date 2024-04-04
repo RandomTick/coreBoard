@@ -5,6 +5,7 @@
 #include <QJsonObject>
 #include <QLabel>
 #include <QFileDialog>
+#include "resizablerectitem.h"
 
 LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
 {
@@ -71,6 +72,8 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     layout->addWidget(view);
 
     setLayout(layout);
+
+    addRectangle("T",150,150,50,50);
 }
 
 void LayoutEditor::updateButtons(bool undoCommandsExist, bool redoCommandsExist){
@@ -96,11 +99,9 @@ void LayoutEditor::loadLayout(const QString &fileName){
 }
 
 
-void LayoutEditor::addRectangle() {
-    QGraphicsRectItem *rect = new QGraphicsRectItem(QRectF(0, 0, 100, 100));
-    //scene->addItem(rect);
+void LayoutEditor::addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y) {
+    ResizableRectItem *rect = new ResizableRectItem(QRectF(0, 0, h, w), text);
 
-    //ResizableRectItem *rect = new ResizableRectItem(QRectF(0, 0, 100, 100));
     scene->addItem(rect);
     rect->setPos(50,50);
 }

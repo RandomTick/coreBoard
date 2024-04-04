@@ -26,7 +26,7 @@ private:
     QPushButton *redoButton;
     QPushButton *addButton;
 public slots:
-    void addRectangle();
+    void addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y);
     void loadLayoutButton();
     void updateLanguage();
 
