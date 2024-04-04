@@ -1,0 +1,2 @@
+#include "resizablerectitem.h"
+

@@ -2,6 +2,7 @@
 #include <QGraphicsItem>
 #include "layouteditorgraphicsview.h"
 #include "layouteditor.h"
+#include "resizablerectitem.h"
 //#include <iostream>
 
 LayoutEditor *layoutEditor;
@@ -101,7 +102,7 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
             qreal newHeight = 0;
 
 
-            QGraphicsRectItem *rect = dynamic_cast<QGraphicsRectItem*>(currentItem);
+            ResizableRectItem *rect = dynamic_cast<ResizableRectItem*>(currentItem);
             if (rect){ //is rectangle
                 switch (edgeOrCorner) {
                     case 1: // Top-Left Corner
@@ -298,7 +299,7 @@ void LayoutEditorGraphicsView::redoLastAction(){
 
 
 void LayoutEditorGraphicsView::doAction(Action *action){
-    QGraphicsRectItem *rect = dynamic_cast<QGraphicsRectItem*>(action->item);
+    ResizableRectItem *rect = dynamic_cast<ResizableRectItem*>(action->item);
     if (action->actionType == Move){
         //get current position
         QPointF currentPos = action->item->pos();
@@ -341,6 +342,11 @@ void LayoutEditorGraphicsView::resizeEvent(QResizeEvent *event) {
 int LayoutEditorGraphicsView::isOnEdgeOrCorner(QGraphicsItem *item, const QPointF &mousePos) {
     if (!item) {
         return 0; // Safety check, in case the item is null
+    }
+
+    QGraphicsRectItem* rectItem = dynamic_cast<QGraphicsRectItem*>(item);
+    if (!rectItem) {
+        return 0;// prevent 1 when hovering over text, might need to be changed if we allow other shapes.
     }
 
     QRectF rect = item->boundingRect();

@@ -5,6 +5,7 @@
 #include <QJsonObject>
 #include <QLabel>
 #include <QFileDialog>
+#include "resizablerectitem.h"
 
 LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
 {
@@ -71,6 +72,8 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     layout->addWidget(view);
 
     setLayout(layout);
+
+    addRectangle("T",150,150,50,50);
 }
 
 void LayoutEditor::updateButtons(bool undoCommandsExist, bool redoCommandsExist){
@@ -96,22 +99,11 @@ void LayoutEditor::loadLayout(const QString &fileName){
 }
 
 
-void LayoutEditor::addLabel(QString text, int x, int y, int w, int h) {
-    QRect geometry(x, y, w, h);
-    QLabel *keyLabel = new QLabel(this);
-    keyLabel->setGeometry(geometry);
-    QString label = text;
+void LayoutEditor::addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y) {
+    ResizableRectItem *rect = new ResizableRectItem(QRectF(0, 0, h, w), text);
 
-    QColor defaultColor = QColor(125,125,125);
-    keyLabel->setText(label);
-    keyLabel->setStyleSheet(QString("background-color: #%1%2%3; border: 1px solid black;")
-                                .arg(defaultColor.red(), 2, 16, QChar('0'))
-                                .arg(defaultColor.green(), 2, 16, QChar('0'))
-                                .arg(defaultColor.blue(), 2, 16, QChar('0')));
-    keyLabel->setAlignment(Qt::AlignCenter); // Center the text
-    keyLabel->show();
-    keyLabel->update();
-
+    scene->addItem(rect);
+    rect->setPos(50,50);
 }
 
 void LayoutEditor::updateLanguage() {
