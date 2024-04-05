@@ -33,10 +33,12 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
             //change background properties/general stuff
         }
     }else{
-        QGraphicsRectItem* rectItem = dynamic_cast<QGraphicsRectItem*>(item);
-        if (!rectItem) {
-            return ; //only allow rectangles to be resized and moved for now, as otherwise it would move the label of the rectangle
+        QGraphicsTextItem* textItem = dynamic_cast<QGraphicsTextItem*>(item);
+        if(textItem){
+            //when text gets selected, we need to select the closest rectangle in order to move/resize the correct one
+            item = item->parentItem();
         }
+
         if (item) {
             currentItem = item;
             offset = mapToScene(event->pos()) - item->pos();
