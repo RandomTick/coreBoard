@@ -2,9 +2,11 @@
 #include <QGraphicsItem>
 #include "layouteditor.h"
 #include "mainwindow.h"
+#include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
 #include <QFileDialog>
+#include <QJsonArray>
 #include "resizablerectitem.h"
 
 LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
@@ -73,8 +75,8 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
 
     setLayout(layout);
 
-    addRectangle("T",150,150,50,50);
-    addRectangle("S",44,77,200,300);
+    //addRectangle("T",150,150,50,50);
+    //addRectangle("S",44,77,200,300);
 }
 
 void LayoutEditor::updateButtons(bool undoCommandsExist, bool redoCommandsExist){
@@ -97,6 +99,44 @@ void LayoutEditor::loadLayoutButton(){
 
 void LayoutEditor::loadLayout(const QString &fileName){
 
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning("Failed to open layout file.");
+        return;
+    }
+
+    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    QJsonObject rootObject = doc.object();
+    QJsonArray elements = rootObject.value("Elements").toArray();
+
+    for (const QJsonValue &element : elements) {
+        if (element.toObject().value("__type").toString() == "KeyboardKey") {
+            createKey(element.toObject());
+        }
+    }
+
+    int maxWidth = rootObject.value("Width").toInt();
+    int maxHeight = rootObject.value("Height").toInt();
+
+    setMinimumSize(maxWidth + 20, maxHeight + 60);// +20/+60 to ensure a margin for layout editor
+}
+
+void LayoutEditor::createKey(const QJsonObject &keyData){
+    QJsonArray boundaries = keyData.value("Boundaries").toArray();
+    if (boundaries.size() < 4) {//TODO: Handle others than rectangles here!
+        qWarning("Invalid boundaries data.");
+        return;
+    }
+    QString label = keyData.value("Text").toString();
+    // Assuming rectangular shape and the points are given in order
+    int x = boundaries[0].toObject()["X"].toInt();
+    int y = boundaries[0].toObject()["Y"].toInt();
+    int width = boundaries[1].toObject()["X"].toInt() - x;
+    int height = boundaries[3].toObject()["Y"].toInt() - y;
+
+
+    addRectangle(label,width,height,x,y);
+
 }
 
 
@@ -104,7 +144,7 @@ void LayoutEditor::addRectangle(const QString &text, qreal h, qreal w, qreal x, 
     ResizableRectItem *rect = new ResizableRectItem(QRectF(0, 0, h, w), text);
 
     scene->addItem(rect);
-    rect->setPos(50,50);
+    rect->setPos(x,y);
 }
 
 void LayoutEditor::updateLanguage() {

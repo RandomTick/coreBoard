@@ -28,6 +28,7 @@ private:
 public slots:
     void addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y);
     void loadLayoutButton();
+    void createKey(const QJsonObject &keyData);
     void updateLanguage();
 
 };

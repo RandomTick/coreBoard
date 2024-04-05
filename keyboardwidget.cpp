@@ -32,26 +32,12 @@ void KeyboardWidget::loadLayout(const QString &fileName)
             createKey(element.toObject());
         }
     }
-
-
-
     //adjust size
     int maxWidth = rootObject.value("Width").toInt();
     int maxHeight = rootObject.value("Height").toInt();
 
-
-    /*
-    for (const auto& keyLabel : findChildren<QLabel*>()) {
-        int rightEdge = keyLabel->geometry().right();
-        int bottomEdge = keyLabel->geometry().bottom();
-
-        maxWidth = qMax(maxWidth, rightEdge);
-        maxHeight = qMax(maxHeight, bottomEdge);
-    }
-    */
-
-    setMinimumSize(maxWidth, maxHeight + 20); // +20 to ensure a margin for layout editor
-    this->window()->resize(maxWidth, maxHeight);
+    setMinimumSize(maxWidth, maxHeight);
+    this->window()->resize(0, 0);
 
 }
 
