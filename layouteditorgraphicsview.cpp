@@ -249,20 +249,20 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
 void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
     if (currentItem) {
-
         int edgeOrCorner = isOnEdgeOrCorner(currentItem, event->pos());
 
         Action *action;
 
         if (!edgeOrCorner){
-            Actions move = Actions::Move;
-            action = new Action(move, currentItem, startingPosition, QRectF());
+            action = new Action(Actions::Move, currentItem, startingPosition, QRectF());
             qDeleteAll(alignmentHelpers);
             alignmentHelpers.clear();
         }else{
-            Actions resize = Actions::Resize;
-            action = new Action(resize, currentItem, startingPosition, startingBounds);
+            action = new Action(Actions::Resize, currentItem, startingPosition, startingBounds);
         }
+        //TO-DO: check if something actually happened, if not select the item for moving with arrow keys or multiselect
+
+
         undoActions.push_back(action);
         redoActions.clear();
 
