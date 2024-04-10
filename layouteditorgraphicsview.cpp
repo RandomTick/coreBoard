@@ -60,6 +60,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                     if (newText != oldText){
                         Action* action = new Action(Actions::ChangeText, rect, oldText, newText);
                         undoActions.push_back(action);
+                        redoActions.clear();
                         layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
                     }
 
@@ -291,25 +292,43 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
         int edgeOrCorner = isOnEdgeOrCorner(currentItem, event->pos());
 
         Action *action;
+        bool validAction = false;
 
         if (!edgeOrCorner){
-            action = new Action(Actions::Move, currentItem, startingPosition);
+            //find out if starting position is different from current Position
+            if (startingPosition != currentItem->pos()){
+                action = new Action(Actions::Move, currentItem, startingPosition);
+                validAction = true;
+            }
+
         }else{
-            action = new Action(Actions::Resize, currentItem, startingPosition, startingBounds);
+            if (startingPosition != currentItem->pos() || startingBounds != getCorrectBoundingRect(currentItem)){
+                action = new Action(Actions::Resize, currentItem, startingPosition, startingBounds);
+                validAction = true;
+            }
+
         }
 
         qDeleteAll(alignmentHelpers);
         alignmentHelpers.clear();
-        //TO-DO: check if something actually happened, if not select the item for moving with arrow keys or multiselect, make sure the action does not get pushed back, as nothing happened
 
-        undoActions.push_back(action);
-        redoActions.clear();
 
-        action = nullptr;
-        currentItem = nullptr;
-        activeAction = Actions::None;
+        if (validAction){
+            undoActions.push_back(action);
+            redoActions.clear();
+            action = nullptr;
+            currentItem = nullptr;
+            activeAction = Actions::None;
+            layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+        }else{
+            //TODO: select the item for moving with arrow keys or multiselect
 
-        layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+            //for now
+            action = nullptr;
+            currentItem = nullptr;
+            activeAction = Actions::None;
+            layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+        }
     }
 }
 
