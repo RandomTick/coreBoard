@@ -4,14 +4,14 @@
 
 ## Overview
 
-In the realm of digital content creation, particularly speedrunning, streaming and video production, the ability to visualize keyboard inputs on-screen in real-time is invaluable. While several applications offer keyboard visualization, they often come at a cost, either in terms of performance, ease of use, or accessibility. **coreBoard** emerges as a solution that is not only free but also remarkably easy to use, without the need for intricate graphics. Its primary goal is to offer a seamless experience, perfectly capturable for live streaming or video recording, potentially even with chroma key, and highly customizable to suit various user needs.
+In the realm of digital content creation, particularly speedrunning, streaming and video production, the ability to visualize keyboard inputs on-screen in real-time is invaluable. While several applications offer keyboard visualization, they often come at a cost, either in terms of performance, ease of use, or accessibility. **coreBoard** emerges as a solution that is not only free but also remarkably easy to use, without the need for intricate graphics. Its primary goal is to offer a seamless experience, perfectly capturable for live streaming or video recording and highly customizable to suit various user needs.
 
 ## Key Features
 
 - **High Performance**: Leveraging the efficiency of C++ and Qt, **coreBoard** is designed to render keyboard visualizations faster than ever before, ensuring no lag or performance hindrance to other applications, including resource-intensive ones.
 - **Cross-Platform Compatibility**: With a vision to support multiple operating systems, **coreBoard** is taking the first steps towards becoming the go-to keyboard visualization tool for users beyond Windows, catering to a broader audience in the future.
 - **Customizability**: Understanding the diverse needs of users, **coreBoard** offers extensive customization options, allowing users to tailor the appearance and functionality of their on-screen keyboard to fit their unique preferences.
-- **Ease of Capture**: Designed with content creators in mind, **coreBoard** ensures that capturing and integrating keyboard visualization into streams or recordings is straightforward, compatible with popular software like OBS Studio.
+- **Ease of Capture**: Designed with content creators in mind, **coreBoard** ensures that capturing and integrating keyboard visualization into streams or recordings is straightforward, compatible with popular software like OBS Studio and Streamlabs.
 - **Free and Open Source**: Embracing the spirit of community and accessibility, **coreBoard** is freely available and open source, inviting contributions and enhancements from developers around the world.
 
 ## Getting Started
