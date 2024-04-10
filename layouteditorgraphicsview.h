@@ -64,6 +64,7 @@ private:
     void updateAlignmentHelpers(QGraphicsItem* item);
     void drawAlignmentLine(const QRectF& movingRect, qreal distance, Qt::Orientation orientation, bool isStartSide);
     bool rangesOverlap(qreal start1, qreal end1, qreal start2, qreal end2);
+    void updateSizeHelpers(QGraphicsItem* item);
     QRectF getCorrectBoundingRect(QGraphicsItem *item);
     QPointF edgeOffset;    
     Actions activeAction;

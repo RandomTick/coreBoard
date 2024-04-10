@@ -6,6 +6,7 @@
 #include "symbolinputdialog.h"
 #include <QMenu>
 #include <QInputDialog>
+#include <float.h>
 //#include <iostream>
 
 LayoutEditor *layoutEditor;
@@ -229,8 +230,10 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                         rect->setRect(0, 0, newWidth, newHeight);
                         break;
                 }
-            }
+                //display size of rect
+                updateSizeHelpers(rect);
 
+            }
         }else if (activeAction == None || activeAction == Move){
 
             activeAction = Actions::Move;
@@ -291,11 +294,12 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
 
         if (!edgeOrCorner){
             action = new Action(Actions::Move, currentItem, startingPosition);
-            qDeleteAll(alignmentHelpers);
-            alignmentHelpers.clear();
         }else{
             action = new Action(Actions::Resize, currentItem, startingPosition, startingBounds);
         }
+
+        qDeleteAll(alignmentHelpers);
+        alignmentHelpers.clear();
         //TO-DO: check if something actually happened, if not select the item for moving with arrow keys or multiselect, make sure the action does not get pushed back, as nothing happened
 
         undoActions.push_back(action);
@@ -452,7 +456,6 @@ int LayoutEditorGraphicsView::isOnEdgeOrCorner(QGraphicsItem *item, const QPoint
     return 0; // Not on edge or corner
 }
 
-#include <float.h> // For FLT_MAX
 
 void LayoutEditorGraphicsView::updateAlignmentHelpers(QGraphicsItem* movingItem) {
     // Clear existing alignment helpers
@@ -575,11 +578,49 @@ void LayoutEditorGraphicsView::drawAlignmentLine(const QRectF& movingRect, qreal
 }
 
 bool LayoutEditorGraphicsView::rangesOverlap(qreal start1, qreal end1, qreal start2, qreal end2) {
-    //return std::max(start1, start2) <= std::min(end1, end2);
-
-    //this is better visually
     qreal middle1 = (start1 + end1) / 2; // Calculate the middle point of the current item
     return middle1 >= start2 && middle1 <= end2; // Check if the middle point lies within the bounds of the other item
 
 }
+
+
+void LayoutEditorGraphicsView::updateSizeHelpers(QGraphicsItem* item) {
+    // Ensure the item is valid and the type expected
+    if (!item || !(item->type() == QGraphicsRectItem::Type || item->type() == QGraphicsEllipseItem::Type))
+        return;
+
+    qDeleteAll(alignmentHelpers);
+    alignmentHelpers.clear();
+
+    QRectF rect = item->boundingRect().translated(item->pos());
+
+    // Horizontal size helper - Display width inside the rectangle
+    QPointF startWidthPoint(rect.left(), rect.top() + rect.height() / 2);
+    QPointF endWidthPoint(rect.left() + rect.width(), rect.top() + rect.height() / 2);
+    QGraphicsLineItem* lineWidth = scene->addLine(QLineF(startWidthPoint, endWidthPoint), QPen(Qt::blue, 1, Qt::DashLine));
+    alignmentHelpers.append(lineWidth);
+
+    QGraphicsTextItem* textWidthItem = scene->addText(QString::number(qRound(rect.width())) + " px");
+    textWidthItem->setDefaultTextColor(Qt::blue);
+    // Position the width text item in the middle of the line, adjusting for the text's size
+    textWidthItem->setPos(rect.left() + rect.width() / 4 - textWidthItem->boundingRect().width() / 2,
+                          startWidthPoint.y() - textWidthItem->boundingRect().height() / 2 - 10);
+    alignmentHelpers.append(textWidthItem);
+
+    // Vertical size helper - Display height inside the rectangle
+    QPointF startHeightPoint(rect.left() + rect.width() / 2, rect.top());
+    QPointF endHeightPoint(rect.left() + rect.width() / 2, rect.top() + rect.height());
+    QGraphicsLineItem* lineHeight = scene->addLine(QLineF(startHeightPoint, endHeightPoint), QPen(Qt::blue, 1, Qt::DashLine));
+    alignmentHelpers.append(lineHeight);
+
+    QGraphicsTextItem* textHeightItem = scene->addText(QString::number(qRound(rect.height())) + " px");
+    textHeightItem->setDefaultTextColor(Qt::blue);
+    // Position the height text item in the middle of the line, adjusting for the text's size
+    textHeightItem->setPos(startHeightPoint.x() - textHeightItem->boundingRect().width() / 4 + 10,
+                           rect.top() + rect.height() / 4 - textHeightItem->boundingRect().height() / 2);
+    alignmentHelpers.append(textHeightItem);
+}
+
+
+
 
