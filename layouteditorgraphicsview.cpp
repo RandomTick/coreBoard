@@ -3,6 +3,9 @@
 #include "layouteditorgraphicsview.h"
 #include "layouteditor.h"
 #include "resizablerectitem.h"
+#include "symbolinputdialog.h"
+#include <QMenu>
+#include <QInputDialog>
 //#include <iostream>
 
 LayoutEditor *layoutEditor;
@@ -24,20 +27,53 @@ void LayoutEditorGraphicsView::setSceneAndStore(QGraphicsScene *externScene){
 
 void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
     QGraphicsItem *item = scene->itemAt(mapToScene(event->pos()), QTransform());
+    QGraphicsTextItem* textItem = dynamic_cast<QGraphicsTextItem*>(item);
+    if(textItem){
+        //when text gets selected, we need to select the closest rectangle in order to move/resize the correct one
+        item = item->parentItem();
+    }
     if (event->button() == Qt::RightButton) {
         //TODO: implement right click stuff, like changing bind/shape etc.
         qDebug("right test");
         if(item){
             //change item properties
+            ResizableRectItem *rect = dynamic_cast<ResizableRectItem*>(item);
+            if (rect){
+                QMenu menu;
+                QAction *actionRename = menu.addAction("Rename");
+                QAction *actionRebind = menu.addAction("Rebind");
+                QAction *actionDelete = menu.addAction("Delete");
+                QAction *selectedAction = menu.exec(QCursor::pos());
+                // Handle Actions
+                if (selectedAction == actionRename) {
+                    QString oldText = rect->getText();
+                    SymbolInputDialog *dialog = new SymbolInputDialog(this, oldText);
+                    if (dialog->exec() == QDialog::Accepted) {
+                        QString text = dialog->getText();
+                        rect->setText(text);
+                    }
+                    delete dialog;
+
+                    //log action:
+                    QString newText = rect->getText();
+                    if (newText != oldText){
+                        Action* action = new Action(Actions::ChangeText, rect, oldText, newText);
+                        undoActions.push_back(action);
+                        layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    }
+
+                } else if (selectedAction == actionRebind) {
+                    qDebug("2");
+                }else if (selectedAction == actionDelete) {
+                    qDebug("3");
+                }
+                return;
+            }
         }else{
             //change background properties/general stuff
         }
     }else{
-        QGraphicsTextItem* textItem = dynamic_cast<QGraphicsTextItem*>(item);
-        if(textItem){
-            //when text gets selected, we need to select the closest rectangle in order to move/resize the correct one
-            item = item->parentItem();
-        }
+
 
         if (item) {
             currentItem = item;
@@ -254,14 +290,13 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
         Action *action;
 
         if (!edgeOrCorner){
-            action = new Action(Actions::Move, currentItem, startingPosition, QRectF());
+            action = new Action(Actions::Move, currentItem, startingPosition);
             qDeleteAll(alignmentHelpers);
             alignmentHelpers.clear();
         }else{
             action = new Action(Actions::Resize, currentItem, startingPosition, startingBounds);
         }
-        //TO-DO: check if something actually happened, if not select the item for moving with arrow keys or multiselect
-
+        //TO-DO: check if something actually happened, if not select the item for moving with arrow keys or multiselect, make sure the action does not get pushed back, as nothing happened
 
         undoActions.push_back(action);
         redoActions.clear();
@@ -325,7 +360,6 @@ void LayoutEditorGraphicsView::doAction(Action *action){
         //update position in action
         action->position = currentPos;
 
-
         //get current size
         QRectF currentBounds = getCorrectBoundingRect(rect);
         //std::cout << currentBounds.width() << ", " << currentBounds.height() << std::endl;
@@ -335,6 +369,11 @@ void LayoutEditorGraphicsView::doAction(Action *action){
         rect->setRect(0, 0, w, h);
         //update size in action
         action->size = currentBounds;
+    }else if(action->actionType == ChangeText && rect){
+        rect->setText(action->oldText);
+        //update action to reverse
+        action->oldText = action->newText;
+        action->newText = rect->getText();
     }
 }
 

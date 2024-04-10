@@ -41,6 +41,7 @@ qt_add_executable(CoreBoard
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         resizablerectitem.h resizablerectitem.cpp
+        symbolinputdialog.h symbolinputdialog.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET CoreBoard APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

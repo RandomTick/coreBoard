@@ -29,7 +29,6 @@
     </property>
     <addaction name="actionView"/>
     <addaction name="actionEdit"/>
-    <addaction name="actionImport"/>
    </widget>
    <widget class="QMenu" name="menuInfo">
     <property name="title">
@@ -48,11 +47,6 @@
   <action name="actionEdit">
    <property name="text">
     <string>Edit Layout</string>
-   </property>
-  </action>
-  <action name="actionImport">
-   <property name="text">
-    <string>Open Layout</string>
    </property>
   </action>
  </widget>

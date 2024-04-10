@@ -12,6 +12,10 @@ void ResizableRectItem::setText(const QString &text) {
     centerText();
 }
 
+QString ResizableRectItem::getText() {
+    return textItem->toPlainText();
+}
+
 void ResizableRectItem::setRect(const QRectF &rect) {
     QGraphicsRectItem::setRect(rect);
     centerText(); // Recenter the text whenever the rectangle size changes

@@ -24,9 +24,17 @@ public:
         QGraphicsItem *item;
         QPointF position;
         QRectF size;
+        QString oldText;
+        QString newText;
+
+        Action(Actions actionType, QGraphicsItem *item, QPointF position)
+            : actionType(actionType), item(item), position(position){}
 
         Action(Actions actionType, QGraphicsItem *item, QPointF position, QRectF size)
             : actionType(actionType), item(item), position(position), size(size) {}
+
+        Action(Actions actionType, QGraphicsItem *item, QString oldText, QString newText)
+            : actionType(actionType), item(item), oldText(oldText), newText(newText){}
 
     };
     void doAction(Action action);

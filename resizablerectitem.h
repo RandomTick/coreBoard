@@ -11,6 +11,7 @@ public:
     void setText(const QString &text);
     void setRect(const QRectF &rect);
     void setRect(qreal x, qreal y, qreal w, qreal h);
+    QString getText();
 
 private:
     QGraphicsTextItem *textItem;
