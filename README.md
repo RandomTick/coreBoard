@@ -22,7 +22,7 @@ In the realm of digital content creation, particularly speedrunning, streaming a
 
 ### Usage
 
-[Coming soon...]
+[Coming soon...] (note that this is an actual keylogger and should not be shown on screen when typing passwords)
 
 ## Contributing
 
