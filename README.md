@@ -30,7 +30,7 @@ Contributions to **coreBoard** are warmly welcomed. Whether it's reporting bugs,
 
 ## License
 
-**coreBoard** is released under the [MIT License](LICENSE). Feel free to use, modify, and distribute it as per the license terms.
+**coreBoard** is released under the [GNU General Public License v3.0](LICENSE). Feel free to use, modify, and distribute it as per the license terms.
 
 ## Acknowledgements
 
