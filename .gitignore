@@ -14,7 +14,6 @@
 *.so.*
 *_pch.h.cpp
 *_resource.rc
-*.qm
 .#*
 *.*#
 core
@@ -72,3 +71,4 @@ CMakeLists.txt.user*
 *.dll
 *.exe
 
+build/*
