@@ -8,7 +8,6 @@
 #include <QMenu>
 #include <QInputDialog>
 #include <float.h>
-//#include <iostream>
 
 LayoutEditor *layoutEditor;
 QList<QGraphicsItem*> alignmentHelpers;

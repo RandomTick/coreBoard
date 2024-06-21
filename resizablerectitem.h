@@ -1,8 +1,6 @@
 #ifndef RESIZABLERECTITEM_H
 #define RESIZABLERECTITEM_H
 
-#include<list>
-
 #include <QGraphicsRectItem>
 #include <QGraphicsTextItem>
 

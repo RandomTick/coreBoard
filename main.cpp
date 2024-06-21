@@ -29,8 +29,6 @@ int main(int argc, char *argv[])
     WindowsKeyListener keyListener;
     keyListener.startListening();
 
-
-
     // Connect signals to slots
     QObject::connect(&keyListener, &WindowsKeyListener::keyPressed,
                      w.keyboardWidget(), &KeyboardWidget::onKeyPressed);

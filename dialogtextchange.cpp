@@ -42,7 +42,7 @@ DialogTextChange::DialogTextChange(QWidget *parent, QString currentText) : QDial
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 
     // Accept button
-    QPushButton *acceptButton = new QPushButton(tr("OK"), this);
+    QPushButton *acceptButton = new QPushButton(tr("Save"), this);
     controlButtonsLayout->addWidget(acceptButton);
     connect(acceptButton, &QPushButton::clicked, this, &QDialog::accept);
 

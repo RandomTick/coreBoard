@@ -6,6 +6,11 @@
 DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> currentKeyCodes)
     : QDialog(parent), keyCodes(currentKeyCodes)
 {
+    #ifdef Q_OS_WIN
+    keyListener = new WindowsKeyListener(this);
+
+    #endif
+
     setWindowTitle("Change Key Codes");
 
     QVBoxLayout *layout = new QVBoxLayout(this);
@@ -23,23 +28,39 @@ DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> current
     QPushButton *cancelButton = new QPushButton(tr("Cancel"), this);
     controlButtonsLayout->addWidget(cancelButton);
 
-    QPushButton *addButton = new QPushButton("Add Key Code", this);
+    QPushButton *addButton = new QPushButton(tr("Add Key Code"), this);
     controlButtonsLayout->addWidget(addButton);
 
-    QPushButton *clearButton = new QPushButton("Clear Key Codes", this);
+    QPushButton *clearButton = new QPushButton(tr("Clear Key Codes"), this);
     controlButtonsLayout->addWidget(clearButton);
 
-    QPushButton *okButton = new QPushButton("OK", this);
+    QPushButton *okButton = new QPushButton(tr("Save"), this);
     controlButtonsLayout->addWidget(okButton);
 
 
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 
-    connect(addButton, &QPushButton::clicked, this, [this, keyCodesDisplay]() {
-        // Placeholder for key code input
-        int keyCode = 123; // Replace with actual input method
-        insertKeycode(keyCode);
-        updateDisplay(keyCodesDisplay);
+    connect(addButton, &QPushButton::clicked, this, [this, keyCodesDisplay, addButton]() {
+        addButton->setEnabled(false);
+        addButton->setText(tr("Press a key..."));
+
+        //select nothing
+        setFocus();
+        // Connect to the keyPressed signal temporarily
+        QMetaObject::Connection conn = connect(keyListener, &WindowsKeyListener::keyPressed,
+            this, [this, keyCodesDisplay, addButton](int keyCode) {
+                // Disconnect after receiving the key
+                QObject::disconnect(this);
+
+                insertKeycode(keyCode);
+                updateDisplay(keyCodesDisplay);
+
+                addButton->setEnabled(true);
+                addButton->setText(tr("Add Key Code"));
+            }, Qt::SingleShotConnection);
+
+        // Start listening for keys
+        keyListener->startListening();
     });
 
     connect(clearButton, &QPushButton::clicked, this, [this, keyCodesDisplay]() {
@@ -50,6 +71,26 @@ DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> current
     connect(okButton, &QPushButton::clicked, this, &QDialog::accept);
 
     updateDisplay(keyCodesDisplay);
+}
+
+DialogKeycodeChange::~DialogKeycodeChange()
+{
+    qDebug("KeyCodeListener detached");
+    keyListener->stopListening();
+}
+
+void DialogKeycodeChange::keyPressEvent(QKeyEvent *event)
+{
+    //Ignore all events
+    return;
+
+    //theoretically limit on escape, enter, numpad enter is necessary but no key should be needed
+    if (event->key() != Qt::Key_Escape &&
+        event->key() != Qt::Key_Enter)
+    {
+        // Pass the event to the base class
+
+    }
 }
 
 std::list<int> DialogKeycodeChange::getKeyCodes() const

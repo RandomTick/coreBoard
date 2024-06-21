@@ -2,7 +2,7 @@
 #define LAYOUTEDITORGRAPHICSVIEW_H
 
 #include <QGraphicsView>
-#include "resizablerectitem.h"
+
 
 class LayoutEditorGraphicsView : public QGraphicsView {
     Q_OBJECT
