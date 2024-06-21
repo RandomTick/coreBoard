@@ -9,6 +9,7 @@
 #include <QJsonArray>
 
 
+
 LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
 {
 
@@ -135,8 +136,17 @@ void LayoutEditor::createKey(const QJsonObject &keyData){
     int width = boundaries[1].toObject()["X"].toInt() - x;
     int height = boundaries[3].toObject()["Y"].toInt() - y;
 
+    QJsonArray kc = keyData.value("KeyCodes").toArray();
+    std::list<int> keyCodes = {};
 
-    addRectangle(label,width,height,x,y);
+    for(int i = 0; i < kc.count(); i++){
+        int j = kc.at(i).toInt();
+        keyCodes.push_back(j);
+    }
+
+
+
+    addRectangle(label,width,height,x,y, keyCodes);
 
 }
 
