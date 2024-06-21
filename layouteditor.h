@@ -29,6 +29,7 @@ private:
     void addShape();
 public slots:
     ResizableRectItem * addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y, const std::list<int> keyCodes = {});
+    void addItemToScene(QGraphicsItem *item);
     void loadLayoutButton();
     void createKey(const QJsonObject &keyData);
     void updateLanguage();

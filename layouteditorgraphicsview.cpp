@@ -3,7 +3,8 @@
 #include "layouteditorgraphicsview.h"
 #include "layouteditor.h"
 #include "resizablerectitem.h"
-#include "symbolinputdialog.h"
+#include "dialogtextchange.h"
+#include "dialogkeycodechange.h"
 #include <QMenu>
 #include <QInputDialog>
 #include <float.h>
@@ -34,8 +35,6 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
         item = item->parentItem();
     }
     if (event->button() == Qt::RightButton) {
-        //TODO: implement right click stuff, like changing bind/shape etc.
-        qDebug("right test");
         if(item){
             //change item properties
             ResizableRectItem *rect = dynamic_cast<ResizableRectItem*>(item);
@@ -48,7 +47,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 // Handle Actions
                 if (selectedAction == actionRename) {
                     QString oldText = rect->getText();
-                    SymbolInputDialog *dialog = new SymbolInputDialog(this, oldText);
+                    DialogTextChange *dialog = new DialogTextChange(this, oldText);
                     if (dialog->exec() == QDialog::Accepted) {
                         QString text = dialog->getText();
                         rect->setText(text);
@@ -65,7 +64,25 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                     }
 
                 } else if (selectedAction == actionRebind) {
-                    qDebug("2");
+                    std::list<int> oldKeycodes = rect->getKeycodes();
+                    std::list<int> newKeycodes = oldKeycodes;
+                    DialogKeycodeChange *dialog = new DialogKeycodeChange(this, oldKeycodes);
+
+                    if (dialog->exec() == QDialog::Accepted){
+                        newKeycodes = dialog->getKeyCodes();
+                        rect->setKeycodes(newKeycodes);
+                    }
+
+                    delete dialog;
+
+                    //log action:
+                    if (oldKeycodes != newKeycodes){
+                        Action* action = new Action(Actions::ChangeKeyCodes, rect, oldKeycodes, newKeycodes);
+                        undoActions.push_back(action);
+                        redoActions.clear();
+                        layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    }
+
                 }else if (selectedAction == actionDelete) {
                     Action * action = new Action(Actions::Remove, rect);
 
@@ -74,7 +91,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                     action->position = currentPos;
                     QRectF currentBounds = getCorrectBoundingRect(rect);
                     action->size = currentBounds;
-                    action->keyCodes = rect->getKeycodes();
+                    action->oldKeycodes = rect->getKeycodes();
 
                     undoActions.push_back(action);
                     redoActions.clear();
@@ -420,21 +437,17 @@ void LayoutEditorGraphicsView::doAction(Action *action){
         //update action to reverse
         action->oldText = action->newText;
         action->newText = rect->getText();
-    }else if(action->actionType == Add){
+    }else if (action->actionType == ChangeKeyCodes  && rect){
+        rect->setKeycodes(action->oldKeycodes);
+        //update action to reverse
+        action->oldKeycodes = action->newKeycodes;
+        action->newKeycodes = rect->getKeycodes();
+    }else if(action->actionType == Add && rect){
         action->actionType = Actions::Remove;
-        action->oldText = rect->getText();
-        QPointF currentPos = rect->pos();
-        action->position = currentPos;
-        QRectF currentBounds = getCorrectBoundingRect(rect);
-        action->size = currentBounds;
-        action->keyCodes = rect->getKeycodes();
-
         scene->removeItem(rect);
-    }else if (action->actionType == Remove){
-        ResizableRectItem *rect = layoutEditor->addRectangle(action->oldText, action->size.height(), action->size.width(), action->position.x(),action->position.y(), action->keyCodes);
-
+    }else if (action->actionType == Remove && rect){
         action->actionType = Actions::Add;
-        action->item = rect;
+        layoutEditor->addItemToScene(rect);
     }
 }
 

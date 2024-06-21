@@ -164,6 +164,10 @@ ResizableRectItem * LayoutEditor::addRectangle(const QString &text, qreal h, qre
     return rect;
 }
 
+void LayoutEditor::addItemToScene(QGraphicsItem *item){
+    scene->addItem(item);
+}
+
 void LayoutEditor::updateLanguage() {
     // Update the text of your widgets here
     addButton->setText(tr("Add Shape"));

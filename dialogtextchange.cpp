@@ -1,10 +1,10 @@
-#include "SymbolInputDialog.h"
+#include "dialogtextchange.h"
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QSignalMapper>
 
-SymbolInputDialog::SymbolInputDialog(QWidget *parent, QString currentText) : QDialog(parent) {
+DialogTextChange::DialogTextChange(QWidget *parent, QString currentText) : QDialog(parent) {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
     // Input field
@@ -49,11 +49,11 @@ SymbolInputDialog::SymbolInputDialog(QWidget *parent, QString currentText) : QDi
 
 }
 
-void SymbolInputDialog::insertSymbol(const QString &symbol) {
+void DialogTextChange::insertSymbol(const QString &symbol) {
     // Insert the symbol into the input field at the current cursor position
     lineEdit->insert(symbol);
 }
 
-QString SymbolInputDialog::getText() const {
+QString DialogTextChange::getText() const {
     return lineEdit->text();
 }

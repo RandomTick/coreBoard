@@ -17,7 +17,7 @@ public:
         Move,
         Resize,
         ChangeText,
-        ChangeKey
+        ChangeKeyCodes
     };
     class Action{
     public:
@@ -27,7 +27,8 @@ public:
         QRectF size;
         QString oldText;
         QString newText;
-        std::list<int> keyCodes;
+        std::list<int> oldKeycodes;
+        std::list<int> newKeycodes;
 
         Action(Actions actionType, QGraphicsItem *item)
             : actionType(actionType), item(item){}
@@ -40,6 +41,9 @@ public:
 
         Action(Actions actionType, QGraphicsItem *item, QString oldText, QString newText)
             : actionType(actionType), item(item), oldText(oldText), newText(newText){}
+
+        Action(Actions actionType, QGraphicsItem *item, std::list<int> oldKeycodes, std::list<int> newKeycodes)
+            : actionType(actionType), item(item), oldKeycodes(oldKeycodes), newKeycodes(newKeycodes){}
 
     };
     void doAction(Action action);
