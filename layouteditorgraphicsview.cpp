@@ -412,10 +412,11 @@ void LayoutEditorGraphicsView::doAction(Action *action){
         action->position = currentPos;
         QRectF currentBounds = getCorrectBoundingRect(rect);
         action->size = currentBounds;
+        action->keyCodes = rect->getKeycodes();
 
         scene->removeItem(rect);
     }else if (action->actionType == Remove){
-        ResizableRectItem *rect = layoutEditor->addRectangle(action->oldText, action->size.height(), action->size.width(), action->position.x(),action->position.y());
+        ResizableRectItem *rect = layoutEditor->addRectangle(action->oldText, action->size.height(), action->size.width(), action->position.x(),action->position.y(), action->keyCodes);
 
         action->actionType = Actions::Add;
         action->item = rect;

@@ -145,8 +145,8 @@ void LayoutEditor::addShape(){
     view->addRectAction(rect);
 }
 
-ResizableRectItem * LayoutEditor::addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y) {
-    ResizableRectItem *rect = new ResizableRectItem(QRectF(0, 0, h, w), text);
+ResizableRectItem * LayoutEditor::addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y, const std::list<int> keyCodes) {
+    ResizableRectItem *rect = new ResizableRectItem(QRectF(0, 0, h, w), text, keyCodes);
 
     scene->addItem(rect);
     rect->setPos(x,y);

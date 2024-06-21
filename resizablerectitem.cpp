@@ -1,11 +1,15 @@
 #include "ResizableRectItem.h"
 
-ResizableRectItem::ResizableRectItem(const QRectF &rect, const QString &text, QGraphicsItem *parent)
+ResizableRectItem::ResizableRectItem(const QRectF &rect, const QString &text, const std::list<int> keycodes, QGraphicsItem *parent)
     : QGraphicsRectItem(rect, parent) {
     textItem = new QGraphicsTextItem(this);
     textItem->setPlainText(text);
+    keyCodes = keycodes;
     centerText();
 }
+
+
+
 
 void ResizableRectItem::setText(const QString &text) {
     textItem->setPlainText(text);
@@ -23,6 +27,14 @@ void ResizableRectItem::setRect(const QRectF &rect) {
 
 void ResizableRectItem::setRect(qreal x, qreal y, qreal w, qreal h) {
     setRect(QRectF(x, y, w, h));
+}
+
+void ResizableRectItem::setKeycodes(const std::list<int> newKeycodes){
+    keyCodes = newKeycodes;
+}
+
+std::list<int> ResizableRectItem::getKeycodes(){
+    return keyCodes;
 }
 
 void ResizableRectItem::centerText() {

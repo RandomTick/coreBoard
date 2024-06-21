@@ -27,6 +27,7 @@ public:
         QRectF size;
         QString oldText;
         QString newText;
+        std::list<int> keyCodes;
 
         Action(Actions actionType, QGraphicsItem *item)
             : actionType(actionType), item(item){}
