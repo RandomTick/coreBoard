@@ -55,6 +55,7 @@ protected:
 
 
 
+
 private:
     QGraphicsScene *scene;
     QGraphicsItem *currentItem;

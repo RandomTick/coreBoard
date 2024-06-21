@@ -67,7 +67,23 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 } else if (selectedAction == actionRebind) {
                     qDebug("2");
                 }else if (selectedAction == actionDelete) {
-                    qDebug("3");
+                    Action * action = new Action(Actions::Remove, rect);
+
+                    action->oldText = rect->getText();
+                    QPointF currentPos = rect->pos();
+                    action->position = currentPos;
+                    QRectF currentBounds = getCorrectBoundingRect(rect);
+                    action->size = currentBounds;
+                    action->keyCodes = rect->getKeycodes();
+
+                    undoActions.push_back(action);
+                    redoActions.clear();
+                    action = nullptr;
+                    currentItem = nullptr;
+                    layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    scene->removeItem(rect);
+
+
                 }
                 return;
             }
@@ -332,6 +348,7 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
     }
 }
 
+
 void LayoutEditorGraphicsView::addRectAction(QGraphicsItem* item){
     Action *action;
     action = new Action(Actions::Add, item);
@@ -369,8 +386,6 @@ void LayoutEditorGraphicsView::redoLastAction(){
     layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
 
 }
-
-
 
 
 void LayoutEditorGraphicsView::doAction(Action *action){
