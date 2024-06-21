@@ -2,6 +2,7 @@
 #define LAYOUTEDITORGRAPHICSVIEW_H
 
 #include <QGraphicsView>
+#include "resizablerectitem.h"
 
 class LayoutEditorGraphicsView : public QGraphicsView {
     Q_OBJECT
@@ -27,6 +28,9 @@ public:
         QString oldText;
         QString newText;
 
+        Action(Actions actionType, QGraphicsItem *item)
+            : actionType(actionType), item(item){}
+
         Action(Actions actionType, QGraphicsItem *item, QPointF position)
             : actionType(actionType), item(item), position(position){}
 
@@ -40,6 +44,7 @@ public:
     void doAction(Action action);
     void undoLastAction();
     void redoLastAction();
+    void addRectAction(QGraphicsItem* item);
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;

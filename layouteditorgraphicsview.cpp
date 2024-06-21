@@ -72,7 +72,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 return;
             }
         }else{
-            //change background properties/general stuff
+            //change background properties/general stuff, possibly dont want to do this in here, preferably in the keyboardWidget?. Depends on wheather we want to
         }
     }else{
 
@@ -332,6 +332,14 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
     }
 }
 
+void LayoutEditorGraphicsView::addRectAction(QGraphicsItem* item){
+    Action *action;
+    action = new Action(Actions::Add, item);
+    undoActions.push_back(action);
+    redoActions.clear();
+    action = nullptr;
+    layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+}
 
 void LayoutEditorGraphicsView::undoLastAction(){
     //make sure there is a last action
@@ -397,6 +405,20 @@ void LayoutEditorGraphicsView::doAction(Action *action){
         //update action to reverse
         action->oldText = action->newText;
         action->newText = rect->getText();
+    }else if(action->actionType == Add){
+        action->actionType = Actions::Remove;
+        action->oldText = rect->getText();
+        QPointF currentPos = rect->pos();
+        action->position = currentPos;
+        QRectF currentBounds = getCorrectBoundingRect(rect);
+        action->size = currentBounds;
+
+        scene->removeItem(rect);
+    }else if (action->actionType == Remove){
+        ResizableRectItem *rect = layoutEditor->addRectangle(action->oldText, action->size.height(), action->size.width(), action->position.x(),action->position.y());
+
+        action->actionType = Actions::Add;
+        action->item = rect;
     }
 }
 

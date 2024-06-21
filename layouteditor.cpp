@@ -7,7 +7,7 @@
 #include <QLabel>
 #include <QFileDialog>
 #include <QJsonArray>
-#include "resizablerectitem.h"
+
 
 LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
 {
@@ -59,6 +59,7 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     connect(openButton, &QPushButton::clicked, this, &LayoutEditor::loadLayoutButton);
     connect(undoButton, &QPushButton::clicked, view, &LayoutEditorGraphicsView::undoLastAction);
     connect(redoButton, &QPushButton::clicked, view, &LayoutEditorGraphicsView::redoLastAction);
+    connect(addButton, &QPushButton::clicked, this, &LayoutEditor::addShape);
 
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
@@ -139,12 +140,18 @@ void LayoutEditor::createKey(const QJsonObject &keyData){
 
 }
 
+void LayoutEditor::addShape(){
+    ResizableRectItem *rect = addRectangle("",100,100,100,100);
+    view->addRectAction(rect);
+}
 
-void LayoutEditor::addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y) {
+ResizableRectItem * LayoutEditor::addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y) {
     ResizableRectItem *rect = new ResizableRectItem(QRectF(0, 0, h, w), text);
 
     scene->addItem(rect);
     rect->setPos(x,y);
+
+    return rect;
 }
 
 void LayoutEditor::updateLanguage() {

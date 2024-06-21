@@ -8,6 +8,7 @@
 #include <QVBoxLayout>
 #include <QJsonArray>
 #include "layouteditorgraphicsview.h"
+#include "resizablerectitem.h"
 
 class LayoutEditor : public QWidget
 {
@@ -25,8 +26,9 @@ private:
     QPushButton *undoButton;
     QPushButton *redoButton;
     QPushButton *addButton;
+    void addShape();
 public slots:
-    void addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y);
+    ResizableRectItem * addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y);
     void loadLayoutButton();
     void createKey(const QJsonObject &keyData);
     void updateLanguage();
