@@ -1,74 +1,102 @@
-# This file is used to ignore files which are generated
-# ----------------------------------------------------------------------------
+# coreBoard .gitignore — generated and build artifacts only; source is tracked.
+# ---------------------------------------------------------------------------
+# The build directory must not be committed: it contains compiled objects,
+# executables, and CMake/Make/Ninja output that are machine- and tool-dependent.
+# Everyone should build from source with CMake.
+# ---------------------------------------------------------------------------
 
-*~
-*.autosave
-*.a
-*.core
-*.moc
-*.o
-*.obj
-*.orig
-*.rej
-*.so
-*.so.*
-*_pch.h.cpp
-*_resource.rc
-.#*
-*.*#
-core
-!core/
-tags
-.DS_Store
-.directory
-*.debug
-Makefile*
-*.prl
-*.app
-moc_*.cpp
-ui_*.h
-qrc_*.cpp
-Thumbs.db
-*.res
-*.rc
+# Release notes (internal checklist; not for repo)
+RELEASING.md
+
+# Build directories (do not upload)
+build/
+out/
+cmake-build-*/
+*.build/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
 /.qmake.cache
 /.qmake.stash
 
-# qtcreator generated files
+# Compiled objects and binaries
+*.a
+*.lib
+*.o
+*.obj
+*.so
+*.so.*
+*.dll
+*.exe
+*.dylib
+*.core
+core
+!core/
+
+# Qt / MOC / UIC / RCC generated
+*.moc
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+*_pch.h.cpp
+
+# Make / Ninja
+Makefile
+Makefile.*
+*.ninja
+*.ninja_deps
+*.ninja_log
+
+# Qt project / IDE
 *.pro.user*
 CMakeLists.txt.user*
+*.autosave
 
-# xemacs temporary files
-*.flc
-
-# Vim temporary files
-.*.swp
-
-# Visual Studio generated files
-*.ib_pdb_index
+# Windows / Visual Studio
 *.idb
 *.ilk
 *.pdb
 *.sln
 *.suo
-*.vcproj
-*vcproj.*.*.user
+*.vcxproj
+*vcxproj.*
+*.vcxproj.user
 *.ncb
 *.sdf
 *.opensdf
-*.vcxproj
-*vcxproj.*
+Thumbs.db
+*.res
+*.rc
+*_resource.rc
 
-# MinGW generated files
+# MinGW
 *.Debug
 *.Release
+*.ib_pdb_index
 
-# Python byte code
+# macOS
+*.app
+.DS_Store
+
+# Linux / misc
+.directory
+*.debug
+*.orig
+*.rej
+.#*
+*.*#
+tags
+
+# Editors
+*~
+.*.swp
+*.flc
+
+# Python
 *.pyc
 
-# Binaries
-# --------
-*.dll
-*.exe
-
-build/*
