@@ -9,8 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets LinguistTools)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets LinguistTools)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTools)
 
 set(TS_FILES translations/CoreBoard_en_US.ts translations/CoreBoard_fr_FR.ts translations/CoreBoard_de_DE.ts)
 
@@ -88,12 +88,84 @@ set_target_properties(CoreBoard PROPERTIES
 )
 
 include(GNUInstallDirs)
+
+# MSVC runtime and UCRT for Windows installer (bundled in NSIS)
+if(WIN32)
+    set(CMAKE_INSTALL_UCRT_LIBRARIES TRUE)
+endif()
+include(InstallRequiredSystemLibraries)
+
 install(TARGETS CoreBoard
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+# Deploy Qt DLLs and plugins so the installed app (and installer) are self-contained
+if(WIN32 AND NOT ANDROID)
+    if(QT_VERSION_MAJOR GREATER_EQUAL 6)
+        # Qt 6.3+: generated script runs windeployqt at install time
+        qt_generate_deploy_app_script(
+            TARGET CoreBoard
+            OUTPUT_SCRIPT deploy_script
+            NO_UNSUPPORTED_PLATFORM_ERROR
+            NO_COMPILER_RUNTIME  # we use InstallRequiredSystemLibraries
+        )
+        install(SCRIPT ${deploy_script})
+    else()
+        # Qt 5: run windeployqt at install time
+        set(_qt_bin_dir "")
+        if(TARGET Qt${QT_VERSION_MAJOR}::qmake)
+            get_target_property(_qmake_executable Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
+            if(_qmake_executable)
+                get_filename_component(_qt_bin_dir "${_qmake_executable}" DIRECTORY)
+            endif()
+        endif()
+        if(NOT _qt_bin_dir)
+            get_target_property(_widgets_loc Qt${QT_VERSION_MAJOR}::Widgets IMPORTED_LOCATION)
+            if(_widgets_loc)
+                get_filename_component(_qt_bin_dir "${_widgets_loc}" DIRECTORY)
+            endif()
+        endif()
+        if(_qt_bin_dir)
+            find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${_qt_bin_dir}")
+            if(WINDEPLOYQT_EXECUTABLE)
+                install(CODE "
+                    set(_exe \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/CoreBoard.exe\")
+                    if(NOT EXISTS \"\${_exe}\")
+                        message(FATAL_ERROR \"Expected exe at \${_exe}\")
+                    endif()
+                    execute_process(
+                        COMMAND \"${CMAKE_COMMAND}\" -E env PATH=\"${_qt_bin_dir}\" \"${WINDEPLOYQT_EXECUTABLE}\"
+                            --no-compiler-runtime
+                            \"\${_exe}\"
+                        RESULT_VARIABLE _res
+                    )
+                    if(_res)
+                        message(FATAL_ERROR \"windeployqt failed: \${_res}\")
+                    endif()
+                ")
+            endif()
+        endif()
+    endif()
+endif()
+
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(CoreBoard)
 endif()
+
+# --- CPack: Windows installer (NSIS) and ZIP
+set(CPACK_PACKAGE_NAME "coreBoard")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_VENDOR "coreBoard")
+if(WIN32)
+    set(CPACK_GENERATOR "NSIS;ZIP")
+    set(CPACK_NSIS_PACKAGE_NAME "coreBoard")
+    set(CPACK_NSIS_DISPLAY_NAME "coreBoard")
+    set(CPACK_NSIS_INSTALL_ROOT "\\$PROGRAMFILES64")
+    set(CPACK_NSIS_MUI_ICON "" CACHE FILEPATH "Optional: path to .ico for installer")
+    set(CPACK_NSIS_MUI_UNIICON "" CACHE FILEPATH "Optional: path to .ico for uninstaller")
+else()
+    set(CPACK_GENERATOR "ZIP")
+endif()
+include(CPack)
