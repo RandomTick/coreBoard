@@ -5,36 +5,16 @@
 #include <QTranslator>
 #include <QLocale>
 
-#include "windowskeylistener.h"
-#include "KeyboardWidget.h"
-
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    MainWindow w;    
+    MainWindow w;
     w.show();
-
-
 
     //select system language
     //TODO: make a menu and config to handle this/set it to something else
     //w.changeLanguage(&a, QLocale::system().name());
-
-
-    //Keyboard listener initialization:
-
-    //Handling for Windows
-    #ifdef Q_OS_WIN
-    WindowsKeyListener keyListener;
-    keyListener.startListening();
-
-    // Connect signals to slots
-    QObject::connect(&keyListener, &WindowsKeyListener::keyPressed,
-                     w.keyboardWidget(), &KeyboardWidget::onKeyPressed);
-    QObject::connect(&keyListener, &WindowsKeyListener::keyReleased,
-                     w.keyboardWidget(), &KeyboardWidget::onKeyReleased);
-    #endif
 
     return a.exec();
 }

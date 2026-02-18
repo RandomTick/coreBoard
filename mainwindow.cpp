@@ -1,11 +1,18 @@
 #include <QStackedWidget>
 #include <QVBoxLayout>
 #include <QTranslator>
+#include <QMessageBox>
+#include <QFileInfo>
+#include <QTimer>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "layouteditor.h"
-
-KeyboardWidget *m_keyboardWidget;
+#include "layoutsettings.h"
+#include "settingsdialog.h"
+#include "versioninfo.h"
+#ifdef Q_OS_WIN
+#include "windowskeylistener.h"
+#endif
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -13,36 +20,176 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    QStackedWidget *stackedWidget = new QStackedWidget(this);
-    setCentralWidget(stackedWidget);
+    m_layoutSettings = new LayoutSettings;
+    m_stackedWidget = new QStackedWidget(this);
+    setCentralWidget(m_stackedWidget);
 
     m_keyboardWidget = new KeyboardWidget(this);
-    //m_keyboardWidget->loadLayout("C:/Users/SV5237/Documents/CoreBoard/keyboard_layout.json");
-    m_keyboardWidget->loadLayout("C:/Users/SV5237/Documents/CoreBoard/nohBoard_example.json");
+    m_layoutEditor = new LayoutEditor(this);
+    m_layoutEditor->setLayoutSettings(m_layoutSettings);
 
-    //KeyboardWidget *editKeyboard = new KeyboardWidget(this);
-    //editKeyboard->loadLayout("C:/Users/SV5237/Documents/CoreBoard/nohBoard_example.json");
-    LayoutEditor *m_layoutEditor = new LayoutEditor(this);
+    m_stackedWidget->addWidget(m_keyboardWidget);
+    m_stackedWidget->addWidget(m_layoutEditor);
 
+#ifdef Q_OS_WIN
+    m_keyListener = new WindowsKeyListener(this);
+    m_keyListener->startListening();
+    connect(m_keyListener, &WindowsKeyListener::keyPressed, m_keyboardWidget, &KeyboardWidget::onKeyPressed);
+    connect(m_keyListener, &WindowsKeyListener::keyReleased, m_keyboardWidget, &KeyboardWidget::onKeyReleased);
+#endif
 
-    stackedWidget->addWidget(m_keyboardWidget);
-    stackedWidget->addWidget(m_layoutEditor);
+    QString lastPath = m_layoutSettings->lastLayoutPath();
+    if (!lastPath.isEmpty() && QFileInfo::exists(lastPath)) {
+        m_keyboardWidget->loadLayout(lastPath);
+        m_layoutEditor->loadLayout(lastPath);
+        QTimer::singleShot(100, this, &MainWindow::ensureWindowFitsLayoutEditor);
+    }
+    int tab = m_layoutSettings->lastTabIndex();
+    m_stackedWidget->setCurrentIndex(qBound(0, tab, 1));
 
-    stackedWidget->setCurrentIndex(1);
-
-    connect(ui->actionView, &QAction::triggered, [stackedWidget](){
-        stackedWidget->setCurrentIndex(0);
+    connect(ui->actionView, &QAction::triggered, this, &MainWindow::onSwitchToView);
+    connect(ui->actionEdit, &QAction::triggered, [this]() {
+        m_stackedWidget->setCurrentIndex(1);
+        m_layoutSettings->setLastTabIndex(1);
+        m_layoutSettings->save();
     });
-    connect(ui->actionEdit, &QAction::triggered, [stackedWidget](){
-        stackedWidget->setCurrentIndex(1);
+    connect(ui->actionSettings, &QAction::triggered, this, &MainWindow::onSettings);
+    connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::onAbout);
+    applyVisualizationColors();
+    connect(m_layoutEditor, &LayoutEditor::layoutLoaded, this, &MainWindow::reloadVisualizationLayout);
+    connect(m_layoutEditor, &LayoutEditor::layoutLoaded, this, [this]() {
+        QTimer::singleShot(100, this, &MainWindow::ensureWindowFitsLayoutEditor);
     });
+}
 
+void MainWindow::ensureWindowFitsLayoutEditor()
+{
+    QSize need = m_layoutEditor->minimumSize();
+    QSize central = m_stackedWidget->size();
+    if (need.width() <= 0 || need.height() <= 0)
+        return;
+    // Resize window so central widget is exactly the required size (allows shrink = "as small as possible")
+    if (central.width() > 0 && central.height() > 0) {
+        int newW = width() + (need.width() - central.width());
+        int newH = height() + (need.height() - central.height());
+        QMainWindow::resize(newW, newH);
+    } else {
+        // Not laid out yet; use estimated chrome (menu bar + frame)
+        const int chromeW = 24;
+        const int chromeH = 80;
+        QMainWindow::resize(need.width() + chromeW, need.height() + chromeH);
+    }
+}
 
+void MainWindow::onAbout()
+{
+    QMessageBox::about(this, tr("About coreBoard"),
+        tr("<h3>coreBoard</h3>"
+           "<p>coreBoard is a keyboard visualization tool for streaming and video. "
+           "It displays key presses on screen in real time and is designed to be fast and easy to capture with OBS or similar software.</p>"
+           "<p>Built with C++ and Qt.</p>"
+           "<p>All source code is publicly available under the GPL-3.0 license:<br>"
+           "<a href=\"https://github.com/RandomTick/coreBoard\">https://github.com/RandomTick/coreBoard</a></p>"
+           "<p>Version %1</p>").arg(QLatin1String(APP_VERSION)));
+}
 
+void MainWindow::onSettings()
+{
+    SettingsDialog dlg(m_layoutSettings, this);
+    if (dlg.exec() == QDialog::Accepted)
+        applyVisualizationColors();
+}
+
+void MainWindow::applyVisualizationColors()
+{
+    m_keyboardWidget->setKeyColor(m_layoutSettings->keyColor());
+    m_keyboardWidget->setHighlightColor(m_layoutSettings->highlightColor());
+    m_keyboardWidget->setBackgroundColor(m_layoutSettings->backgroundColor());
+    m_keyboardWidget->setTextColor(m_layoutSettings->textColor());
+    m_keyboardWidget->setHighlightedTextColor(m_layoutSettings->highlightedTextColor());
+    m_keyboardWidget->applyColors();
+}
+
+void MainWindow::onSwitchToView()
+{
+    if (m_stackedWidget->currentIndex() != 1)
+        m_stackedWidget->setCurrentIndex(0);
+    else if (!m_layoutEditor->isDirty())
+        m_stackedWidget->setCurrentIndex(0);
+    else if (confirmLeaveEditor())
+        m_stackedWidget->setCurrentIndex(0);
+    if (m_stackedWidget->currentIndex() == 0) {
+        m_layoutSettings->setLastTabIndex(0);
+        m_layoutSettings->save();
+        // Reload visualization after switch so it shows current layout and key codes
+        QString path = m_layoutEditor->currentLayoutPath();
+        QTimer::singleShot(0, this, [this, path]() {
+            reloadVisualizationLayout(path);
+        });
+    }
+}
+
+void MainWindow::reloadVisualizationLayout(const QString &path)
+{
+    if (path.isEmpty())
+        return;
+    // Same path as "Open": reload visualization from file. Defer so after Save the file is closed.
+    QString pathCopy = path;
+    QTimer::singleShot(150, this, [this, pathCopy]() {
+        m_keyboardWidget->loadLayout(pathCopy);
+        m_keyboardWidget->update();
+    });
+}
+
+bool MainWindow::confirmLeaveEditor()
+{
+    QMessageBox::StandardButton b = QMessageBox::question(this, tr("Unsaved changes"),
+        tr("Save changes to the layout before switching?"),
+        QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+    if (b == QMessageBox::Cancel)
+        return false;
+    if (b == QMessageBox::Save) {
+        m_layoutEditor->saveLayout();
+        if (m_layoutEditor->isDirty())
+            return false;
+    }
+    return true;
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if (m_stackedWidget->currentIndex() == 1 && m_layoutEditor->isDirty()) {
+        QMessageBox::StandardButton b = QMessageBox::question(this, tr("Unsaved changes"),
+            tr("Save changes to the layout before closing?"),
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+        if (b == QMessageBox::Cancel) {
+            event->ignore();
+            return;
+        }
+        if (b == QMessageBox::Save) {
+            m_layoutEditor->saveLayout();
+            if (m_layoutEditor->isDirty()) {
+                event->ignore();
+                return;
+            }
+        }
+    }
+    m_layoutSettings->setLastTabIndex(m_stackedWidget->currentIndex());
+    m_layoutSettings->save();
+    event->accept();
+}
+
+void MainWindow::showEvent(QShowEvent *event)
+{
+    QMainWindow::showEvent(event);
+    if (m_stackedWidget->currentIndex() == 1)
+        QTimer::singleShot(100, this, &MainWindow::ensureWindowFitsLayoutEditor);
 }
 
 MainWindow::~MainWindow()
 {
+    delete m_layoutSettings;
+    m_layoutSettings = nullptr;
     delete ui;
 }
 
@@ -51,8 +198,12 @@ KeyboardWidget* MainWindow::keyboardWidget() const {
     return m_keyboardWidget;
 }
 
+WindowsKeyListener* MainWindow::keyListener() const {
+    return m_keyListener;
+}
+
 void MainWindow::resize(int width, int height){
-    this->resize(width,height);
+    QMainWindow::resize(width, height);
 }
 
 bool MainWindow::changeLanguage(const QApplication *a, const QString languageCode) {
@@ -87,4 +238,3 @@ bool MainWindow::changeLanguage(const QApplication *a, const QString languageCod
 
     return true;
 }
-
