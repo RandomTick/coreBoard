@@ -4,6 +4,12 @@
 #include <QWidget>
 #include <QPushButton>
 #include <QJsonArray>
+#include <QGraphicsView>
+#include <QGraphicsScene>
+#include <QGraphicsItem>
+#include <map>
+#include <vector>
+#include <QColor>
 
 class KeyboardWidget : public QWidget
 {
@@ -11,16 +17,33 @@ class KeyboardWidget : public QWidget
 
 public:
     explicit KeyboardWidget(QWidget *parent = nullptr);
-    void loadLayout(const QString &fileName);
+    void loadLayout(const QString &fileName, int retryCount = 0);
+    void loadLayoutFromData(const QByteArray &jsonData);
     QJsonArray elements;
-    KeyboardWidget *m_keyboardWidget; // Assuming this is your KeyboardWidget member
+
+    void setKeyColor(const QColor &color);
+    void setHighlightColor(const QColor &color);
+    void setBackgroundColor(const QColor &color);
+    void setTextColor(const QColor &color);
+    void setHighlightedTextColor(const QColor &color);
+    void applyColors();  // re-apply current colors to all keys and scene
 
 private:
     void createKey(const QJsonObject &keyData);
-    void changeKeyColor(const int &keyLabel, const QColor &color);
+    void applyLayoutData(const QByteArray &jsonData);
+    void changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor);
+    static void setShapeTextColor(QGraphicsItem *shapeItem, const QColor &color);
     void resetCounter();
 
-
+    QGraphicsView *m_view = nullptr;
+    QGraphicsScene *m_scene = nullptr;
+    std::map<int, std::vector<QGraphicsItem*>> m_keys;
+    std::map<QString, int> keyCounter;
+    QColor m_keyColor;
+    QColor m_highlightColor;
+    QColor m_backgroundColor;
+    QColor m_textColor;
+    QColor m_highlightedTextColor;
 
 public slots:
     void onKeyPressed(int key);

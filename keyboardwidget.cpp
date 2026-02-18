@@ -2,117 +2,283 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QFile>
-#include <QLabel>
+#include <QGraphicsRectItem>
+#include <QGraphicsEllipseItem>
+#include <QGraphicsPolygonItem>
+#include <QGraphicsTextItem>
+#include <QAbstractGraphicsShapeItem>
+#include <QVBoxLayout>
+#include <QTimer>
+#include <cmath>
 
 KeyboardWidget::KeyboardWidget(QWidget *parent) : QWidget(parent)
+    , m_keyColor(0, 0, 255)
+    , m_highlightColor(Qt::red)
+    , m_backgroundColor(53, 53, 53)
+    , m_textColor(Qt::white)
+    , m_highlightedTextColor(Qt::black)
 {
+    m_scene = new QGraphicsScene(this);
+    m_view = new QGraphicsView(m_scene, this);
+    m_view->setRenderHint(QPainter::Antialiasing);
+    m_view->setRenderHint(QPainter::TextAntialiasing);
+    m_view->setFrameShape(QFrame::NoFrame);
+    m_view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_view->setBackgroundBrush(m_backgroundColor);
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(m_view);
 }
 
-std::map<int, QLabel*> keys;
-std::map<QString, int> keyCounter;
-
-//TODO: change colors to use from config
-QColor defaultColor = QColor(0,0,255);
-QColor hightlightedColor = Qt::red;
-
-void KeyboardWidget::loadLayout(const QString &fileName)
+void KeyboardWidget::setKeyColor(const QColor &color)
 {
-    QFile file(fileName);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning("Failed to open layout file.");
+    if (color.isValid())
+        m_keyColor = color;
+}
+
+void KeyboardWidget::setHighlightColor(const QColor &color)
+{
+    if (color.isValid())
+        m_highlightColor = color;
+}
+
+void KeyboardWidget::setBackgroundColor(const QColor &color)
+{
+    if (color.isValid()) {
+        m_backgroundColor = color;
+        m_view->setBackgroundBrush(m_backgroundColor);
+    }
+}
+
+void KeyboardWidget::setTextColor(const QColor &color)
+{
+    if (color.isValid())
+        m_textColor = color;
+}
+
+void KeyboardWidget::setHighlightedTextColor(const QColor &color)
+{
+    if (color.isValid())
+        m_highlightedTextColor = color;
+}
+
+void KeyboardWidget::setShapeTextColor(QGraphicsItem *shapeItem, const QColor &color)
+{
+    if (!shapeItem || !color.isValid())
+        return;
+    for (QGraphicsItem *child : shapeItem->childItems()) {
+        QGraphicsTextItem *textItem = qgraphicsitem_cast<QGraphicsTextItem*>(child);
+        if (textItem) {
+            textItem->setDefaultTextColor(color);
+            return;
+        }
+    }
+}
+
+void KeyboardWidget::applyColors()
+{
+    m_view->setBackgroundBrush(m_backgroundColor);
+    // Apply to all key shapes in the scene (including keys with no keycode)
+    for (QGraphicsItem *item : m_scene->items()) {
+        if (item->parentItem() != nullptr)
+            continue;
+        QAbstractGraphicsShapeItem *shape = qgraphicsitem_cast<QAbstractGraphicsShapeItem*>(item);
+        if (shape) {
+            shape->setBrush(m_keyColor);
+            setShapeTextColor(shape, m_textColor);
+        }
+    }
+}
+
+void KeyboardWidget::loadLayout(const QString &fileName, int retryCount)
+{
+    if (fileName.isEmpty()) {
+        m_scene->clear();
+        m_keys.clear();
+        keyCounter.clear();
+        update();
         return;
     }
 
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly)) {
+        const int maxRetries = 8;
+        if (retryCount < maxRetries) {
+            QTimer::singleShot(80, this, [this, fileName, retryCount]() {
+                loadLayout(fileName, retryCount + 1);
+            });
+        }
+        return;
+    }
+
+    QByteArray data = file.readAll();
+    file.close();
+    applyLayoutData(data);
+}
+
+void KeyboardWidget::loadLayoutFromData(const QByteArray &jsonData)
+{
+    if (jsonData.isEmpty()) {
+        m_scene->clear();
+        m_keys.clear();
+        keyCounter.clear();
+        update();
+        return;
+    }
+    applyLayoutData(jsonData);
+}
+
+void KeyboardWidget::applyLayoutData(const QByteArray &jsonData)
+{
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(jsonData, &parseError);
+    if (parseError.error != QJsonParseError::NoError || doc.isNull())
+        return;
+
     QJsonObject rootObject = doc.object();
     elements = rootObject.value("Elements").toArray();
+
+    m_scene->clear();
+    m_keys.clear();
+    keyCounter.clear();
 
     for (const QJsonValue &element : elements) {
         if (element.toObject().value("__type").toString() == "KeyboardKey") {
             createKey(element.toObject());
         }
     }
-    //adjust size
+
     int maxWidth = rootObject.value("Width").toInt();
     int maxHeight = rootObject.value("Height").toInt();
-
+    m_scene->setSceneRect(0, 0, qMax(1, maxWidth), qMax(1, maxHeight));
     setMinimumSize(maxWidth, maxHeight);
-    this->window()->resize(0, 0);
-
+    m_view->viewport()->update();
+    update();
 }
-
 
 void KeyboardWidget::createKey(const QJsonObject &keyData)
 {
     QJsonArray boundaries = keyData.value("Boundaries").toArray();
-    if (boundaries.size() < 4) {//TODO: Handle others than rectangles here!
+    if (boundaries.size() < 4) {
         qWarning("Invalid boundaries data.");
         return;
     }
 
-    // Assuming rectangular shape and the points are given in order
-    int x = boundaries[0].toObject()["X"].toInt();
-    int y = boundaries[0].toObject()["Y"].toInt();
-    int width = boundaries[1].toObject()["X"].toInt() - x;
-    int height = boundaries[3].toObject()["Y"].toInt() - y;
-
-    QRect geometry(x, y, width, height);
-    QLabel *keyLabel = new QLabel(this);
-    keyLabel->setGeometry(geometry);
-
-    //QString label = keyData.value("label").toString();
-    //qDebug(QString("keyCode: %1 for key %2").arg(keyCode).arg(label).toStdString().c_str());
     QString label = keyData.value("Text").toString();
+    QJsonArray kc = keyData.value("KeyCodes").toArray();
 
+    qreal minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    for (const QJsonValue &pv : boundaries) {
+        QJsonObject po = pv.toObject();
+        qreal px = po["X"].toDouble();
+        qreal py = po["Y"].toDouble();
+        minX = qMin(minX, px);
+        minY = qMin(minY, py);
+        maxX = qMax(maxX, px);
+        maxY = qMax(maxY, py);
+    }
+    qreal w = maxX - minX;
+    qreal h = maxY - minY;
 
+    QAbstractGraphicsShapeItem *shapeItem = nullptr;
 
-    keyLabel->setText(label);
-    keyLabel->setStyleSheet(QString("background-color: #%1%2%3; border: 1px solid black;")
-                           .arg(defaultColor.red(), 2, 16, QChar('0'))
-                           .arg(defaultColor.green(), 2, 16, QChar('0'))
-                           .arg(defaultColor.blue(), 2, 16, QChar('0')));
-    keyLabel->setAlignment(Qt::AlignCenter); // Center the text
-    keyLabel->show();
-    keyLabel->update();
-
-
-    QJsonArray keyCodes = keyData.value("KeyCodes").toArray();
-    if (!keyCodes.isEmpty()) {
-        for (int i = 0; i < keyCodes.size(); i++){
-            keys[keyCodes[i].toInt()] = keyLabel;
+    if (boundaries.size() == 4) {
+        QPolygonF fourPoints;
+        for (const QJsonValue &pv : boundaries) {
+            QJsonObject po = pv.toObject();
+            fourPoints << QPointF(po["X"].toDouble(), po["Y"].toDouble());
         }
+        bool isAxisAlignedRect = true;
+        for (const QPointF &p : fourPoints) {
+            if ((p.x() != minX && p.x() != maxX) || (p.y() != minY && p.y() != maxY)) {
+                isAxisAlignedRect = false;
+                break;
+            }
+        }
+        if (isAxisAlignedRect && w > 0 && h > 0) {
+            QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, w, h);
+            rect->setPos(minX, minY);
+            rect->setBrush(m_keyColor);
+            rect->setPen(QPen(Qt::black, 1));
+            m_scene->addItem(rect);
+            shapeItem = rect;
+        }
+    }
+
+    if (!shapeItem && boundaries.size() >= 32) {
+        QGraphicsEllipseItem *ellipse = new QGraphicsEllipseItem(0, 0, w, h);
+        ellipse->setPos(minX, minY);
+        ellipse->setBrush(m_keyColor);
+        ellipse->setPen(QPen(Qt::black, 1));
+        m_scene->addItem(ellipse);
+        shapeItem = ellipse;
+    }
+
+    if (!shapeItem) {
+        QPolygonF poly;
+        for (const QJsonValue &pv : boundaries) {
+            QJsonObject po = pv.toObject();
+            qreal px = po["X"].toDouble();
+            qreal py = po["Y"].toDouble();
+            poly << QPointF(px - minX, py - minY);
+        }
+        QGraphicsPolygonItem *polyItem = new QGraphicsPolygonItem(poly);
+        polyItem->setPos(minX, minY);
+        polyItem->setBrush(m_keyColor);
+        polyItem->setPen(QPen(Qt::black, 1));
+        m_scene->addItem(polyItem);
+        shapeItem = polyItem;
+    }
+
+    if (!shapeItem)
+        return;
+
+    QGraphicsTextItem *textItem = new QGraphicsTextItem(shapeItem);
+    textItem->setPlainText(label);
+    textItem->setDefaultTextColor(m_textColor);
+    QRectF textBr = textItem->boundingRect();
+    QRectF shapeBr = shapeItem->boundingRect();
+    textItem->setPos(shapeBr.center().x() - textBr.width() / 2, shapeBr.center().y() - textBr.height() / 2);
+    textItem->setZValue(1);
+
+    for (int i = 0; i < kc.size(); ++i) {
+        int code = static_cast<int>(kc[i].toDouble(0));
+        // Skip invalid/empty keycode (0); otherwise keys with no keycode show as pressed
+        if (code != 0)
+            m_keys[code].push_back(shapeItem);
     }
     keyCounter[label] = 0;
 }
 
-
-void KeyboardWidget::changeKeyColor(const int &keyCode, const QColor &color) {
-
-
-    //make sure key is in the layout before accessing it:
-    if (keys[keyCode] == nullptr){
+void KeyboardWidget::changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor)
+{
+    auto it = m_keys.find(keyCode);
+    if (it == m_keys.end())
         return;
-    }
-
-    QLabel *key = keys[keyCode];
-    key->setStyleSheet(QString("background-color: #%1%2%3; border: 1px solid black;")
-                           .arg(color.red(), 2, 16, QChar('0'))
-                           .arg(color.green(), 2, 16, QChar('0'))
-                           .arg(color.blue(), 2, 16, QChar('0')));
-
-    //somehow track count (no permanent increment, rather on rising edge)
-}
-void resetCounter(){
-    for (std::pair<const QString, int>  i : keyCounter){
-        i.second = 0;
+    for (QGraphicsItem *item : it->second) {
+        if (!item)
+            continue;
+        QAbstractGraphicsShapeItem *shape = qgraphicsitem_cast<QAbstractGraphicsShapeItem*>(item);
+        if (shape) {
+            shape->setBrush(brushColor);
+            setShapeTextColor(shape, textColor);
+        }
     }
 }
 
-void KeyboardWidget::onKeyPressed(int key) {
-    changeKeyColor(key, hightlightedColor);
+void KeyboardWidget::resetCounter()
+{
+    for (auto &p : keyCounter)
+        p.second = 0;
 }
 
-void KeyboardWidget::onKeyReleased(int key) {
-    changeKeyColor(key, defaultColor);
+void KeyboardWidget::onKeyPressed(int key)
+{
+    changeKeyColor(key, m_highlightColor, m_highlightedTextColor);
 }
 
+void KeyboardWidget::onKeyReleased(int key)
+{
+    changeKeyColor(key, m_keyColor, m_textColor);
+}
