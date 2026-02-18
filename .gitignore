@@ -8,6 +8,9 @@
 # Release notes (internal checklist; not for repo)
 RELEASING.md
 
+# Local backup (keep only locally, not in repo)
+backup_nohBoard_example.json
+
 # Build directories (do not upload)
 build/
 out/
