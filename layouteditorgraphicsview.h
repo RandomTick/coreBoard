@@ -44,12 +44,13 @@ public:
 
         Action(Actions actionType, QGraphicsItem *item, std::list<int> oldKeycodes, std::list<int> newKeycodes)
             : actionType(actionType), item(item), oldKeycodes(oldKeycodes), newKeycodes(newKeycodes){}
-
     };
     void doAction(Action action);
     void undoLastAction();
     void redoLastAction();
     void addRectAction(QGraphicsItem* item);
+    void clearUndoRedo();
+    void clearAlignmentHelpers();
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;

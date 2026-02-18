@@ -22,7 +22,7 @@ QString ResizableRectItem::getText() {
 
 void ResizableRectItem::setRect(const QRectF &rect) {
     QGraphicsRectItem::setRect(rect);
-    centerText(); // Recenter the text whenever the rectangle size changes
+    centerText();
 }
 
 void ResizableRectItem::setRect(qreal x, qreal y, qreal w, qreal h) {
@@ -38,7 +38,6 @@ std::list<int> ResizableRectItem::getKeycodes(){
 }
 
 void ResizableRectItem::centerText() {
-    // Ensure the text is centered within the new rectangle bounds
     QRectF textRect = textItem->boundingRect();
     QPointF center = rect().center() - QPointF(textRect.width() / 2, textRect.height() / 2);
     textItem->setPos(center);
