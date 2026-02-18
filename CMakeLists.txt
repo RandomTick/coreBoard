@@ -31,6 +31,10 @@ set(PROJECT_SOURCES
         icons/redo.png icons/undo.png
         resources.qrc
         nohBoard_example.json
+        resizableellipseitem.h resizableellipseitem.cpp
+        resizablepolygonitem.h resizablepolygonitem.cpp
+        layoutsettings.h layoutsettings.cpp
+        settingsdialog.h settingsdialog.cpp
         ${TRANSLATABLE_SOURCES}
         ${TS_FILES}
 )
