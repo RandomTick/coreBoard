@@ -3,13 +3,12 @@
 #include <QPushButton>
 #include <QLabel>
 
-DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> currentKeyCodes)
-    : QDialog(parent), keyCodes(currentKeyCodes)
+DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> currentKeyCodes, WindowsKeyListener *mainKeyListener)
+    : QDialog(parent), keyCodes(currentKeyCodes), mainKeyListener(mainKeyListener)
 {
-    #ifdef Q_OS_WIN
-    keyListener = new WindowsKeyListener(this);
-
-    #endif
+#ifdef Q_OS_WIN
+    keyListener = mainKeyListener ? mainKeyListener : new WindowsKeyListener(this);
+#endif
 
     setWindowTitle("Change Key Codes");
 
@@ -41,26 +40,19 @@ DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> current
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 
     connect(addButton, &QPushButton::clicked, this, [this, keyCodesDisplay, addButton]() {
+        if (!keyListener) return;
         addButton->setEnabled(false);
         addButton->setText(tr("Press a key..."));
-
-        //select nothing
         setFocus();
-        // Connect to the keyPressed signal temporarily
-        QMetaObject::Connection conn = connect(keyListener, &WindowsKeyListener::keyPressed,
+        connect(keyListener, &WindowsKeyListener::keyPressed,
             this, [this, keyCodesDisplay, addButton](int keyCode) {
-                // Disconnect after receiving the key
-                QObject::disconnect(this);
-
                 insertKeycode(keyCode);
                 updateDisplay(keyCodesDisplay);
-
                 addButton->setEnabled(true);
                 addButton->setText(tr("Add Key Code"));
             }, Qt::SingleShotConnection);
-
-        // Start listening for keys
-        keyListener->startListening();
+        if (!this->mainKeyListener)
+            keyListener->startListening();
     });
 
     connect(clearButton, &QPushButton::clicked, this, [this, keyCodesDisplay]() {
@@ -75,8 +67,13 @@ DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> current
 
 DialogKeycodeChange::~DialogKeycodeChange()
 {
-    qDebug("KeyCodeListener detached");
-    keyListener->stopListening();
+#ifdef Q_OS_WIN
+    if (mainKeyListener) {
+        mainKeyListener->setAsGlobalInstance();
+    } else if (keyListener) {
+        keyListener->stopListening();
+    }
+#endif
 }
 
 void DialogKeycodeChange::keyPressEvent(QKeyEvent *event)

@@ -10,7 +10,7 @@ class DialogKeycodeChange : public QDialog {
     Q_OBJECT
 
 public:
-    explicit DialogKeycodeChange(QWidget *parent = nullptr, std::list<int> currentKeyCodes = {});
+    explicit DialogKeycodeChange(QWidget *parent = nullptr, std::list<int> currentKeyCodes = {}, class WindowsKeyListener *mainKeyListener = nullptr);
     ~DialogKeycodeChange();
     std::list<int> getKeyCodes() const;
 
@@ -22,8 +22,8 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
 
 private:
-
-    WindowsKeyListener* keyListener;
+    WindowsKeyListener* keyListener = nullptr;
+    WindowsKeyListener* mainKeyListener = nullptr;
     std::list<int> keyCodes;
 
     void updateDisplay(QLineEdit *display);

@@ -46,8 +46,14 @@ WindowsKeyListener::WindowsKeyListener(QObject *parent) : QObject(parent) {
 }
 
 WindowsKeyListener::~WindowsKeyListener() {
-    stopListening(); // Ensure the hook is released
-    instance = nullptr;
+    if (instance == this) {
+        stopListening();
+        instance = nullptr;
+    }
+}
+
+void WindowsKeyListener::setAsGlobalInstance() {
+    instance = this;
 }
 
 void WindowsKeyListener::startListening() {

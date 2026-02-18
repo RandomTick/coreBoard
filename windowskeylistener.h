@@ -12,6 +12,8 @@ public:
 
     void startListening();
     void stopListening();
+    /** Reclaim the global hook (call from app when a temporary listener is being destroyed). */
+    void setAsGlobalInstance();
 
 signals:
     void keyPressed(int key);
