@@ -1,81 +1,95 @@
 # coreBoard
 
-**coreBoard** is a keyboard visualization and layout editor for streaming and recording. It shows key presses on-screen in real time and lets you design custom keyboard layouts. Built with C++ and Qt for performance and cross-platform use.
+A keyboard visualization and layout editor for streaming and recording. Display key presses on-screen in real time and design custom layouts—all with **full NohBoard layout compatibility**.
 
-## Overview
+![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
-For streaming, speedrunning, or video, an on-screen keyboard display helps viewers see inputs. **coreBoard** provides a fast, customizable keyboard overlay that you can capture in OBS or similar tools. It uses NohBoard-compatible JSON layouts so you can reuse or edit existing layouts.
+---
 
-**Note:** The application receives keyboard input for visualization. Do not type passwords while it is visible or while a key-capture is active; use it only in trusted setups.
+## What is coreBoard?
+
+For streaming, speedrunning, or video content, an on-screen keyboard overlay helps viewers see exactly which keys you're pressing. **coreBoard** gives you a fast, customizable overlay that works with OBS, Streamlabs, and similar tools.
+
+You can use your existing **NohBoard layouts as-is**—no conversion needed. coreBoard reads and writes the same JSON format, so layouts are fully interchangeable.
+
+> **Security note:** The app receives keyboard input for visualization. Do not type passwords while it is visible or while key capture is active. Use only in trusted setups.
+
+---
 
 ## Features
 
-- **Live keyboard view** — Real-time key press/release highlighting (Windows key listener).
-- **Layout editor** — Create and edit keyboard layouts with:
-  - **Shapes:** rectangles, ellipses, and polygons.
-  - **Resize** — Drag handles to resize and move items.
-  - **Key bindings** — Assign key codes to each key shape.
-  - **Undo/Redo** — Full undo/redo for edits.
-  - **Save/Load/New** — JSON layout files (NohBoard-compatible).
-- **Layout settings** — Remembers last layout, recent files (e.g. last 5), and last tab (View vs Editor).
-- **Cross-platform** — Qt-based; currently targeting Windows, with potential for other platforms.
+| Feature | Description |
+|--------|-------------|
+| **Live overlay** | Real-time key press/release highlighting via Windows key listener |
+| **Layout editor** | Built-in editor with rectangles, ellipses, polygons, resize handles, and key bindings |
+| **NohBoard compatible** | Load and save the same `.json` layouts—switch seamlessly from NohBoard |
+| **Undo/Redo** | Full history for layout edits |
+| **Settings persistence** | Remembers last layout, recent files, and view/editor tab |
+| **Cross-platform ready** | Qt-based; Windows supported, others possible |
 
-## Building
+---
 
-### Requirements
+## Quick Start
 
-- **CMake** 3.5 or newer  
-- **Qt** 5 or 6 with components: **Widgets**, **LinguistTools**  
-- C++17-capable compiler (e.g. MSVC, GCC, Clang)
+A **Windows installer** for the latest version is available under [Releases](https://github.com/YOUR_USERNAME/coreBoard/releases).
 
-### Build steps
+### Build from source
 
-Do **not** commit the `build` directory; it is ignored and should be generated locally.
+**Requirements:** CMake 3.5+, Qt 5 or 6 (Widgets, Svg, LinguistTools), C++17 compiler
 
 ```bash
-# Clone and enter the project
-git clone <repository-url>
+git clone https://github.com/YOUR_USERNAME/coreBoard.git
 cd coreBoard
 
-# Configure (use your Qt path if needed)
 cmake -B build -DCMAKE_PREFIX_PATH=<path-to-Qt>
-
-# Build
 cmake --build build
 ```
 
-The executable is produced inside `build/` (e.g. `build/CoreBoard.exe` on Windows). Run it from the project root so it can find layout files and resources.
+The executable is in `build/` (e.g. `build/CoreBoard.exe` on Windows). Run from the project root so layout files and resources are found.
 
-### CMake options
+### Run
 
-- `CMAKE_PREFIX_PATH` — Path to Qt (e.g. `C:/Qt/6.5.0/msvc2019_64` or `/usr/lib/qt6`).
+1. **View mode** — Shows the current layout and highlights keys as you press them. Use this for streaming or recording.
+2. **Editor tab** — Open, create, or edit layouts. Use **File → Open** to load any NohBoard `.json` layout.
+
+---
 
 ## Usage
 
-1. **View mode** — Shows the current layout and highlights keys as you press them. Use this for streaming or recording.
-2. **Layout editor** — Switch to the editor to create or edit a layout:
-   - **Open** — Load a `.json` layout (NohBoard format).
-   - **New** — Start a blank layout.
-   - **Add** — Add a rectangle, ellipse, or polygon; set text and key codes.
-   - **Save / Save as** — Write the layout to a JSON file.
+- **Open** — Load a `.json` layout (NohBoard format).
+- **New** — Start a blank layout.
+- **Add** — Add a rectangle, ellipse, or polygon; assign text and key codes.
+- **Save / Save as** — Write the layout to a JSON file (same format NohBoard uses).
 
-Layout and window settings (last layout, recent layouts, last tab) are stored and restored on the next run.
+Layout and window settings (last layout, recent layouts, tab) are restored on next launch.
 
-## Project structure (summary)
+---
 
-- **Keyboard widget** — Renders the layout and key states.
-- **Layout editor** — Scene-based editor (rectangles, ellipses, polygons) with undo/redo.
-- **Layout settings** — Persists last layout path, recent layouts, and tab index.
-- **Windows key listener** — Feeds key press/release events to the keyboard widget.
+## Switching from NohBoard?
+
+See the **[NohBoard Migration Guide](docs/NOHBOARD_MIGRATION.md)** for a quick step-by-step guide. In short: your layouts work as-is.
+
+---
+
+## Project Structure
+
+- **Keyboard widget** — Renders the layout and key states
+- **Layout editor** — Scene-based editor (rectangles, ellipses, polygons) with undo/redo
+- **Layout settings** — Persists last layout, recent files, tab index
+- **Windows key listener** — Feeds key press/release events to the overlay
+
+---
 
 ## Contributing
 
-Contributions are welcome: bug reports, feature ideas, or code changes. Translation scaffolding (Qt Linguist) exists for en/fr/de but strings are not yet translated—contributions there are welcome too. Please open an issue or pull request.
+Contributions welcome: bug reports, feature ideas, or pull requests. Translation scaffolding exists for en/fr/de—help is appreciated there too.
+
+---
 
 ## License
 
-**coreBoard** is released under the [GNU General Public License v3.0](LICENSE). You may use, modify, and distribute it under the terms of the license.
+**coreBoard** is released under the [GNU General Public License v3.0](LICENSE).
 
 ## Acknowledgements
 
-Inspired by **NohBoard**. coreBoard aims to be compatible with NohBoard-style JSON layouts while adding a built-in editor and improved performance. We acknowledge NohBoard’s work and build on it for streamers and content creators.
+Inspired by **NohBoard**. coreBoard aims for full layout compatibility while adding a built-in editor and improved performance. We acknowledge NohBoard's work and build on it for streamers and content creators.
