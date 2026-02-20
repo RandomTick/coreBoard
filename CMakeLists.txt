@@ -46,6 +46,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
 qt_add_executable(CoreBoard
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
+        CoreBoard.rc
         resizablerectitem.h resizablerectitem.cpp
         dialogtextchange.h dialogtextchange.cpp
         dialogkeycodechange.h
@@ -67,6 +68,7 @@ else()
     else()
         add_executable(CoreBoard
             ${PROJECT_SOURCES}
+            CoreBoard.rc
         )
     endif()
 
@@ -179,14 +181,37 @@ set(CPACK_PACKAGE_NAME "coreBoard")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_VENDOR "coreBoard")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "coreBoard")
-set(CPACK_PACKAGE_FILE_NAME "coreBoard-${CPACK_SYSTEM_NAME}")
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(_cpack_arch "win64")
+else()
+    set(_cpack_arch "win32")
+endif()
+set(CPACK_PACKAGE_FILE_NAME "coreBoard-${_cpack_arch}")
+set(CPACK_PACKAGE_EXECUTABLES "CoreBoard" "coreBoard")
 if(WIN32)
     set(CPACK_GENERATOR "NSIS;ZIP")
     set(CPACK_NSIS_PACKAGE_NAME "coreBoard")
     set(CPACK_NSIS_DISPLAY_NAME "coreBoard")
     set(CPACK_NSIS_INSTALL_ROOT "\\$PROGRAMFILES64")
-    set(CPACK_NSIS_MUI_ICON "" CACHE FILEPATH "Optional: path to .ico for installer")
-    set(CPACK_NSIS_MUI_UNIICON "" CACHE FILEPATH "Optional: path to .ico for uninstaller")
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\CoreBoard.exe")
+    set(CPACK_NSIS_WELCOME_TITLE "Welcome to coreBoard Setup")
+    set(CPACK_NSIS_FINISH_TITLE "coreBoard installed successfully")
+    set(CPACK_NSIS_MUI_FINISHPAGE_RUN "\$INSTDIR\\\\bin\\\\CoreBoard.exe")
+    set(CPACK_NSIS_BRANDING_TEXT "coreBoard")
+    set(CPACK_NSIS_IGNORE_LICENSE_PAGE ON)
+    set(_installer_dir "${CMAKE_CURRENT_SOURCE_DIR}/installer")
+    if(EXISTS "${_installer_dir}/coreBoard.ico")
+        set(CPACK_NSIS_MUI_ICON "${_installer_dir}/coreBoard.ico")
+        set(CPACK_NSIS_MUI_UNIICON "${_installer_dir}/coreBoard.ico")
+    endif()
+    if(EXISTS "${_installer_dir}/welcome.bmp")
+        set(CPACK_NSIS_MUI_WELCOMEFINISHPAGE_BITMAP "${_installer_dir}/welcome.bmp")
+    endif()
+    if(EXISTS "${_installer_dir}/header.bmp")
+        set(CPACK_NSIS_MUI_HEADERIMAGE "${_installer_dir}/header.bmp")
+    endif()
+    set(CPACK_NSIS_CREATE_ICONS_EXTRA "CreateShortCut '$DESKTOP\\\\coreBoard.lnk' '$INSTDIR\\\\bin\\\\CoreBoard.exe' ''")
+    set(CPACK_NSIS_DELETE_ICONS_EXTRA "Delete '$DESKTOP\\\\coreBoard.lnk'")
 else()
     set(CPACK_GENERATOR "ZIP")
 endif()

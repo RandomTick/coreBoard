@@ -76,6 +76,7 @@ Thumbs.db
 *.res
 *.rc
 *_resource.rc
+!CoreBoard.rc
 
 # MinGW
 *.Debug
