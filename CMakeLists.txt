@@ -9,13 +9,14 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets LinguistTools)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTools)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets LinguistTools Svg)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTools Svg)
 
 set(TS_FILES translations/CoreBoard_en_US.ts translations/CoreBoard_fr_FR.ts translations/CoreBoard_de_DE.ts)
 
 set(TRANSLATABLE_SOURCES
     mainwindow.ui
+    labelsettingsdialog.cpp
     layouteditor.h layouteditor.cpp
     main.cpp
     mainwindow.cpp
@@ -34,6 +35,8 @@ set(PROJECT_SOURCES
         resizablepolygonitem.h resizablepolygonitem.cpp
         layoutsettings.h layoutsettings.cpp
         settingsdialog.h settingsdialog.cpp
+        labelsettingsdialog.h labelsettingsdialog.cpp
+        dialogstyle.h dialogstyle.cpp
         ${TRANSLATABLE_SOURCES}
         ${TS_FILES}
 )
@@ -71,7 +74,7 @@ else()
 endif()
 
 
-target_link_libraries(CoreBoard PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(CoreBoard PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Svg)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
@@ -89,11 +92,28 @@ set_target_properties(CoreBoard PROPERTIES
 
 include(GNUInstallDirs)
 
-# MSVC runtime and UCRT for Windows installer (bundled in NSIS)
+# Windows: bundle compiler runtime so install/installer runs on other PCs
 if(WIN32)
     set(CMAKE_INSTALL_UCRT_LIBRARIES TRUE)
+    include(InstallRequiredSystemLibraries)
+    # MinGW: windeployqt and CPack do not copy MinGW runtime DLLs; install them explicitly
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        get_filename_component(_mingw_bin "${CMAKE_CXX_COMPILER}" DIRECTORY)
+        set(_mingw_runtime_dlls
+            libgcc_s_seh-1.dll
+            libstdc++-6.dll
+            libwinpthread-1.dll
+        )
+        foreach(_dll ${_mingw_runtime_dlls})
+            set(_path "${_mingw_bin}/${_dll}")
+            if(EXISTS "${_path}")
+                install(FILES "${_path}" DESTINATION ${CMAKE_INSTALL_BINDIR})
+            else()
+                message(WARNING "MinGW runtime DLL not found: ${_path} (installer may fail on other PCs)")
+            endif()
+        endforeach()
+    endif()
 endif()
-include(InstallRequiredSystemLibraries)
 
 install(TARGETS CoreBoard
     BUNDLE DESTINATION .
