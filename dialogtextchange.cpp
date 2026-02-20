@@ -1,16 +1,23 @@
 #include "dialogtextchange.h"
+#include <QLabel>
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QSignalMapper>
 
-DialogTextChange::DialogTextChange(QWidget *parent, QString currentText) : QDialog(parent) {
+DialogTextChange::DialogTextChange(QWidget *parent, QString currentText, QString currentShiftText) : QDialog(parent) {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
-    // Input field
+    mainLayout->addWidget(new QLabel(tr("Text (normal):")));
     lineEdit = new QLineEdit(this);
     mainLayout->addWidget(lineEdit);
     lineEdit->setText(currentText);
+
+    mainLayout->addWidget(new QLabel(tr("Text when Shift held:")));
+    shiftLineEdit = new QLineEdit(this);
+    shiftLineEdit->setPlaceholderText(tr("Leave empty to use same as normal"));
+    mainLayout->addWidget(shiftLineEdit);
+    shiftLineEdit->setText(currentShiftText);
 
     // Symbol buttons layout
     QHBoxLayout *symbolsLayout = new QHBoxLayout();
@@ -50,10 +57,16 @@ DialogTextChange::DialogTextChange(QWidget *parent, QString currentText) : QDial
 }
 
 void DialogTextChange::insertSymbol(const QString &symbol) {
-    // Insert the symbol into the input field at the current cursor position
-    lineEdit->insert(symbol);
+    if (lineEdit->hasFocus())
+        lineEdit->insert(symbol);
+    else if (shiftLineEdit->hasFocus())
+        shiftLineEdit->insert(symbol);
 }
 
 QString DialogTextChange::getText() const {
     return lineEdit->text();
+}
+
+QString DialogTextChange::getShiftText() const {
+    return shiftLineEdit->text();
 }

@@ -9,10 +9,25 @@
 #include "resizablepolygonitem.h"
 #include "dialogtextchange.h"
 #include "dialogkeycodechange.h"
+#include "dialogstyle.h"
 #include "mainwindow.h"
 #include "windowskeylistener.h"
+#include "keystyle.h"
 #include <QMenu>
+#include <QKeyEvent>
 #include <float.h>
+
+static KeyStyle keyStyleForItem(QGraphicsItem *item) {
+    if (ResizableRectItem *r = dynamic_cast<ResizableRectItem*>(item)) return r->keyStyle();
+    if (ResizableEllipseItem *e = dynamic_cast<ResizableEllipseItem*>(item)) return e->keyStyle();
+    if (ResizablePolygonItem *p = dynamic_cast<ResizablePolygonItem*>(item)) return p->keyStyle();
+    return KeyStyle();
+}
+static void setKeyStyleForItem(QGraphicsItem *item, const KeyStyle &s) {
+    if (ResizableRectItem *r = dynamic_cast<ResizableRectItem*>(item)) { r->setKeyStyle(s); return; }
+    if (ResizableEllipseItem *e = dynamic_cast<ResizableEllipseItem*>(item)) { e->setKeyStyle(s); return; }
+    if (ResizablePolygonItem *p = dynamic_cast<ResizablePolygonItem*>(item)) p->setKeyStyle(s);
+}
 
 LayoutEditor *layoutEditor;
 QList<QGraphicsItem*> alignmentHelpers;
@@ -23,6 +38,12 @@ LayoutEditorGraphicsView::LayoutEditorGraphicsView(QWidget *parent) : QGraphicsV
     currentItem = nullptr;
     activeAction = Actions::None;
     edgeOffset = QPointF(0, 0);
+    setDragMode(QGraphicsView::RubberBandDrag);
+    setFocusPolicy(Qt::StrongFocus);
+    m_arrowDirection = 0;
+    m_arrowCommitTimer = new QTimer(this);
+    m_arrowCommitTimer->setSingleShot(true);
+    connect(m_arrowCommitTimer, &QTimer::timeout, this, &LayoutEditorGraphicsView::commitArrowKeyMoveSegment);
 }
 
 
@@ -39,36 +60,61 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
         item = item->parentItem();
     }
     if (event->button() == Qt::RightButton) {
+        if (m_pickStyleMode || m_applyStyleMode) {
+            m_pickStyleMode = false;
+            m_applyStyleMode = false;
+            setCursor(Qt::ArrowCursor);
+            emit applyStyleModeExited();
+            event->accept();
+            return;
+        }
         if(item){
             ResizableRectItem *rect = dynamic_cast<ResizableRectItem*>(item);
             ResizableEllipseItem *ellipse = dynamic_cast<ResizableEllipseItem*>(item);
             ResizablePolygonItem *polygon = dynamic_cast<ResizablePolygonItem*>(item);
             if (rect || ellipse || polygon){
                 QMenu menu;
-                QAction *actionRename = menu.addAction("Rename");
-                QAction *actionRebind = menu.addAction("Rebind");
+                QAction *actionRename = menu.addAction(tr("Rename"));
+                QAction *actionRebind = menu.addAction(tr("Rebind"));
+                QAction *actionStyle = menu.addAction(tr("Edit style..."));
                 menu.addSeparator();
-                QAction *actionDelete = menu.addAction("Delete");
+                QAction *actionDelete = menu.addAction(tr("Delete"));
                 QAction *selectedAction = menu.exec(QCursor::pos());
                 QGraphicsItem *keyItem = rect ? static_cast<QGraphicsItem*>(rect) : (ellipse ? static_cast<QGraphicsItem*>(ellipse) : static_cast<QGraphicsItem*>(polygon));
+
+                QList<QGraphicsItem*> styleTargets;
+                if (item->isSelected()) {
+                    for (QGraphicsItem *sel : scene->selectedItems()) {
+                        if (dynamic_cast<ResizableRectItem*>(sel) || dynamic_cast<ResizableEllipseItem*>(sel) || dynamic_cast<ResizablePolygonItem*>(sel))
+                            styleTargets.append(sel);
+                    }
+                }
+                if (styleTargets.isEmpty())
+                    styleTargets.append(keyItem);
                 auto getText = [rect, ellipse, polygon]() { return rect ? rect->getText() : (ellipse ? ellipse->getText() : polygon->getText()); };
                 auto setText = [rect, ellipse, polygon](const QString &t) { if (rect) rect->setText(t); else if (ellipse) ellipse->setText(t); else polygon->setText(t); };
+                auto getShiftText = [rect, ellipse, polygon]() { return rect ? rect->getShiftText() : (ellipse ? ellipse->getShiftText() : polygon->getShiftText()); };
+                auto setShiftText = [rect, ellipse, polygon](const QString &t) { if (rect) rect->setShiftText(t); else if (ellipse) ellipse->setShiftText(t); else polygon->setShiftText(t); };
                 auto getKeycodes = [rect, ellipse, polygon]() { return rect ? rect->getKeycodes() : (ellipse ? ellipse->getKeycodes() : polygon->getKeycodes()); };
                 auto setKeycodes = [rect, ellipse, polygon](const std::list<int> &kc) { if (rect) rect->setKeycodes(kc); else if (ellipse) ellipse->setKeycodes(kc); else polygon->setKeycodes(kc); };
 
                 if (selectedAction == actionRename) {
                     QString oldText = getText();
-                    DialogTextChange *dialog = new DialogTextChange(this, oldText);
-                    if (dialog->exec() == QDialog::Accepted)
+                    QString oldShiftText = getShiftText();
+                    DialogTextChange *dialog = new DialogTextChange(this, oldText, oldShiftText);
+                    if (dialog->exec() == QDialog::Accepted) {
                         setText(dialog->getText());
+                        setShiftText(dialog->getShiftText());
+                    }
                     delete dialog;
                     QString newText = getText();
-                    if (newText != oldText){
-                        Action* action = new Action(Actions::ChangeText, keyItem, oldText, newText);
+                    QString newShiftText = getShiftText();
+                    if (newText != oldText || newShiftText != oldShiftText) {
+                        Action *action = new Action(Actions::ChangeText, keyItem, oldText, newText, oldShiftText, newShiftText);
                         undoActions.push_back(action);
                         redoActions.clear();
-                    layoutEditor->markDirty();
-                    layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                        layoutEditor->markDirty();
+                        layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
                     }
                 } else if (selectedAction == actionRebind) {
                     std::list<int> oldKeycodes = getKeycodes();
@@ -89,6 +135,24 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                     layoutEditor->markDirty();
                     layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
                     }
+                } else if (selectedAction == actionStyle) {
+                    KeyStyle current = keyStyleForItem(styleTargets.first());
+                    QString previewLabel = (rect ? rect->getText() : (ellipse ? ellipse->getText() : polygon->getText()));
+                    DialogStyle *dialog = new DialogStyle(this, current, previewLabel);
+                    if (dialog->exec() == QDialog::Accepted) {
+                        KeyStyle newStyle = dialog->getStyle();
+                        Action *action = new Action(Actions::ChangeStyle, nullptr);
+                        action->styleNew = newStyle;
+                        for (QGraphicsItem *target : styleTargets) {
+                            action->styleItems.append(qMakePair(target, keyStyleForItem(target)));
+                            setKeyStyleForItem(target, newStyle);
+                        }
+                        undoActions.push_back(action);
+                        redoActions.clear();
+                        layoutEditor->markDirty();
+                        layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    }
+                    delete dialog;
                 } else if (selectedAction == actionDelete) {
                     Action * action = new Action(Actions::Remove, keyItem);
                     action->oldText = getText();
@@ -107,17 +171,71 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
         }else{
             //change background properties/general stuff, possibly dont want to do this in here, preferably in the keyboardWidget?. Depends on wheather we want to
         }
-    }else{
-
-
-        if (item) {
-            currentItem = item;
-            offset = mapToScene(event->pos()) - item->pos();
-            startingPosition = item->pos();
-            startingBounds = getCorrectBoundingRect(item);
-        }else{
-            offset = QPointF();
-            startingPosition = QPointF();
+    } else {
+        if (event->button() == Qt::LeftButton) {
+            if (item) {
+                ResizableRectItem *rect = dynamic_cast<ResizableRectItem*>(item);
+                ResizableEllipseItem *ellipse = dynamic_cast<ResizableEllipseItem*>(item);
+                ResizablePolygonItem *polygon = dynamic_cast<ResizablePolygonItem*>(item);
+                if (rect || ellipse || polygon) {
+                    if (m_pickStyleMode) {
+                        m_pickedStyle = keyStyleForItem(item);
+                        m_hasPickedStyle = true;
+                        m_pickStyleMode = false;
+                        setCursor(Qt::ArrowCursor);
+                        emit stylePicked();
+                        return;
+                    }
+                    if (m_applyStyleMode && m_hasPickedStyle) {
+                        QList<QGraphicsItem*> targets;
+                        if (item->isSelected()) {
+                            for (QGraphicsItem *sel : scene->selectedItems()) {
+                                if (dynamic_cast<ResizableRectItem*>(sel) || dynamic_cast<ResizableEllipseItem*>(sel) || dynamic_cast<ResizablePolygonItem*>(sel))
+                                    targets.append(sel);
+                            }
+                        }
+                        if (targets.isEmpty())
+                            targets.append(item);
+                        Action *action = new Action(Actions::ChangeStyle, nullptr);
+                        action->styleNew = m_pickedStyle;
+                        for (QGraphicsItem *target : targets) {
+                            action->styleItems.append(qMakePair(target, keyStyleForItem(target)));
+                            setKeyStyleForItem(target, m_pickedStyle);
+                        }
+                        undoActions.push_back(action);
+                        redoActions.clear();
+                        layoutEditor->markDirty();
+                        layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                        return;
+                    }
+                    if (event->modifiers() & Qt::ControlModifier) {
+                        item->setSelected(!item->isSelected());
+                    } else {
+                        scene->clearSelection();
+                        item->setSelected(true);
+                    }
+                    currentItem = item;
+                    offset = mapToScene(event->pos()) - item->pos();
+                    startingPosition = item->pos();
+                    startingBounds = getCorrectBoundingRect(item);
+                } else {
+                    currentItem = nullptr;
+                    QGraphicsView::mousePressEvent(event);
+                }
+            } else {
+                currentItem = nullptr;
+                QGraphicsView::mousePressEvent(event);
+            }
+        } else {
+            if (item) {
+                currentItem = item;
+                offset = mapToScene(event->pos()) - item->pos();
+                startingPosition = item->pos();
+                startingBounds = getCorrectBoundingRect(item);
+            } else {
+                offset = QPointF();
+                startingPosition = QPointF();
+            }
         }
     }
 }
@@ -166,8 +284,12 @@ void LayoutEditorGraphicsView::centerText(QGraphicsRectItem *rect){
 }
 
 void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
-    if (currentItem) {
+    if (!currentItem) {
+        QGraphicsView::mouseMoveEvent(event);
+        return;
+    }
 
+    {
         int edgeOrCorner = isOnEdgeOrCorner(currentItem, event->pos());
         //QRectF currentBounds = getCorrectBoundingRect(currentItem);
 
@@ -273,6 +395,10 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                         else { polygon->setPos(newPos.x() - edgeOffset.x() + xOffset, startingPosition.y()); polygon->setSize(newWidth, newHeight); }
                         break;
                 }
+                if (rect) rect->setText(rect->getText());
+                else if (ellipse) ellipse->setText(ellipse->getText());
+                else if (polygon) polygon->setText(polygon->getText());
+
                 QPointF mouseScene = mapToScene(event->pos());
                 if (currentItem && currentItem->sceneBoundingRect().contains(mouseScene)) {
                     updateSizeHelpers(currentItem);
@@ -335,18 +461,23 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
     }
 }
 
-
 void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
-    if (currentItem) {
+    if (!currentItem) {
+        QGraphicsView::mouseReleaseEvent(event);
+        return;
+    }
+    {
         int edgeOrCorner = isOnEdgeOrCorner(currentItem, event->pos());
 
         Action *action;
         bool validAction = false;
 
         if (!edgeOrCorner){
-            //find out if starting position is different from current Position
             if (startingPosition != currentItem->pos()){
-                action = new Action(Actions::Move, currentItem, startingPosition);
+                action = new Action(Actions::Move, nullptr);
+                action->moveItems.append(qMakePair(currentItem, startingPosition));
+                action->moveDelta = currentItem->pos() - startingPosition;
+                action->moveApplied = true;
                 validAction = true;
             }
 
@@ -373,15 +504,12 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
                     layoutEditor->markDirty();
                     layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
                     layoutEditor->updateMinimumSizeFromScene();
-        }else{
-            //TODO: select the item for moving with arrow keys or multiselect
-
-            //for now
+        } else {
             action = nullptr;
             currentItem = nullptr;
             activeAction = Actions::None;
-                    layoutEditor->markDirty();
-                    layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+            layoutEditor->markDirty();
+            layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
         }
     }
 }
@@ -443,13 +571,25 @@ void LayoutEditorGraphicsView::redoLastAction(){
 
 
 void LayoutEditorGraphicsView::doAction(Action *action){
-    ResizableRectItem *rect = dynamic_cast<ResizableRectItem*>(action->item);
-    ResizableEllipseItem *ellipse = dynamic_cast<ResizableEllipseItem*>(action->item);
-    ResizablePolygonItem *polygon = dynamic_cast<ResizablePolygonItem*>(action->item);
-    if (action->actionType == Move){
-        QPointF currentPos = action->item->pos();
-        action->item->setPos(action->position);
-        action->position = currentPos;
+    ResizableRectItem *rect = action->item ? dynamic_cast<ResizableRectItem*>(action->item) : nullptr;
+    ResizableEllipseItem *ellipse = action->item ? dynamic_cast<ResizableEllipseItem*>(action->item) : nullptr;
+    ResizablePolygonItem *polygon = action->item ? dynamic_cast<ResizablePolygonItem*>(action->item) : nullptr;
+    if (action->actionType == Move) {
+        if (!action->moveItems.isEmpty()) {
+            if (action->moveApplied) {
+                for (const auto &p : action->moveItems)
+                    p.first->setPos(p.first->pos() - action->moveDelta);
+                action->moveApplied = false;
+            } else {
+                for (const auto &p : action->moveItems)
+                    p.first->setPos(p.first->pos() + action->moveDelta);
+                action->moveApplied = true;
+            }
+        } else if (action->item) {
+            QPointF currentPos = action->item->pos();
+            action->item->setPos(action->position);
+            action->position = currentPos;
+        }
     } else if (action->actionType == Resize && (rect || ellipse || polygon)) {
         QPointF currentPos = action->item->pos();
         QPointF newPos = QPointF(action->position.x(), action->position.y());
@@ -461,9 +601,20 @@ void LayoutEditorGraphicsView::doAction(Action *action){
         if (rect) rect->setRect(0, 0, w, h); else if (ellipse) ellipse->setRect(0, 0, w, h); else polygon->setSize(w, h);
         action->size = currentBounds;
     } else if (action->actionType == ChangeText && (rect || ellipse || polygon)) {
-        if (rect) rect->setText(action->oldText); else if (ellipse) ellipse->setText(action->oldText); else polygon->setText(action->oldText);
+        if (rect) {
+            rect->setText(action->oldText);
+            rect->setShiftText(action->oldShiftText);
+        } else if (ellipse) {
+            ellipse->setText(action->oldText);
+            ellipse->setShiftText(action->oldShiftText);
+        } else {
+            polygon->setText(action->oldText);
+            polygon->setShiftText(action->oldShiftText);
+        }
         action->oldText = action->newText;
         action->newText = rect ? rect->getText() : (ellipse ? ellipse->getText() : polygon->getText());
+        action->oldShiftText = action->newShiftText;
+        action->newShiftText = rect ? rect->getShiftText() : (ellipse ? ellipse->getShiftText() : polygon->getShiftText());
     } else if (action->actionType == ChangeKeyCodes && (rect || ellipse || polygon)) {
         if (rect) rect->setKeycodes(action->oldKeycodes); else if (ellipse) ellipse->setKeycodes(action->oldKeycodes); else polygon->setKeycodes(action->oldKeycodes);
         action->oldKeycodes = action->newKeycodes;
@@ -474,14 +625,132 @@ void LayoutEditorGraphicsView::doAction(Action *action){
     } else if (action->actionType == Remove) {
         action->actionType = Actions::Add;
         layoutEditor->addItemToScene(action->item);
+    } else if (action->actionType == ChangeStyle) {
+        if (action->styleApplied) {
+            for (const auto &p : action->styleItems)
+                setKeyStyleForItem(p.first, p.second);
+            action->styleApplied = false;
+        } else {
+            for (const auto &p : action->styleItems)
+                setKeyStyleForItem(p.first, action->styleNew);
+            action->styleApplied = true;
+        }
     }
 }
 
 
 
+QList<QGraphicsItem*> LayoutEditorGraphicsView::selectedKeyItems() const {
+    QList<QGraphicsItem*> out;
+    if (!scene) return out;
+    for (QGraphicsItem *item : scene->selectedItems()) {
+        if (dynamic_cast<ResizableRectItem*>(item) || dynamic_cast<ResizableEllipseItem*>(item) || dynamic_cast<ResizablePolygonItem*>(item))
+            out.append(item);
+    }
+    return out;
+}
+
+void LayoutEditorGraphicsView::nudgeSelection(int dx, int dy) {
+    QList<QGraphicsItem*> items = selectedKeyItems();
+    if (items.isEmpty()) return;
+    qreal minX = scene->sceneRect().left();
+    qreal minY = scene->sceneRect().top();
+    qreal maxX = scene->sceneRect().right();
+    qreal maxY = scene->sceneRect().bottom();
+    for (QGraphicsItem *item : items) {
+        QRectF br = getCorrectBoundingRect(item);
+        qreal newX = qMax(minX, qMin(item->pos().x() + dx, maxX - br.width()));
+        qreal newY = qMax(minY, qMin(item->pos().y() + dy, maxY - br.height()));
+        item->setPos(newX, newY);
+    }
+}
+
+void LayoutEditorGraphicsView::commitArrowKeyMoveSegment() {
+    if (m_arrowSegmentStarts.isEmpty() || (m_arrowSegmentDelta.x() == 0 && m_arrowSegmentDelta.y() == 0)) {
+        m_arrowSegmentStarts.clear();
+        m_arrowDirection = 0;
+        return;
+    }
+    Action *action = new Action(Actions::Move, nullptr);
+    action->moveItems = m_arrowSegmentStarts;
+    action->moveDelta = m_arrowSegmentDelta;
+    action->moveApplied = true;
+    undoActions.push_back(action);
+    redoActions.clear();
+    layoutEditor->markDirty();
+    layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+    layoutEditor->updateMinimumSizeFromScene();
+    m_arrowSegmentStarts.clear();
+    m_arrowSegmentDelta = QPointF(0, 0);
+    m_arrowDirection = 0;
+}
+
+void LayoutEditorGraphicsView::setPickStyleMode(bool on) {
+    m_pickStyleMode = on;
+    m_applyStyleMode = on ? false : m_applyStyleMode;
+    if (on)
+        setCursor(Qt::CrossCursor);
+    else if (!m_applyStyleMode)
+        setCursor(Qt::ArrowCursor);
+}
+
+void LayoutEditorGraphicsView::setApplyStyleMode(bool on) {
+    m_applyStyleMode = on;
+    m_pickStyleMode = on ? false : m_pickStyleMode;
+    if (on)
+        setCursor(Qt::CrossCursor);
+    else if (!m_pickStyleMode)
+        setCursor(Qt::ArrowCursor);
+}
+
+void LayoutEditorGraphicsView::keyPressEvent(QKeyEvent *event) {
+    if (event->key() == Qt::Key_Escape && (m_pickStyleMode || m_applyStyleMode)) {
+        m_pickStyleMode = false;
+        m_applyStyleMode = false;
+        setCursor(Qt::ArrowCursor);
+        emit applyStyleModeExited();
+        event->accept();
+        return;
+    }
+    int key = event->key();
+    int direction = 0;
+    int dx = 0, dy = 0;
+    if (key == Qt::Key_Left) { direction = 1; dx = -1; }
+    else if (key == Qt::Key_Right) { direction = 2; dx = 1; }
+    else if (key == Qt::Key_Up) { direction = 3; dy = -1; }
+    else if (key == Qt::Key_Down) { direction = 4; dy = 1; }
+    if (direction != 0) {
+        QList<QGraphicsItem*> items = selectedKeyItems();
+        if (!items.isEmpty()) {
+            event->accept();
+            m_arrowCommitTimer->stop();
+            if (direction != m_arrowDirection) {
+                commitArrowKeyMoveSegment();
+                m_arrowDirection = direction;
+                m_arrowSegmentDelta = QPointF(0, 0);
+                m_arrowSegmentStarts.clear();
+                for (QGraphicsItem *item : items)
+                    m_arrowSegmentStarts.append(qMakePair(item, item->pos()));
+            }
+            m_arrowSegmentDelta += QPointF(dx, dy);
+            nudgeSelection(dx, dy);
+            return;
+        }
+    }
+    QGraphicsView::keyPressEvent(event);
+}
+
+void LayoutEditorGraphicsView::keyReleaseEvent(QKeyEvent *event) {
+    int key = event->key();
+    if (key == Qt::Key_Left || key == Qt::Key_Right || key == Qt::Key_Up || key == Qt::Key_Down) {
+        m_arrowCommitTimer->start(250);
+    }
+    QGraphicsView::keyReleaseEvent(event);
+}
+
 void LayoutEditorGraphicsView::resizeEvent(QResizeEvent *event) {
     QGraphicsView::resizeEvent(event);
-    if (scene) {        
+    if (scene) {
         QRectF newRect = QRectF(QPointF(0, 0), QSizeF(this->viewport()->size()));
         scene->setSceneRect(newRect);
     }

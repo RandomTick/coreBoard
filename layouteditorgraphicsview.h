@@ -2,7 +2,11 @@
 #define LAYOUTEDITORGRAPHICSVIEW_H
 
 #include <QGraphicsView>
-
+#include <QList>
+#include <QPair>
+#include <QTimer>
+#include <QKeyEvent>
+#include "keystyle.h"
 
 class LayoutEditorGraphicsView : public QGraphicsView {
     Q_OBJECT
@@ -17,7 +21,8 @@ public:
         Move,
         Resize,
         ChangeText,
-        ChangeKeyCodes
+        ChangeKeyCodes,
+        ChangeStyle
     };
     class Action{
     public:
@@ -27,8 +32,18 @@ public:
         QRectF size;
         QString oldText;
         QString newText;
+        QString oldShiftText;
+        QString newShiftText;
         std::list<int> oldKeycodes;
         std::list<int> newKeycodes;
+        // Multi-item move: list of (item, start position); delta applied for undo/redo
+        QList<QPair<QGraphicsItem*, QPointF>> moveItems;
+        QPointF moveDelta;
+        bool moveApplied = true;  // true = items have been moved by +delta
+        // ChangeStyle: per-item old style, single new style; styleApplied true = items have newStyle
+        QList<QPair<QGraphicsItem*, KeyStyle>> styleItems;
+        KeyStyle styleNew;
+        bool styleApplied = true;
 
         Action(Actions actionType, QGraphicsItem *item)
             : actionType(actionType), item(item){}
@@ -41,21 +56,32 @@ public:
 
         Action(Actions actionType, QGraphicsItem *item, QString oldText, QString newText)
             : actionType(actionType), item(item), oldText(oldText), newText(newText){}
+        Action(Actions actionType, QGraphicsItem *item, QString oldText, QString newText, QString oldShiftText, QString newShiftText)
+            : actionType(actionType), item(item), oldText(oldText), newText(newText), oldShiftText(oldShiftText), newShiftText(newShiftText){}
 
         Action(Actions actionType, QGraphicsItem *item, std::list<int> oldKeycodes, std::list<int> newKeycodes)
             : actionType(actionType), item(item), oldKeycodes(oldKeycodes), newKeycodes(newKeycodes){}
     };
-    void doAction(Action action);
+    void doAction(Action *action);
     void undoLastAction();
     void redoLastAction();
     void addRectAction(QGraphicsItem* item);
     void clearUndoRedo();
+    void setPickStyleMode(bool on);
+    void setApplyStyleMode(bool on);
+    bool hasPickedStyle() const { return m_hasPickedStyle; }
     void clearAlignmentHelpers();
+
+signals:
+    void stylePicked();
+    void applyStyleModeExited();
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void keyReleaseEvent(QKeyEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
 
@@ -69,7 +95,6 @@ private:
     QRectF startingBounds;
     std::vector<Action*> undoActions;
     std::vector<Action*> redoActions;
-    void doAction(Action* action);
     int isOnEdgeOrCorner(QGraphicsItem *item, const QPointF &mousePos);
     void enforceRectSize(QPointF &newPos, qreal &newWidth, qreal &newHeight);
     void centerText(QGraphicsRectItem *rect);
@@ -78,11 +103,21 @@ private:
     bool rangesOverlap(qreal start1, qreal end1, qreal start2, qreal end2);
     void updateSizeHelpers(QGraphicsItem* item);
     QRectF getCorrectBoundingRect(QGraphicsItem *item);
-    QPointF edgeOffset;    
+    QPointF edgeOffset;
     Actions activeAction;
 
+    void commitArrowKeyMoveSegment();
+    void nudgeSelection(int dx, int dy);
+    QList<QGraphicsItem*> selectedKeyItems() const;
 
-
+    int m_arrowDirection = 0;
+    QPointF m_arrowSegmentDelta;
+    bool m_pickStyleMode = false;
+    bool m_applyStyleMode = false;
+    bool m_hasPickedStyle = false;
+    KeyStyle m_pickedStyle;
+    QList<QPair<QGraphicsItem*, QPointF>> m_arrowSegmentStarts;
+    QTimer *m_arrowCommitTimer = nullptr;
 };
 
 #endif // LAYOUTEDITORGRAPHICSVIEW_H

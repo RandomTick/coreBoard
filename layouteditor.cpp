@@ -12,6 +12,7 @@
 #include <QMessageBox>
 #include <cmath>
 #include "layoutsettings.h"
+#include "keystyle.h"
 
 // Minimum width so toolbar buttons (Open, New, Save, etc.) stay visible
 static const int kMinimumEditorWidth = 720;
@@ -40,6 +41,9 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
                                "}"
                                "QPushButton:hover {"
                                "background-color: rgba(150, 51, 150, 0.4);"
+                               "}"
+                               "QPushButton:checked {"
+                               "background-color: rgba(150, 51, 150, 0.7);"
                                "}";
 
     openButton = new QPushButton(tr("Open Layout"), this);
@@ -64,6 +68,23 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
 
     addButton = new QPushButton(tr("Add Shape"), this);
     addButton->setStyleSheet(buttonStyleSheet);
+
+    pickStyleButton = new QPushButton(this);
+    pickStyleButton->setCheckable(true);
+    pickStyleButton->setIcon(QIcon(":/icons/pick_style.svg"));
+    pickStyleButton->setIconSize(QSize(18, 18));
+    pickStyleButton->setFixedSize(24, 24);
+    pickStyleButton->setStyleSheet(buttonStyleSheet);
+    pickStyleButton->setToolTip(tr("Pick style from a key"));
+
+    applyStyleButton = new QPushButton(this);
+    applyStyleButton->setCheckable(true);
+    applyStyleButton->setIcon(QIcon(":/icons/apply_style.svg"));
+    applyStyleButton->setIconSize(QSize(18, 18));
+    applyStyleButton->setFixedSize(24, 24);
+    applyStyleButton->setStyleSheet(buttonStyleSheet);
+    applyStyleButton->setToolTip(tr("Apply picked style to key(s)"));
+    applyStyleButton->setEnabled(false);
 
     QMenu *addShapeMenu = new QMenu(this);
     QAction *actRect = addShapeMenu->addAction(tr("Rectangle"));
@@ -91,7 +112,22 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     });
     connect(saveButton, &QPushButton::clicked, this, &LayoutEditor::saveLayout);
     connect(saveAsButton, &QPushButton::clicked, this, &LayoutEditor::saveLayoutAs);
-
+    connect(pickStyleButton, &QPushButton::toggled, this, &LayoutEditor::onPickStyleToggled);
+    connect(applyStyleButton, &QPushButton::toggled, this, &LayoutEditor::onApplyStyleClicked);
+    connect(view, &LayoutEditorGraphicsView::stylePicked, this, [this]() {
+        pickStyleButton->blockSignals(true);
+        pickStyleButton->setChecked(false);
+        pickStyleButton->blockSignals(false);
+        applyStyleButton->setEnabled(view->hasPickedStyle());
+    });
+    connect(view, &LayoutEditorGraphicsView::applyStyleModeExited, this, [this]() {
+        pickStyleButton->blockSignals(true);
+        pickStyleButton->setChecked(false);
+        pickStyleButton->blockSignals(false);
+        applyStyleButton->blockSignals(true);
+        applyStyleButton->setChecked(false);
+        applyStyleButton->blockSignals(false);
+    });
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(openButton);
@@ -101,6 +137,8 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     buttonLayout->addWidget(undoButton);
     buttonLayout->addWidget(redoButton);
     buttonLayout->addWidget(addButton);
+    buttonLayout->addWidget(pickStyleButton);
+    buttonLayout->addWidget(applyStyleButton);
     buttonLayout->addStretch(1);
 
 
@@ -246,6 +284,10 @@ void LayoutEditor::createKey(const QJsonObject &keyData){
         return;
     }
     QString label = keyData.value("Text").toString();
+    QString shiftText = keyData.value("ShiftText").toString();
+    if (shiftText.isEmpty())
+        shiftText = label;
+    KeyStyle keyStyle = KeyStyle::fromJson(keyData);
 
     QJsonArray kc = keyData.value("KeyCodes").toArray();
     std::list<int> keyCodes = {};
@@ -279,7 +321,8 @@ void LayoutEditor::createKey(const QJsonObject &keyData){
             qreal y = minY;
             qreal width = maxX - minX;
             qreal height = maxY - minY;
-            addRectangle(label, width, height, x, y, keyCodes);
+            ResizableRectItem *rect = addRectangle(label, width, height, x, y, keyCodes, keyStyle);
+            rect->setShiftText(shiftText);
         } else {
             qreal w = maxX - minX;
             qreal h = maxY - minY;
@@ -287,8 +330,8 @@ void LayoutEditor::createKey(const QJsonObject &keyData){
             for (const QPointF &p : fourPoints) {
                 templatePolygon << QPointF(p.x() - minX, p.y() - minY);
             }
-            ResizablePolygonItem *polyItem = addPolygon(templatePolygon, label, minX, minY, w, h, keyCodes);
-            Q_UNUSED(polyItem);
+            ResizablePolygonItem *polyItem = addPolygon(templatePolygon, label, minX, minY, w, h, keyCodes, keyStyle);
+            polyItem->setShiftText(shiftText);
         }
     } else {
         qreal minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
@@ -306,7 +349,8 @@ void LayoutEditor::createKey(const QJsonObject &keyData){
         // High point count => saved ellipse (we write 64 points for circles); load as ellipse so it stays smooth
         const int ellipsePointThreshold = 32;
         if (boundaries.size() >= ellipsePointThreshold) {
-            addEllipse(label, w, h, minX, minY, keyCodes);
+            ResizableEllipseItem *ellipse = addEllipse(label, w, h, minX, minY, keyCodes, keyStyle);
+            ellipse->setShiftText(shiftText);
         } else {
             QPolygonF poly;
             for (const QJsonValue &pv : boundaries) {
@@ -319,8 +363,8 @@ void LayoutEditor::createKey(const QJsonObject &keyData){
             for (const QPointF &p : poly) {
                 templatePolygon << QPointF(p.x() - minX, p.y() - minY);
             }
-            ResizablePolygonItem *polyItem = addPolygon(templatePolygon, label, minX, minY, w, h, keyCodes);
-            Q_UNUSED(polyItem);
+            ResizablePolygonItem *polyItem = addPolygon(templatePolygon, label, minX, minY, w, h, keyCodes, keyStyle);
+            polyItem->setShiftText(shiftText);
         }
     }
 }
@@ -330,26 +374,48 @@ void LayoutEditor::addShape(){
     view->addRectAction(rect);
 }
 
-ResizableEllipseItem * LayoutEditor::addEllipse(const QString &text, qreal h, qreal w, qreal x, qreal y, const std::list<int> keyCodes) {
+void LayoutEditor::onPickStyleToggled(bool checked){
+    if (checked) {
+        view->setApplyStyleMode(false);
+        applyStyleButton->setChecked(false);
+        view->setPickStyleMode(true);
+    } else {
+        view->setPickStyleMode(false);
+    }
+}
+
+void LayoutEditor::onApplyStyleClicked(bool checked){
+    if (!checked) {
+        view->setApplyStyleMode(false);
+        return;
+    }
+    if (!view->hasPickedStyle())
+        return;
+    view->setPickStyleMode(false);
+    view->setApplyStyleMode(true);
+}
+
+ResizableEllipseItem * LayoutEditor::addEllipse(const QString &text, qreal h, qreal w, qreal x, qreal y, const std::list<int> keyCodes, const KeyStyle &keyStyle) {
     ResizableEllipseItem *ellipse = new ResizableEllipseItem(QRectF(0, 0, h, w), text, keyCodes);
+    ellipse->setKeyStyle(keyStyle);
     scene->addItem(ellipse);
     ellipse->setPos(x, y);
     return ellipse;
 }
 
-ResizablePolygonItem * LayoutEditor::addPolygon(const QPolygonF &templatePolygon, const QString &text, qreal x, qreal y, qreal w, qreal h, const std::list<int> keyCodes) {
+ResizablePolygonItem * LayoutEditor::addPolygon(const QPolygonF &templatePolygon, const QString &text, qreal x, qreal y, qreal w, qreal h, const std::list<int> keyCodes, const KeyStyle &keyStyle) {
     ResizablePolygonItem *poly = new ResizablePolygonItem(templatePolygon, text, keyCodes);
+    poly->setKeyStyle(keyStyle);
     scene->addItem(poly);
     poly->setRect(x, y, w, h);
     return poly;
 }
 
-ResizableRectItem * LayoutEditor::addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y, const std::list<int> keyCodes) {
+ResizableRectItem * LayoutEditor::addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y, const std::list<int> keyCodes, const KeyStyle &keyStyle) {
     ResizableRectItem *rect = new ResizableRectItem(QRectF(0, 0, h, w), text, keyCodes);
-
+    rect->setKeyStyle(keyStyle);
     scene->addItem(rect);
     rect->setPos(x,y);
-
     return rect;
 }
 
@@ -429,8 +495,8 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
 
         QJsonArray boundaries;
         QString text;
-        qreal centerX = 0, centerY = 0;
-        qreal itemMinX = 0, itemMinY = 0, itemMaxX = 0, itemMaxY = 0;
+        QString shiftText;
+        qreal centerX = 0, centerY = 0, itemMinX = 0, itemMinY = 0, itemMaxX = 0, itemMaxY = 0;
         QJsonArray keyCodesArray;
 
         ResizableRectItem *rectItem = dynamic_cast<ResizableRectItem *>(item);
@@ -447,6 +513,7 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
                 boundaries.append(QJsonObject{{"X", static_cast<int>(sc.x())}, {"Y", static_cast<int>(sc.y())}});
             }
             text = rectItem->getText();
+            shiftText = rectItem->getShiftText();
             QPointF centerSc = rectItem->mapToScene(QPointF(w / 2, h / 2));
             centerX = centerSc.x();
             centerY = centerSc.y();
@@ -468,6 +535,7 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
                 boundaries.append(QJsonObject{{"X", static_cast<int>(sc.x())}, {"Y", static_cast<int>(sc.y())}});
             }
             text = ellipseItem->getText();
+            shiftText = ellipseItem->getShiftText();
             QPointF centerSc = ellipseItem->mapToScene(QPointF(cx, cy));
             centerX = centerSc.x();
             centerY = centerSc.y();
@@ -481,6 +549,7 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
                 boundaries.append(QJsonObject{{"X", static_cast<int>(sc.x())}, {"Y", static_cast<int>(sc.y())}});
             }
             text = polygonItem->getText();
+            shiftText = polygonItem->getShiftText();
             QPointF centerSc = polygonItem->mapToScene(polygonItem->boundingRect().center());
             centerX = centerSc.x();
             centerY = centerSc.y();
@@ -492,6 +561,14 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
             continue;
         }
 
+        KeyStyle itemStyle;
+        if (rectItem)
+            itemStyle = rectItem->keyStyle();
+        else if (ellipseItem)
+            itemStyle = ellipseItem->keyStyle();
+        else if (polygonItem)
+            itemStyle = polygonItem->keyStyle();
+
         QJsonObject keyObj;
         keyObj.insert("__type", "KeyboardKey");
         keyObj.insert("Id", id++);
@@ -500,7 +577,10 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
         keyObj.insert("Text", text);
         keyObj.insert("TextPosition", QJsonObject{{"X", static_cast<int>(centerX)}, {"Y", static_cast<int>(centerY)}});
         keyObj.insert("ChangeOnCaps", false);
-        keyObj.insert("ShiftText", text);
+        keyObj.insert("ShiftText", shiftText.isEmpty() ? text : shiftText);
+        QJsonObject styleObj = itemStyle.toJson();
+        for (auto it = styleObj.begin(); it != styleObj.end(); ++it)
+            keyObj.insert(it.key(), it.value());
         elementsArray.append(keyObj);
 
         if (first) {
