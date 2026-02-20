@@ -9,6 +9,7 @@
 #include "layouteditor.h"
 #include "layoutsettings.h"
 #include "settingsdialog.h"
+#include "labelsettingsdialog.h"
 #include "versioninfo.h"
 #ifdef Q_OS_WIN
 #include "windowskeylistener.h"
@@ -36,6 +37,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_keyListener->startListening();
     connect(m_keyListener, &WindowsKeyListener::keyPressed, m_keyboardWidget, &KeyboardWidget::onKeyPressed);
     connect(m_keyListener, &WindowsKeyListener::keyReleased, m_keyboardWidget, &KeyboardWidget::onKeyReleased);
+    connect(m_keyListener, &WindowsKeyListener::shiftStateChanged, m_keyboardWidget, &KeyboardWidget::setShiftState);
+    connect(m_keyListener, &WindowsKeyListener::capsLockStateChanged, m_keyboardWidget, &KeyboardWidget::setCapsLockState);
 #endif
 
     QString lastPath = m_layoutSettings->lastLayoutPath();
@@ -53,7 +56,8 @@ MainWindow::MainWindow(QWidget *parent)
         m_layoutSettings->setLastTabIndex(1);
         m_layoutSettings->save();
     });
-    connect(ui->actionSettings, &QAction::triggered, this, &MainWindow::onSettings);
+    connect(ui->actionColors, &QAction::triggered, this, &MainWindow::onColors);
+    connect(ui->actionLabelDisplay, &QAction::triggered, this, &MainWindow::onLabelDisplay);
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::onAbout);
     applyVisualizationColors();
     connect(m_layoutEditor, &LayoutEditor::layoutLoaded, this, &MainWindow::reloadVisualizationLayout);
@@ -93,11 +97,20 @@ void MainWindow::onAbout()
            "<p>Version %1</p>").arg(QLatin1String(APP_VERSION)));
 }
 
-void MainWindow::onSettings()
+void MainWindow::onColors()
 {
     SettingsDialog dlg(m_layoutSettings, this);
     if (dlg.exec() == QDialog::Accepted)
         applyVisualizationColors();
+}
+
+void MainWindow::onLabelDisplay()
+{
+    LabelSettingsDialog dlg(m_layoutSettings, this);
+    if (dlg.exec() == QDialog::Accepted) {
+        m_keyboardWidget->setLabelMode(m_layoutSettings->labelMode());
+        m_keyboardWidget->update();
+    }
 }
 
 void MainWindow::applyVisualizationColors()
@@ -107,6 +120,7 @@ void MainWindow::applyVisualizationColors()
     m_keyboardWidget->setBackgroundColor(m_layoutSettings->backgroundColor());
     m_keyboardWidget->setTextColor(m_layoutSettings->textColor());
     m_keyboardWidget->setHighlightedTextColor(m_layoutSettings->highlightedTextColor());
+    m_keyboardWidget->setLabelMode(m_layoutSettings->labelMode());
     m_keyboardWidget->applyColors();
 }
 

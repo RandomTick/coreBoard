@@ -39,7 +39,8 @@ signals:
 private slots:
     void onSwitchToView();
     void onAbout();
-    void onSettings();
+    void onColors();
+    void onLabelDisplay();
     void reloadVisualizationLayout(const QString &path);
     void ensureWindowFitsLayoutEditor();
 

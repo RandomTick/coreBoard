@@ -5,6 +5,12 @@
 #include <QStringList>
 #include <QColor>
 
+enum class LabelMode {
+    FollowCapsAndShift,  // Show shift labels when Shift != Caps Lock
+    AllUppercase,        // Always show shift/uppercase labels
+    AllLowercase         // Always show base/lowercase labels
+};
+
 class LayoutSettings
 {
 public:
@@ -35,6 +41,9 @@ public:
     QColor highlightedTextColor() const;
     void setHighlightedTextColor(const QColor &color);
 
+    LabelMode labelMode() const;
+    void setLabelMode(LabelMode mode);
+
 private:
     void load();
 
@@ -48,6 +57,7 @@ private:
     QColor m_backgroundColor;
     QColor m_textColor;
     QColor m_highlightedTextColor;
+    LabelMode m_labelMode = LabelMode::FollowCapsAndShift;
 };
 
 #endif // LAYOUTSETTINGS_H

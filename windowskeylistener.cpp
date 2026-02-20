@@ -4,34 +4,61 @@
 
 HHOOK hHook;
 WindowsKeyListener* instance = nullptr;
+static bool leftShiftDown = false;
+static bool rightShiftDown = false;
+
+static bool isShiftKey(UINT vkCode) {
+    return vkCode == VK_LSHIFT || vkCode == VK_RSHIFT;
+}
+
+static bool isCapsLockKey(UINT vkCode) {
+    return vkCode == VK_CAPITAL;
+}
 
 LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode >= 0 && instance) {
         KBDLLHOOKSTRUCT *pkbhs = (KBDLLHOOKSTRUCT *)lParam;
+        UINT vk = pkbhs->vkCode;
+        if (isCapsLockKey(vk) && (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)) {
+            bool capsOn = (GetKeyState(VK_CAPITAL) & 1) != 0;
+            emit instance->capsLockStateChanged(capsOn);
+        }
+        if (isShiftKey(vk)) {
+            bool wasPressed = leftShiftDown || rightShiftDown;
+            if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
+                if (vk == VK_LSHIFT)
+                    leftShiftDown = true;
+                else
+                    rightShiftDown = true;
+                if (!wasPressed)
+                    emit instance->shiftStateChanged(true);
+            } else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
+                if (vk == VK_LSHIFT)
+                    leftShiftDown = false;
+                else
+                    rightShiftDown = false;
+                if (wasPressed && !leftShiftDown && !rightShiftDown)
+                    emit instance->shiftStateChanged(false);
+            }
+        }
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
             if(pkbhs->vkCode == VK_RETURN) {
                 if ((pkbhs->flags & LLKHF_EXTENDED) == LLKHF_EXTENDED) {
-                    //std::cout << "Numpad Enter Pressed" << std::endl;
                     emit instance->keyPressed(VK_SEPARATOR);
                 } else {
-                    //std::cout << "Regular Enter Pressed" << std::endl;
                     emit instance->keyPressed(VK_RETURN);
                 }
             } else {
-                //std::cout << "Key Pressed: " << pkbhs->vkCode << std::endl;
                 emit instance->keyPressed(pkbhs->vkCode);
             }
         } else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
             if(pkbhs->vkCode == VK_RETURN) {
                 if ((pkbhs->flags & LLKHF_EXTENDED) == LLKHF_EXTENDED) {
-                    //std::cout << "Numpad Enter Released" << std::endl;
                     emit instance->keyReleased(VK_SEPARATOR);
                 } else {
-                    //std::cout << "Regular Enter Released" << std::endl;
                     emit instance->keyReleased(VK_RETURN);
                 }
             } else {
-                //std::cout << "Key Released: " << pkbhs->vkCode << std::endl;
                 emit instance->keyReleased(pkbhs->vkCode);
             }
         }
@@ -58,13 +85,13 @@ void WindowsKeyListener::setAsGlobalInstance() {
 
 void WindowsKeyListener::startListening() {
     if (!hHook) {
-
         hHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, nullptr, 0);
-        if (!hHook) {
+        if (hHook) {
+            bool capsOn = (GetKeyState(VK_CAPITAL) & 1) != 0;
+            emit instance->capsLockStateChanged(capsOn);
+        } else {
             // Handle error
             qWarning("Failed to start listening to keyboard");
-        }else{
-            //qDebug("Startet listening");
         }
     }
 }

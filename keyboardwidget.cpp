@@ -1,4 +1,5 @@
 #include "KeyboardWidget.h"
+#include "keystyle.h"
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QFile>
@@ -10,6 +11,11 @@
 #include <QVBoxLayout>
 #include <QTimer>
 #include <cmath>
+
+namespace {
+const int BaseTextRole = Qt::UserRole;
+const int ShiftTextRole = Qt::UserRole + 1;
+}
 
 KeyboardWidget::KeyboardWidget(QWidget *parent) : QWidget(parent)
     , m_keyColor(0, 0, 255)
@@ -153,6 +159,7 @@ void KeyboardWidget::applyLayoutData(const QByteArray &jsonData)
     int maxHeight = rootObject.value("Height").toInt();
     m_scene->setSceneRect(0, 0, qMax(1, maxWidth), qMax(1, maxHeight));
     setMinimumSize(maxWidth, maxHeight);
+    updateLabelsForShiftState();
     m_view->viewport()->update();
     update();
 }
@@ -166,7 +173,11 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     }
 
     QString label = keyData.value("Text").toString();
+    QString shiftText = keyData.value("ShiftText").toString();
+    if (shiftText.isEmpty())
+        shiftText = label;
     QJsonArray kc = keyData.value("KeyCodes").toArray();
+    KeyStyle keyStyle = KeyStyle::fromJson(keyData);
 
     qreal minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
     for (const QJsonValue &pv : boundaries) {
@@ -200,7 +211,7 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
             QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, w, h);
             rect->setPos(minX, minY);
             rect->setBrush(m_keyColor);
-            rect->setPen(QPen(Qt::black, 1));
+            rect->setPen(keyStyle.pen());
             m_scene->addItem(rect);
             shapeItem = rect;
         }
@@ -210,7 +221,7 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
         QGraphicsEllipseItem *ellipse = new QGraphicsEllipseItem(0, 0, w, h);
         ellipse->setPos(minX, minY);
         ellipse->setBrush(m_keyColor);
-        ellipse->setPen(QPen(Qt::black, 1));
+        ellipse->setPen(keyStyle.pen());
         m_scene->addItem(ellipse);
         shapeItem = ellipse;
     }
@@ -226,7 +237,7 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
         QGraphicsPolygonItem *polyItem = new QGraphicsPolygonItem(poly);
         polyItem->setPos(minX, minY);
         polyItem->setBrush(m_keyColor);
-        polyItem->setPen(QPen(Qt::black, 1));
+        polyItem->setPen(keyStyle.pen());
         m_scene->addItem(polyItem);
         shapeItem = polyItem;
     }
@@ -234,9 +245,13 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     if (!shapeItem)
         return;
 
+    shapeItem->setData(BaseTextRole, label);
+    shapeItem->setData(ShiftTextRole, shiftText);
+
     QGraphicsTextItem *textItem = new QGraphicsTextItem(shapeItem);
     textItem->setPlainText(label);
     textItem->setDefaultTextColor(m_textColor);
+    textItem->setFont(keyStyle.font());
     QRectF textBr = textItem->boundingRect();
     QRectF shapeBr = shapeItem->boundingRect();
     textItem->setPos(shapeBr.center().x() - textBr.width() / 2, shapeBr.center().y() - textBr.height() / 2);
@@ -281,4 +296,65 @@ void KeyboardWidget::onKeyPressed(int key)
 void KeyboardWidget::onKeyReleased(int key)
 {
     changeKeyColor(key, m_keyColor, m_textColor);
+}
+
+void KeyboardWidget::setLabelMode(LabelMode mode)
+{
+    m_labelMode = mode;
+    updateLabelsForShiftState();
+}
+
+void KeyboardWidget::setShiftState(bool pressed)
+{
+    m_shiftPressed = pressed;
+    updateLabelsForShiftState();
+}
+
+void KeyboardWidget::setCapsLockState(bool on)
+{
+    m_capsLockOn = on;
+    updateLabelsForShiftState();
+}
+
+void KeyboardWidget::updateLabelsForShiftState()
+{
+    bool useShiftLabel = false;
+    switch (m_labelMode) {
+    case LabelMode::FollowCapsAndShift:
+        useShiftLabel = (m_shiftPressed != m_capsLockOn);
+        break;
+    case LabelMode::AllUppercase:
+        useShiftLabel = true;
+        break;
+    case LabelMode::AllLowercase:
+        useShiftLabel = false;
+        break;
+    }
+
+    for (QGraphicsItem *item : m_scene->items()) {
+        if (item->parentItem() != nullptr)
+            continue;
+        QAbstractGraphicsShapeItem *shape = qgraphicsitem_cast<QAbstractGraphicsShapeItem*>(item);
+        if (!shape)
+            continue;
+        QString baseText = shape->data(BaseTextRole).toString();
+        QString shiftText = shape->data(ShiftTextRole).toString();
+        if (baseText.isNull() && shiftText.isNull())
+            continue;
+        if (shiftText.isEmpty())
+            shiftText = baseText;
+        if (baseText.isEmpty())
+            baseText = shiftText;
+        QString displayText = useShiftLabel ? shiftText : baseText;
+        for (QGraphicsItem *child : shape->childItems()) {
+            QGraphicsTextItem *textItem = qgraphicsitem_cast<QGraphicsTextItem*>(child);
+            if (textItem) {
+                textItem->setPlainText(displayText);
+                QRectF textBr = textItem->boundingRect();
+                QRectF shapeBr = shape->boundingRect();
+                textItem->setPos(shapeBr.center().x() - textBr.width() / 2, shapeBr.center().y() - textBr.height() / 2);
+                break;
+            }
+        }
+    }
 }

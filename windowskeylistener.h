@@ -18,6 +18,8 @@ public:
 signals:
     void keyPressed(int key);
     void keyReleased(int key);
+    void shiftStateChanged(bool pressed);
+    void capsLockStateChanged(bool on);
 };
 
 #endif // WINDOWSKEYLISTENER_H

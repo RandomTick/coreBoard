@@ -10,6 +10,7 @@
 #include <map>
 #include <vector>
 #include <QColor>
+#include "layoutsettings.h"
 
 class KeyboardWidget : public QWidget
 {
@@ -28,11 +29,16 @@ public:
     void setHighlightedTextColor(const QColor &color);
     void applyColors();  // re-apply current colors to all keys and scene
 
+    void setLabelMode(LabelMode mode);
+    void setShiftState(bool pressed);
+    void setCapsLockState(bool on);
+
 private:
     void createKey(const QJsonObject &keyData);
     void applyLayoutData(const QByteArray &jsonData);
     void changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor);
     static void setShapeTextColor(QGraphicsItem *shapeItem, const QColor &color);
+    void updateLabelsForShiftState();
     void resetCounter();
 
     QGraphicsView *m_view = nullptr;
@@ -44,6 +50,9 @@ private:
     QColor m_backgroundColor;
     QColor m_textColor;
     QColor m_highlightedTextColor;
+    LabelMode m_labelMode = LabelMode::FollowCapsAndShift;
+    bool m_shiftPressed = false;
+    bool m_capsLockOn = false;
 
 public slots:
     void onKeyPressed(int key);

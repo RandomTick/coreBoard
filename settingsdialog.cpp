@@ -11,7 +11,7 @@ SettingsDialog::SettingsDialog(LayoutSettings *settings, QWidget *parent)
     : QDialog(parent)
     , m_settings(settings)
 {
-    setWindowTitle(tr("Settings"));
+    setWindowTitle(tr("Colors"));
 
     m_keyColor = m_settings->keyColor();
     m_highlightColor = m_settings->highlightColor();

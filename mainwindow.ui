@@ -34,7 +34,8 @@
     <property name="title">
      <string>Settings</string>
     </property>
-    <addaction name="actionSettings"/>
+    <addaction name="actionColors"/>
+    <addaction name="actionLabelDisplay"/>
    </widget>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
@@ -51,9 +52,14 @@
     <string>Edit Layout</string>
    </property>
   </action>
-  <action name="actionSettings">
+  <action name="actionColors">
    <property name="text">
     <string>Colors...</string>
+   </property>
+  </action>
+  <action name="actionLabelDisplay">
+   <property name="text">
+    <string>Label display...</string>
    </property>
   </action>
   <action name="actionAbout">

@@ -12,6 +12,7 @@ static const char kHighlightColorKey[] = "highlightColor";
 static const char kBackgroundColorKey[] = "backgroundColor";
 static const char kTextColorKey[] = "textColor";
 static const char kHighlightedTextColorKey[] = "highlightedTextColor";
+static const char kLabelModeKey[] = "labelMode";
 
 LayoutSettings::LayoutSettings()
 {
@@ -124,6 +125,16 @@ void LayoutSettings::setHighlightedTextColor(const QColor &color)
     m_highlightedTextColor = color;
 }
 
+LabelMode LayoutSettings::labelMode() const
+{
+    return m_labelMode;
+}
+
+void LayoutSettings::setLabelMode(LabelMode mode)
+{
+    m_labelMode = mode;
+}
+
 void LayoutSettings::save()
 {
     QSettings s(kOrg, kApp);
@@ -134,6 +145,7 @@ void LayoutSettings::save()
     s.setValue(kBackgroundColorKey, m_backgroundColor.name(QColor::HexArgb));
     s.setValue(kTextColorKey, m_textColor.name(QColor::HexArgb));
     s.setValue(kHighlightedTextColorKey, m_highlightedTextColor.name(QColor::HexArgb));
+    s.setValue(kLabelModeKey, static_cast<int>(m_labelMode));
     s.beginWriteArray(kRecentGroup);
     for (int i = 0; i < m_recentLayouts.size(); ++i) {
         s.setArrayIndex(i);
@@ -164,6 +176,14 @@ void LayoutSettings::load()
     m_highlightedTextColor = QColor(s.value(kHighlightedTextColorKey).toString());
     if (!m_highlightedTextColor.isValid())
         m_highlightedTextColor = Qt::black;
+    int modeInt = s.value(kLabelModeKey, 0).toInt();
+    if (modeInt >= 0 && modeInt <= 2)
+        m_labelMode = static_cast<LabelMode>(modeInt);
+    else {
+        // Backward compatibility: old showLabelsByShift
+        bool oldShow = s.value("showLabelsByShift", true).toBool();
+        m_labelMode = oldShow ? LabelMode::FollowCapsAndShift : LabelMode::AllLowercase;
+    }
     m_recentLayouts.clear();
     int n = s.beginReadArray(kRecentGroup);
     for (int i = 0; i < n; ++i) {
