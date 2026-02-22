@@ -1,13 +1,23 @@
 #include "DialogKeycodeChange.h"
+#include "keycode_nameutil.h"
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QLabel>
 
-DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> currentKeyCodes, WindowsKeyListener *mainKeyListener)
+DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> currentKeyCodes,
+    WindowsKeyListener *mainKeyListener
+#ifdef Q_OS_WIN
+    , WindowsMouseListener *mainMouseListenerParam
+#endif
+)
     : QDialog(parent), keyCodes(currentKeyCodes), mainKeyListener(mainKeyListener)
+#ifdef Q_OS_WIN
+    , mainMouseListener(mainMouseListenerParam)
+#endif
 {
 #ifdef Q_OS_WIN
     keyListener = mainKeyListener ? mainKeyListener : new WindowsKeyListener(this);
+    mouseListener = mainMouseListener ? mainMouseListener : new WindowsMouseListener(this);
 #endif
 
     setWindowTitle(tr("Change Key Codes"));
@@ -40,19 +50,34 @@ DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> current
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 
     connect(addButton, &QPushButton::clicked, this, [this, keyCodesDisplay, addButton]() {
+#ifdef Q_OS_WIN
+        if (!keyListener && !mouseListener) return;
+#else
         if (!keyListener) return;
+#endif
         addButton->setEnabled(false);
-        addButton->setText(tr("Press a key..."));
+        addButton->setText(tr("Press a key or mouse button..."));
         setFocus();
-        connect(keyListener, &WindowsKeyListener::keyPressed,
-            this, [this, keyCodesDisplay, addButton](int keyCode) {
-                insertKeycode(keyCode);
-                updateDisplay(keyCodesDisplay);
-                addButton->setEnabled(true);
-                addButton->setText(tr("Add Key Code"));
-            }, Qt::SingleShotConnection);
-        if (!this->mainKeyListener)
-            keyListener->startListening();
+        auto finishAdd = [this, keyCodesDisplay, addButton](int keyCode) {
+            insertKeycode(keyCode);
+            updateDisplay(keyCodesDisplay);
+            addButton->setEnabled(true);
+            addButton->setText(tr("Add Key Code"));
+        };
+        if (keyListener) {
+            connect(keyListener, &WindowsKeyListener::keyPressed,
+                this, finishAdd, Qt::SingleShotConnection);
+            if (!this->mainKeyListener)
+                keyListener->startListening();
+        }
+#ifdef Q_OS_WIN
+        if (mouseListener) {
+            connect(mouseListener, &WindowsMouseListener::keyPressed,
+                this, finishAdd, Qt::SingleShotConnection);
+            if (!this->mainMouseListener)
+                mouseListener->startListening();
+        }
+#endif
     });
 
     connect(clearButton, &QPushButton::clicked, this, [this, keyCodesDisplay]() {
@@ -72,6 +97,11 @@ DialogKeycodeChange::~DialogKeycodeChange()
         mainKeyListener->setAsGlobalInstance();
     } else if (keyListener) {
         keyListener->stopListening();
+    }
+    if (mainMouseListener) {
+        mainMouseListener->setAsGlobalInstance();
+    } else if (mouseListener) {
+        mouseListener->stopListening();
     }
 #endif
 }
@@ -107,9 +137,9 @@ void DialogKeycodeChange::setKeyCodes(const std::list<int> newKeyCodes)
 
 void DialogKeycodeChange::updateDisplay(QLineEdit *display)
 {
-    QString keyCodesStr;
+    QStringList parts;
     for (const auto &code : keyCodes) {
-        keyCodesStr += QString::number(code) + " ";
+        parts << keyCodeToDisplayName(code);
     }
-    display->setText(keyCodesStr.trimmed());
+    display->setText(parts.join(QStringLiteral("  ")));
 }

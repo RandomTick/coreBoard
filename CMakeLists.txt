@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(CoreBoard VERSION 0.1 LANGUAGES CXX)
+project(CoreBoard VERSION 0.4.0 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -30,6 +30,8 @@ set(TRANSLATABLE_SOURCES
     dialogtextchange.cpp
     dialogkeycodechange.cpp
     languagesettingsdialog.cpp
+    keycode_nameutil.h keycode_nameutil.cpp
+    windowsmouselistener.h windowsmouselistener.cpp
 )
 
 set(PROJECT_SOURCES
@@ -56,6 +58,10 @@ qt_add_executable(CoreBoard
         dialogtextchange.h dialogtextchange.cpp
         dialogkeycodechange.h
         dialogkeycodechange.cpp
+        keycode_nameutil.h
+        keycode_nameutil.cpp
+        windowsmouselistener.h
+        windowsmouselistener.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET CoreBoard APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

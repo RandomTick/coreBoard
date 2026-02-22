@@ -15,6 +15,7 @@
 #include <QApplication>
 #ifdef Q_OS_WIN
 #include "windowskeylistener.h"
+#include "windowsmouselistener.h"
 #endif
 
 MainWindow::MainWindow(QWidget *parent)
@@ -41,6 +42,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_keyListener, &WindowsKeyListener::keyReleased, m_keyboardWidget, &KeyboardWidget::onKeyReleased);
     connect(m_keyListener, &WindowsKeyListener::shiftStateChanged, m_keyboardWidget, &KeyboardWidget::setShiftState);
     connect(m_keyListener, &WindowsKeyListener::capsLockStateChanged, m_keyboardWidget, &KeyboardWidget::setCapsLockState);
+
+    m_mouseListener = new WindowsMouseListener(this);
+    m_mouseListener->startListening();
+    connect(m_mouseListener, &WindowsMouseListener::keyPressed, m_keyboardWidget, &KeyboardWidget::onKeyPressed);
+    connect(m_mouseListener, &WindowsMouseListener::keyReleased, m_keyboardWidget, &KeyboardWidget::onKeyReleased);
 #endif
 
     QString lastPath = m_layoutSettings->lastLayoutPath();
@@ -234,6 +240,12 @@ KeyboardWidget* MainWindow::keyboardWidget() const {
 WindowsKeyListener* MainWindow::keyListener() const {
     return m_keyListener;
 }
+
+#ifdef Q_OS_WIN
+WindowsMouseListener* MainWindow::mouseListener() const {
+    return m_mouseListener;
+}
+#endif
 
 void MainWindow::resize(int width, int height){
     QMainWindow::resize(width, height);

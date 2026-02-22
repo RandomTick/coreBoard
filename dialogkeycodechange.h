@@ -5,12 +5,20 @@
 #include <QLineEdit>
 #include <QKeyEvent>
 #include "windowskeylistener.h"
+#ifdef Q_OS_WIN
+#include "windowsmouselistener.h"
+#endif
 
 class DialogKeycodeChange : public QDialog {
     Q_OBJECT
 
 public:
-    explicit DialogKeycodeChange(QWidget *parent = nullptr, std::list<int> currentKeyCodes = {}, class WindowsKeyListener *mainKeyListener = nullptr);
+    explicit DialogKeycodeChange(QWidget *parent = nullptr, std::list<int> currentKeyCodes = {},
+        class WindowsKeyListener *mainKeyListener = nullptr,
+#ifdef Q_OS_WIN
+        class WindowsMouseListener *mainMouseListener = nullptr
+#endif
+    );
     ~DialogKeycodeChange();
     std::list<int> getKeyCodes() const;
 
@@ -24,6 +32,10 @@ protected:
 private:
     WindowsKeyListener* keyListener = nullptr;
     WindowsKeyListener* mainKeyListener = nullptr;
+#ifdef Q_OS_WIN
+    WindowsMouseListener* mouseListener = nullptr;
+    WindowsMouseListener* mainMouseListener = nullptr;
+#endif
     std::list<int> keyCodes;
 
     void updateDisplay(QLineEdit *display);

@@ -14,6 +14,9 @@
 #include "dialogstyle.h"
 #include "mainwindow.h"
 #include "windowskeylistener.h"
+#ifdef Q_OS_WIN
+#include "windowsmouselistener.h"
+#endif
 #include "keystyle.h"
 #include <QMenu>
 #include <QKeyEvent>
@@ -124,7 +127,12 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                     QWidget *pw = layoutEditor->parentWidget();
                     MainWindow *mainWin = pw ? qobject_cast<MainWindow*>(pw->parentWidget()) : nullptr;
                     WindowsKeyListener *appKeyListener = mainWin ? mainWin->keyListener() : nullptr;
+#ifdef Q_OS_WIN
+                    WindowsMouseListener *appMouseListener = mainWin ? mainWin->mouseListener() : nullptr;
+                    DialogKeycodeChange *dialog = new DialogKeycodeChange(this, oldKeycodes, appKeyListener, appMouseListener);
+#else
                     DialogKeycodeChange *dialog = new DialogKeycodeChange(this, oldKeycodes, appKeyListener);
+#endif
                     if (dialog->exec() == QDialog::Accepted){
                         newKeycodes = dialog->getKeyCodes();
                         setKeycodes(newKeycodes);

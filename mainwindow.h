@@ -15,6 +15,9 @@ QT_END_NAMESPACE
 class LayoutEditor;
 class QStackedWidget;
 class WindowsKeyListener;
+#ifdef Q_OS_WIN
+class WindowsMouseListener;
+#endif
 
 class MainWindow : public QMainWindow
 {
@@ -25,6 +28,9 @@ public:
     ~MainWindow();
     KeyboardWidget* keyboardWidget() const;
     WindowsKeyListener* keyListener() const;
+#ifdef Q_OS_WIN
+    WindowsMouseListener* mouseListener() const;
+#endif
     void resize(int width, int height);
     bool changeLanguage(const QApplication *a, const QString languageCode);
     Ui::MainWindow *ui;
@@ -54,5 +60,8 @@ private:
     QStackedWidget *m_stackedWidget = nullptr;
     class LayoutSettings *m_layoutSettings = nullptr;
     WindowsKeyListener *m_keyListener = nullptr;
+#ifdef Q_OS_WIN
+    WindowsMouseListener *m_mouseListener = nullptr;
+#endif
 };
 #endif // MAINWINDOW_H
