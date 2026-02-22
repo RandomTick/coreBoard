@@ -17,6 +17,42 @@
 // Minimum width so toolbar buttons (Open, New, Save, etc.) stay visible
 static const int kMinimumEditorWidth = 720;
 
+namespace {
+// Preset polygon templates in 0-100 unit space (centered, fits in 100x100)
+QPolygonF starTemplate() {
+    QPolygonF p;
+    const int n = 5;
+    const qreal cx = 50, cy = 50, outer = 48, inner = 20;
+    for (int i = 0; i < 2 * n; ++i) {
+        qreal r = (i % 2 == 0) ? outer : inner;
+        qreal angle = M_PI / 2 + 2 * M_PI * i / (2 * n);
+        p << QPointF(cx + r * std::cos(angle), cy - r * std::sin(angle));
+    }
+    return p;
+}
+QPolygonF diamondTemplate() {
+    return QPolygonF() << QPointF(50, 2) << QPointF(98, 50) << QPointF(50, 98) << QPointF(2, 50);
+}
+QPolygonF hexagonTemplate() {
+    QPolygonF p;
+    const qreal cx = 50, cy = 50, r = 48;
+    for (int i = 0; i < 6; ++i) {
+        qreal angle = M_PI / 6 + 2 * M_PI * i / 6;
+        p << QPointF(cx + r * std::cos(angle), cy - r * std::sin(angle));
+    }
+    return p;
+}
+QPolygonF triangleTemplate() {
+    QPolygonF p;
+    const qreal cx = 50, cy = 50, r = 48;
+    for (int i = 0; i < 3; ++i) {
+        qreal angle = M_PI / 2 + 2 * M_PI * i / 3;
+        p << QPointF(cx + r * std::cos(angle), cy - r * std::sin(angle));
+    }
+    return p;
+}
+}
+
 LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
 {
 
@@ -86,13 +122,16 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     applyStyleButton->setToolTip(tr("Apply picked style to key(s)"));
     applyStyleButton->setEnabled(false);
 
-    QMenu *addShapeMenu = new QMenu(this);
-    QAction *actRect = addShapeMenu->addAction(tr("Rectangle"));
-    QAction *actCircle = addShapeMenu->addAction(tr("Circle"));
-    addShapeMenu->addSeparator();
-    QAction *actCustom = addShapeMenu->addAction(tr("Custom shape"));
-    actCustom->setEnabled(false);
-    addButton->setMenu(addShapeMenu);
+    m_addShapeMenu = new QMenu(this);
+    m_actRect = m_addShapeMenu->addAction(tr("Rectangle"));
+    m_actCircle = m_addShapeMenu->addAction(tr("Circle"));
+    m_addShapeMenu->addSeparator();
+    m_customShapeMenu = m_addShapeMenu->addMenu(tr("Custom shape"));
+    m_actStar = m_customShapeMenu->addAction(tr("Star"));
+    m_actDiamond = m_customShapeMenu->addAction(tr("Diamond"));
+    m_actHexagon = m_customShapeMenu->addAction(tr("Hexagon"));
+    m_actTriangle = m_customShapeMenu->addAction(tr("Triangle"));
+    addButton->setMenu(m_addShapeMenu);
 
     saveButton = new QPushButton(tr("Save"), this);
     saveButton->setStyleSheet(buttonStyleSheet);
@@ -105,10 +144,26 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     connect(newButton, &QPushButton::clicked, this, &LayoutEditor::newLayout);
     connect(undoButton, &QPushButton::clicked, view, &LayoutEditorGraphicsView::undoLastAction);
     connect(redoButton, &QPushButton::clicked, view, &LayoutEditorGraphicsView::redoLastAction);
-    connect(actRect, &QAction::triggered, this, &LayoutEditor::addShape);
-    connect(actCircle, &QAction::triggered, this, [this]() {
+    connect(m_actRect, &QAction::triggered, this, &LayoutEditor::addShape);
+    connect(m_actCircle, &QAction::triggered, this, [this]() {
         ResizableEllipseItem *ellipse = addEllipse("", 100, 100, 100, 100);
         view->addRectAction(ellipse);
+    });
+    connect(m_actStar, &QAction::triggered, this, [this]() {
+        ResizablePolygonItem *poly = addPolygon(starTemplate(), "", 100, 100, 100, 100);
+        view->addRectAction(poly);
+    });
+    connect(m_actDiamond, &QAction::triggered, this, [this]() {
+        ResizablePolygonItem *poly = addPolygon(diamondTemplate(), "", 100, 100, 100, 100);
+        view->addRectAction(poly);
+    });
+    connect(m_actHexagon, &QAction::triggered, this, [this]() {
+        ResizablePolygonItem *poly = addPolygon(hexagonTemplate(), "", 100, 100, 100, 100);
+        view->addRectAction(poly);
+    });
+    connect(m_actTriangle, &QAction::triggered, this, [this]() {
+        ResizablePolygonItem *poly = addPolygon(triangleTemplate(), "", 100, 100, 100, 100);
+        view->addRectAction(poly);
     });
     connect(saveButton, &QPushButton::clicked, this, &LayoutEditor::saveLayout);
     connect(saveAsButton, &QPushButton::clicked, this, &LayoutEditor::saveLayoutAs);
@@ -254,8 +309,8 @@ void LayoutEditor::loadLayout(const QString &fileName){
     }
 
     // Minimum size must fit the rightmost and bottommost points of all elements
-    const int marginRight = 36;
-    const int marginBottom = 64;
+    const int marginRight = 56;
+    const int marginBottom = 80;
     int minW = marginRight;
     int minH = marginBottom;
     if (hasBounds) {
@@ -425,8 +480,8 @@ void LayoutEditor::addItemToScene(QGraphicsItem *item){
 
 void LayoutEditor::updateMinimumSizeFromScene()
 {
-    const int marginRight = 36;
-    const int marginBottom = 64;
+    const int marginRight = 56;
+    const int marginBottom = 80;
     qreal maxX = -1e9;
     qreal maxY = -1e9;
     bool hasItems = false;
@@ -620,4 +675,13 @@ void LayoutEditor::updateLanguage() {
     newButton->setText(tr("New Layout"));
     saveButton->setText(tr("Save"));
     saveAsButton->setText(tr("Save As"));
+    pickStyleButton->setToolTip(tr("Pick style from a key"));
+    applyStyleButton->setToolTip(tr("Apply picked style to key(s)"));
+    if (m_actRect) m_actRect->setText(tr("Rectangle"));
+    if (m_actCircle) m_actCircle->setText(tr("Circle"));
+    if (m_customShapeMenu) m_customShapeMenu->setTitle(tr("Custom shape"));
+    if (m_actStar) m_actStar->setText(tr("Star"));
+    if (m_actDiamond) m_actDiamond->setText(tr("Diamond"));
+    if (m_actHexagon) m_actHexagon->setText(tr("Hexagon"));
+    if (m_actTriangle) m_actTriangle->setText(tr("Triangle"));
 }

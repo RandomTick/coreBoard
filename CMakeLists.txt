@@ -19,13 +19,17 @@ set(TRANSLATABLE_SOURCES
     labelsettingsdialog.cpp
     layouteditor.h layouteditor.cpp
     main.cpp
-    mainwindow.cpp
-    mainwindow.h
+    mainwindow.cpp mainwindow.h
     versioninfo.h
     version_info.ui
     keyboardwidget.h keyboardwidget.cpp
     windowskeylistener.h windowskeylistener.cpp
     layouteditorgraphicsview.h layouteditorgraphicsview.cpp
+    settingsdialog.cpp
+    dialogstyle.cpp
+    dialogtextchange.cpp
+    dialogkeycodechange.cpp
+    languagesettingsdialog.cpp
 )
 
 set(PROJECT_SOURCES
@@ -36,6 +40,7 @@ set(PROJECT_SOURCES
         layoutsettings.h layoutsettings.cpp
         settingsdialog.h settingsdialog.cpp
         labelsettingsdialog.h labelsettingsdialog.cpp
+        languagesettingsdialog.h languagesettingsdialog.cpp
         dialogstyle.h dialogstyle.cpp
         ${TRANSLATABLE_SOURCES}
         ${TS_FILES}

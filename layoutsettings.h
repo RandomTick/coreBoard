@@ -44,6 +44,9 @@ public:
     LabelMode labelMode() const;
     void setLabelMode(LabelMode mode);
 
+    QString languageCode() const;
+    void setLanguageCode(const QString &code);
+
 private:
     void load();
 
@@ -58,6 +61,7 @@ private:
     QColor m_textColor;
     QColor m_highlightedTextColor;
     LabelMode m_labelMode = LabelMode::FollowCapsAndShift;
+    QString m_languageCode;
 };
 
 #endif // LAYOUTSETTINGS_H

@@ -10,11 +10,11 @@ DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> current
     keyListener = mainKeyListener ? mainKeyListener : new WindowsKeyListener(this);
 #endif
 
-    setWindowTitle("Change Key Codes");
+    setWindowTitle(tr("Change Key Codes"));
 
     QVBoxLayout *layout = new QVBoxLayout(this);
 
-    QLabel *label = new QLabel("Current Key Codes:", this);
+    QLabel *label = new QLabel(tr("Current Key Codes:"), this);
     layout->addWidget(label);
 
     QLineEdit *keyCodesDisplay = new QLineEdit(this);

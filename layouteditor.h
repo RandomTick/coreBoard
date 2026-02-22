@@ -6,6 +6,8 @@
 #include <QGraphicsScene>
 #include <QPolygonF>
 #include <QPushButton>
+#include <QMenu>
+#include <QAction>
 #include <QVBoxLayout>
 #include <QJsonArray>
 #include "layouteditorgraphicsview.h"
@@ -46,6 +48,14 @@ private:
     QPushButton *applyStyleButton;
     QPushButton *saveButton;
     QPushButton *saveAsButton;
+    QMenu *m_addShapeMenu = nullptr;
+    QMenu *m_customShapeMenu = nullptr;
+    QAction *m_actRect = nullptr;
+    QAction *m_actCircle = nullptr;
+    QAction *m_actStar = nullptr;
+    QAction *m_actDiamond = nullptr;
+    QAction *m_actHexagon = nullptr;
+    QAction *m_actTriangle = nullptr;
     QString _currentLayoutPath;
     bool m_dirty = false;
     LayoutSettings *m_layoutSettings = nullptr;

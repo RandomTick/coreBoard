@@ -19,7 +19,8 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode >= 0 && instance) {
         KBDLLHOOKSTRUCT *pkbhs = (KBDLLHOOKSTRUCT *)lParam;
         UINT vk = pkbhs->vkCode;
-        if (isCapsLockKey(vk) && (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)) {
+        // Caps Lock toggles on key RELEASE on Windows, so we read state on key up
+        if (isCapsLockKey(vk) && (wParam == WM_KEYUP || wParam == WM_SYSKEYUP)) {
             bool capsOn = (GetKeyState(VK_CAPITAL) & 1) != 0;
             emit instance->capsLockStateChanged(capsOn);
         }

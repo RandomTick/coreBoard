@@ -36,6 +36,7 @@
     </property>
     <addaction name="actionColors"/>
     <addaction name="actionLabelDisplay"/>
+    <addaction name="actionLanguage"/>
    </widget>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
@@ -60,6 +61,11 @@
   <action name="actionLabelDisplay">
    <property name="text">
     <string>Label display...</string>
+   </property>
+  </action>
+  <action name="actionLanguage">
+   <property name="text">
+    <string>Language...</string>
    </property>
   </action>
   <action name="actionAbout">

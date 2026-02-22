@@ -1,7 +1,9 @@
 #include <QMouseEvent>
+#include <QFocusEvent>
 #include <QGraphicsItem>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsPolygonItem>
+#include <QPainter>
 #include "layouteditorgraphicsview.h"
 #include "layouteditor.h"
 #include "resizablerectitem.h"
@@ -284,13 +286,10 @@ void LayoutEditorGraphicsView::centerText(QGraphicsRectItem *rect){
 }
 
 void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
-    if (!currentItem) {
-        QGraphicsView::mouseMoveEvent(event);
-        return;
-    }
+    QPointF mouseScenePos = mapToScene(event->pos());
 
-    {
-        int edgeOrCorner = isOnEdgeOrCorner(currentItem, event->pos());
+    if (currentItem) {
+        int edgeOrCorner = isOnEdgeOrCorner(currentItem, mouseScenePos);
         //QRectF currentBounds = getCorrectBoundingRect(currentItem);
 
         if (edgeOrCorner != 0 && (activeAction == None || activeAction == Resize)) {
@@ -410,11 +409,9 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                     alignmentHelpers.clear();
                 }
             }
-        }else if (activeAction == None || activeAction == Move){
-
+        } else if (activeAction == None || activeAction == Move) {
             activeAction = Actions::Move;
-            //Move
-            QPointF newPos = mapToScene(event->pos()) - offset;
+            QPointF newPos = mouseScenePos - offset;
 
             // Get the scene's boundaries
             qreal minX = scene->sceneRect().left();
@@ -430,35 +427,26 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
             updateAlignmentHelpers(currentItem);
 
+        }
+    }
+
+    // Cursor and hover bounding box: always update when not in pick/apply style mode
+    if (!m_pickStyleMode && !m_applyStyleMode) {
+        QGraphicsItem *item = currentItem;
+        if (!item) {
+            item = scene->itemAt(mouseScenePos, QTransform());
+            if (item && alignmentHelpers.contains(item))
+                item = nullptr;
+            if (item) {
+                QGraphicsTextItem *textItem = dynamic_cast<QGraphicsTextItem*>(item);
+                if (textItem && textItem->parentItem())
+                    item = textItem->parentItem();
             }
         }
-    //implement hover event for resize, need to do this seperately, because we do not have currentItem
-
-    QGraphicsItem *item = scene->itemAt(mapToScene(event->pos()), QTransform());
-    int testEdgeOrCorner = isOnEdgeOrCorner(item, event->pos());
-
-    switch (testEdgeOrCorner) {
-        case 1:
-        case 4:
-            setCursor(Qt::SizeFDiagCursor);
-            break;
-        case 2:
-        case 3:
-            setCursor(Qt::SizeBDiagCursor);
-            break;
-        case 5:
-        case 6:
-            setCursor(Qt::SizeHorCursor);
-            break;
-        case 7:
-        case 8:
-            setCursor(Qt::SizeVerCursor);
-            break;
-        default:
-            if (activeAction == None){
-                setCursor(Qt::ArrowCursor); // Default cursor for no match
-            }
+        updateHoverState(item, mouseScenePos);
     }
+
+    QGraphicsView::mouseMoveEvent(event);
 }
 
 void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
@@ -467,7 +455,7 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
         return;
     }
     {
-        int edgeOrCorner = isOnEdgeOrCorner(currentItem, event->pos());
+        int edgeOrCorner = isOnEdgeOrCorner(currentItem, mapToScene(event->pos()));
 
         Action *action;
         bool validAction = false;
@@ -511,6 +499,9 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
             layoutEditor->markDirty();
             layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
         }
+        // Restore default cursor after resize/move ends
+        if (!m_pickStyleMode && !m_applyStyleMode)
+            setCursor(Qt::ArrowCursor);
     }
 }
 
@@ -535,6 +526,7 @@ void LayoutEditorGraphicsView::clearUndoRedo(){
 
 void LayoutEditorGraphicsView::clearAlignmentHelpers(){
     alignmentHelpers.clear();
+    clearHoverBoundingBox();
 }
 
 void LayoutEditorGraphicsView::undoLastAction(){
@@ -756,6 +748,38 @@ void LayoutEditorGraphicsView::resizeEvent(QResizeEvent *event) {
     }
 }
 
+void LayoutEditorGraphicsView::leaveEvent(QEvent *event) {
+    if (currentItem) {
+        for (QGraphicsItem *helper : alignmentHelpers) {
+            if (scene) scene->removeItem(helper);
+            delete helper;
+        }
+        alignmentHelpers.clear();
+        currentItem = nullptr;
+        activeAction = Actions::None;
+        if (!m_pickStyleMode && !m_applyStyleMode)
+            setCursor(Qt::ArrowCursor);
+    }
+    clearHoverBoundingBox();
+    QGraphicsView::leaveEvent(event);
+}
+
+void LayoutEditorGraphicsView::focusOutEvent(QFocusEvent *event) {
+    if (currentItem) {
+        for (QGraphicsItem *helper : alignmentHelpers) {
+            if (scene) scene->removeItem(helper);
+            delete helper;
+        }
+        alignmentHelpers.clear();
+        currentItem = nullptr;
+        activeAction = Actions::None;
+        if (!m_pickStyleMode && !m_applyStyleMode)
+            setCursor(Qt::ArrowCursor);
+    }
+    clearHoverBoundingBox();
+    QGraphicsView::focusOutEvent(event);
+}
+
 int LayoutEditorGraphicsView::isOnEdgeOrCorner(QGraphicsItem *item, const QPointF &mousePos) {
     if (!item) {
         return 0;
@@ -946,6 +970,56 @@ bool LayoutEditorGraphicsView::rangesOverlap(qreal start1, qreal end1, qreal sta
 
 }
 
+
+void LayoutEditorGraphicsView::clearHoverBoundingBox() {
+    if (!m_hoverBoundingBoxRect.isNull()) {
+        m_hoverBoundingBoxRect = QRectF();
+        viewport()->update();
+    }
+}
+
+void LayoutEditorGraphicsView::updateHoverState(QGraphicsItem *itemUnderCursor, const QPointF &mouseScenePos) {
+    bool isKeyShape = itemUnderCursor && (dynamic_cast<ResizableRectItem*>(itemUnderCursor) ||
+        dynamic_cast<ResizableEllipseItem*>(itemUnderCursor) ||
+        dynamic_cast<ResizablePolygonItem*>(itemUnderCursor));
+
+    if (!isKeyShape) {
+        clearHoverBoundingBox();
+        setCursor(Qt::ArrowCursor);
+        return;
+    }
+
+    int edgeOrCorner = isOnEdgeOrCorner(itemUnderCursor, mouseScenePos);
+    switch (edgeOrCorner) {
+        case 1: case 4: setCursor(Qt::SizeFDiagCursor); break;
+        case 2: case 3: setCursor(Qt::SizeBDiagCursor); break;
+        case 5: case 6: setCursor(Qt::SizeHorCursor); break;
+        case 7: case 8: setCursor(Qt::SizeVerCursor); break;
+        default: setCursor(Qt::ArrowCursor); break;
+    }
+
+    // Show dotted bounding box on hover when not dragging (painted in drawForeground, not a scene item)
+    if (!currentItem) {
+        QRectF sceneRect = itemUnderCursor->boundingRect().translated(itemUnderCursor->scenePos());
+        if (m_hoverBoundingBoxRect != sceneRect) {
+            m_hoverBoundingBoxRect = sceneRect;
+            viewport()->update();
+        }
+    } else {
+        clearHoverBoundingBox();
+    }
+}
+
+void LayoutEditorGraphicsView::drawForeground(QPainter *painter, const QRectF &rect) {
+    QGraphicsView::drawForeground(painter, rect);
+    if (!m_hoverBoundingBoxRect.isNull()) {
+        painter->save();
+        painter->setPen(QPen(QColor(128, 128, 128), 1, Qt::DashLine));
+        painter->setBrush(Qt::NoBrush);
+        painter->drawRect(m_hoverBoundingBoxRect);
+        painter->restore();
+    }
+}
 
 void LayoutEditorGraphicsView::updateSizeHelpers(QGraphicsItem* item) {
     // Ensure the item is valid and the type expected

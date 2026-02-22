@@ -13,6 +13,7 @@ static const char kBackgroundColorKey[] = "backgroundColor";
 static const char kTextColorKey[] = "textColor";
 static const char kHighlightedTextColorKey[] = "highlightedTextColor";
 static const char kLabelModeKey[] = "labelMode";
+static const char kLanguageCodeKey[] = "languageCode";
 
 LayoutSettings::LayoutSettings()
 {
@@ -135,6 +136,16 @@ void LayoutSettings::setLabelMode(LabelMode mode)
     m_labelMode = mode;
 }
 
+QString LayoutSettings::languageCode() const
+{
+    return m_languageCode;
+}
+
+void LayoutSettings::setLanguageCode(const QString &code)
+{
+    m_languageCode = code;
+}
+
 void LayoutSettings::save()
 {
     QSettings s(kOrg, kApp);
@@ -146,6 +157,7 @@ void LayoutSettings::save()
     s.setValue(kTextColorKey, m_textColor.name(QColor::HexArgb));
     s.setValue(kHighlightedTextColorKey, m_highlightedTextColor.name(QColor::HexArgb));
     s.setValue(kLabelModeKey, static_cast<int>(m_labelMode));
+    s.setValue(kLanguageCodeKey, m_languageCode);
     s.beginWriteArray(kRecentGroup);
     for (int i = 0; i < m_recentLayouts.size(); ++i) {
         s.setArrayIndex(i);
@@ -184,6 +196,7 @@ void LayoutSettings::load()
         bool oldShow = s.value("showLabelsByShift", true).toBool();
         m_labelMode = oldShow ? LabelMode::FollowCapsAndShift : LabelMode::AllLowercase;
     }
+    m_languageCode = s.value(kLanguageCodeKey).toString();
     m_recentLayouts.clear();
     int n = s.beginReadArray(kRecentGroup);
     for (int i = 0; i < n; ++i) {

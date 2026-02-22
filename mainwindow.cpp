@@ -10,7 +10,9 @@
 #include "layoutsettings.h"
 #include "settingsdialog.h"
 #include "labelsettingsdialog.h"
+#include "languagesettingsdialog.h"
 #include "versioninfo.h"
+#include <QApplication>
 #ifdef Q_OS_WIN
 #include "windowskeylistener.h"
 #endif
@@ -58,12 +60,18 @@ MainWindow::MainWindow(QWidget *parent)
     });
     connect(ui->actionColors, &QAction::triggered, this, &MainWindow::onColors);
     connect(ui->actionLabelDisplay, &QAction::triggered, this, &MainWindow::onLabelDisplay);
+    connect(ui->actionLanguage, &QAction::triggered, this, &MainWindow::onLanguage);
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::onAbout);
     applyVisualizationColors();
     connect(m_layoutEditor, &LayoutEditor::layoutLoaded, this, &MainWindow::reloadVisualizationLayout);
     connect(m_layoutEditor, &LayoutEditor::layoutLoaded, this, [this]() {
         QTimer::singleShot(100, this, &MainWindow::ensureWindowFitsLayoutEditor);
     });
+
+    // Load saved language (English default if not set)
+    QString langCode = m_layoutSettings->languageCode();
+    if (!langCode.isEmpty() && langCode != QLatin1String("en_US"))
+        changeLanguage(qApp, langCode);
 }
 
 void MainWindow::ensureWindowFitsLayoutEditor()
@@ -110,6 +118,17 @@ void MainWindow::onLabelDisplay()
     if (dlg.exec() == QDialog::Accepted) {
         m_keyboardWidget->setLabelMode(m_layoutSettings->labelMode());
         m_keyboardWidget->update();
+    }
+}
+
+void MainWindow::onLanguage()
+{
+    LanguageSettingsDialog dlg(m_layoutSettings, this);
+    if (dlg.exec() == QDialog::Accepted) {
+        QString code = m_layoutSettings->languageCode();
+        if (code.isEmpty())
+            code = QStringLiteral("en_US");
+        changeLanguage(qApp, code);
     }
 }
 

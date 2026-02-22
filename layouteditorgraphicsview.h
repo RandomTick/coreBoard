@@ -83,6 +83,9 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
     void keyReleaseEvent(QKeyEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void leaveEvent(QEvent *event) override;
+    void focusOutEvent(QFocusEvent *event) override;
+    void drawForeground(QPainter *painter, const QRectF &rect) override;
 
 
 
@@ -102,6 +105,8 @@ private:
     void drawAlignmentLine(const QRectF& movingRect, qreal distance, Qt::Orientation orientation, bool isStartSide);
     bool rangesOverlap(qreal start1, qreal end1, qreal start2, qreal end2);
     void updateSizeHelpers(QGraphicsItem* item);
+    void updateHoverState(QGraphicsItem *itemUnderCursor, const QPointF &mouseScenePos);
+    void clearHoverBoundingBox();
     QRectF getCorrectBoundingRect(QGraphicsItem *item);
     QPointF edgeOffset;
     Actions activeAction;
@@ -118,6 +123,7 @@ private:
     KeyStyle m_pickedStyle;
     QList<QPair<QGraphicsItem*, QPointF>> m_arrowSegmentStarts;
     QTimer *m_arrowCommitTimer = nullptr;
+    QRectF m_hoverBoundingBoxRect;
 };
 
 #endif // LAYOUTEDITORGRAPHICSVIEW_H

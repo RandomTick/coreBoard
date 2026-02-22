@@ -41,6 +41,7 @@ private slots:
     void onAbout();
     void onColors();
     void onLabelDisplay();
+    void onLanguage();
     void reloadVisualizationLayout(const QString &path);
     void ensureWindowFitsLayoutEditor();
 
