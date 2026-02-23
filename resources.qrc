@@ -1,9 +1,12 @@
 <RCC>
     <qresource prefix="/">
+        <file>default.json</file>
         <file>icons/redo.png</file>
         <file>icons/undo.png</file>
         <file>icons/pick_style.svg</file>
         <file>icons/apply_style.svg</file>
+        <file>icons/content_copy.svg</file>
+        <file>icons/content_paste.svg</file>
         <file>installer/coreBoard.ico</file>
         <file>translations/cmd.txt</file>
         <file>translations/CoreBoard_de_DE.qm</file>

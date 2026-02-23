@@ -22,6 +22,8 @@ public:
     KeyStyle keyStyle() const;
     void setKeyStyle(const KeyStyle &style);
 
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
+
 private:
     QGraphicsTextItem *textItem;
     QString m_shiftText;

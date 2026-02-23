@@ -23,6 +23,8 @@ public:
     KeyStyle keyStyle() const;
     void setKeyStyle(const KeyStyle &style);
 
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
+
 private:
     QPolygonF _templatePolygon;
     QGraphicsTextItem *textItem;

@@ -2,7 +2,8 @@
 #define DIALOGTEXTCHANGE_H
 
 #include <QDialog>
-#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QKeyEvent>
 
 class DialogTextChange : public QDialog {
     Q_OBJECT
@@ -15,9 +16,12 @@ public:
 private slots:
     void insertSymbol(const QString &symbol);
 
+protected:
+    void keyPressEvent(QKeyEvent *event) override;
+
 private:
-    QLineEdit *lineEdit;
-    QLineEdit *shiftLineEdit;
+    QPlainTextEdit *lineEdit;
+    QPlainTextEdit *shiftLineEdit;
 };
 
 #endif // DIALOGTEXTCHANGE_H

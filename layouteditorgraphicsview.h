@@ -69,12 +69,15 @@ public:
     void clearUndoRedo();
     void setPickStyleMode(bool on);
     void setApplyStyleMode(bool on);
+    void setCopyMode(bool on);
     bool hasPickedStyle() const { return m_hasPickedStyle; }
     void clearAlignmentHelpers();
+    QList<QGraphicsItem*> selectedKeyItems() const;
 
 signals:
     void stylePicked();
     void applyStyleModeExited();
+    void keyCopied();
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
@@ -102,6 +105,7 @@ private:
     void enforceRectSize(QPointF &newPos, qreal &newWidth, qreal &newHeight);
     void centerText(QGraphicsRectItem *rect);
     void updateAlignmentHelpers(QGraphicsItem* item);
+    void updateAlignmentHelpersForSelection();
     void drawAlignmentLine(const QRectF& movingRect, qreal distance, Qt::Orientation orientation, bool isStartSide);
     bool rangesOverlap(qreal start1, qreal end1, qreal start2, qreal end2);
     void updateSizeHelpers(QGraphicsItem* item);
@@ -113,16 +117,17 @@ private:
 
     void commitArrowKeyMoveSegment();
     void nudgeSelection(int dx, int dy);
-    QList<QGraphicsItem*> selectedKeyItems() const;
 
     int m_arrowDirection = 0;
     QPointF m_arrowSegmentDelta;
     bool m_pickStyleMode = false;
     bool m_applyStyleMode = false;
+    bool m_copyMode = false;
     bool m_hasPickedStyle = false;
     KeyStyle m_pickedStyle;
     QList<QPair<QGraphicsItem*, QPointF>> m_arrowSegmentStarts;
     QTimer *m_arrowCommitTimer = nullptr;
+    QList<QPair<QGraphicsItem*, QPointF>> m_dragItems;
     QRectF m_hoverBoundingBoxRect;
 };
 

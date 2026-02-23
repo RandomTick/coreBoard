@@ -10,6 +10,7 @@
 struct KeyStyle {
     QColor outlineColor{Qt::black};
     qreal outlineWidth{1.0};
+    qreal cornerRadius{0.0};
     int fontPointSize{10};
     bool fontBold{false};
     bool fontItalic{false};
@@ -45,6 +46,10 @@ struct KeyStyle {
             s.fontItalic = keyData.value("FontItalic").toBool(false);
         if (keyData.contains("FontFamily"))
             s.fontFamily = keyData.value("FontFamily").toString();
+        if (keyData.contains("CornerRadius"))
+            s.cornerRadius = keyData.value("CornerRadius").toDouble(0.0);
+        if (s.cornerRadius < 0)
+            s.cornerRadius = 0;
         return s;
     }
 
@@ -55,6 +60,8 @@ struct KeyStyle {
         o.insert("FontSize", fontPointSize);
         o.insert("FontBold", fontBold);
         o.insert("FontItalic", fontItalic);
+        if (cornerRadius > 0)
+            o.insert("CornerRadius", cornerRadius);
         if (!fontFamily.isEmpty())
             o.insert("FontFamily", fontFamily);
         return o;

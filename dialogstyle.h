@@ -16,7 +16,7 @@ class DialogStyle : public QDialog {
     Q_OBJECT
 
 public:
-    explicit DialogStyle(QWidget *parent, const KeyStyle &currentStyle, const QString &previewLabel = QString());
+    explicit DialogStyle(QWidget *parent, const KeyStyle &currentStyle, const QString &previewLabel = QString(), bool isRectangle = false);
     KeyStyle getStyle() const;
 
 private:
@@ -26,6 +26,7 @@ private:
     QCheckBox *m_fontBoldCheck = nullptr;
     QCheckBox *m_fontItalicCheck = nullptr;
     QComboBox *m_fontCombo = nullptr;
+    QDoubleSpinBox *m_cornerRadiusSpin = nullptr;
     QString m_previewLabel;
     QColor m_outlineColor;
 

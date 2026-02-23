@@ -6,8 +6,12 @@
 #include <QGraphicsRectItem>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsPolygonItem>
+#include <QGraphicsPathItem>
+#include <QPainterPath>
 #include <QGraphicsTextItem>
 #include <QAbstractGraphicsShapeItem>
+#include <QTextDocument>
+#include <QTextOption>
 #include <QVBoxLayout>
 #include <QTimer>
 #include <cmath>
@@ -149,16 +153,45 @@ void KeyboardWidget::applyLayoutData(const QByteArray &jsonData)
     m_keys.clear();
     keyCounter.clear();
 
+    // Compute bounding box from all elements (same logic as editor) so scene rect matches
+    qreal overallMinX = 1e9, overallMinY = 1e9, overallMaxX = -1e9, overallMaxY = -1e9;
+    bool hasBounds = false;
+    for (const QJsonValue &element : elements) {
+        QJsonObject keyData = element.toObject();
+        if (keyData.value("__type").toString() != "KeyboardKey")
+            continue;
+        QJsonArray boundaries = keyData.value("Boundaries").toArray();
+        if (boundaries.size() < 4)
+            continue;
+        for (const QJsonValue &pv : boundaries) {
+            QJsonObject po = pv.toObject();
+            qreal px = po["X"].toDouble();
+            qreal py = po["Y"].toDouble();
+            overallMinX = qMin(overallMinX, px);
+            overallMinY = qMin(overallMinY, py);
+            overallMaxX = qMax(overallMaxX, px);
+            overallMaxY = qMax(overallMaxY, py);
+            hasBounds = true;
+        }
+    }
+
     for (const QJsonValue &element : elements) {
         if (element.toObject().value("__type").toString() == "KeyboardKey") {
             createKey(element.toObject());
         }
     }
 
-    int maxWidth = rootObject.value("Width").toInt();
-    int maxHeight = rootObject.value("Height").toInt();
-    m_scene->setSceneRect(0, 0, qMax(1, maxWidth), qMax(1, maxHeight));
-    setMinimumSize(maxWidth, maxHeight);
+    if (hasBounds) {
+        qreal w = qMax(qreal(1), overallMaxX - overallMinX);
+        qreal h = qMax(qreal(1), overallMaxY - overallMinY);
+        m_scene->setSceneRect(overallMinX, overallMinY, w, h);
+        setMinimumSize(static_cast<int>(w), static_cast<int>(h));
+    } else {
+        int maxWidth = rootObject.value("Width").toInt();
+        int maxHeight = rootObject.value("Height").toInt();
+        m_scene->setSceneRect(0, 0, qMax(1, maxWidth), qMax(1, maxHeight));
+        setMinimumSize(maxWidth, maxHeight);
+    }
     updateLabelsForShiftState();
     m_view->viewport()->update();
     update();
@@ -208,12 +241,23 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
             }
         }
         if (isAxisAlignedRect && w > 0 && h > 0) {
-            QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, w, h);
-            rect->setPos(minX, minY);
-            rect->setBrush(m_keyColor);
-            rect->setPen(keyStyle.pen());
-            m_scene->addItem(rect);
-            shapeItem = rect;
+            if (keyStyle.cornerRadius > 0) {
+                QPainterPath path;
+                path.addRoundedRect(0, 0, w, h, keyStyle.cornerRadius, keyStyle.cornerRadius);
+                QGraphicsPathItem *pathItem = new QGraphicsPathItem(path);
+                pathItem->setPos(minX, minY);
+                pathItem->setBrush(m_keyColor);
+                pathItem->setPen(keyStyle.pen());
+                m_scene->addItem(pathItem);
+                shapeItem = pathItem;
+            } else {
+                QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, w, h);
+                rect->setPos(minX, minY);
+                rect->setBrush(m_keyColor);
+                rect->setPen(keyStyle.pen());
+                m_scene->addItem(rect);
+                shapeItem = rect;
+            }
         }
     }
 
@@ -249,11 +293,16 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     shapeItem->setData(ShiftTextRole, shiftText);
 
     QGraphicsTextItem *textItem = new QGraphicsTextItem(shapeItem);
+    textItem->document()->setDocumentMargin(0);
+    QTextOption opt;
+    opt.setAlignment(Qt::AlignHCenter);
+    textItem->document()->setDefaultTextOption(opt);
     textItem->setPlainText(label);
     textItem->setDefaultTextColor(m_textColor);
     textItem->setFont(keyStyle.font());
-    QRectF textBr = textItem->boundingRect();
     QRectF shapeBr = shapeItem->boundingRect();
+    textItem->setTextWidth(qMax(0.0, shapeBr.width() - 8));
+    QRectF textBr = textItem->boundingRect();
     textItem->setPos(shapeBr.center().x() - textBr.width() / 2, shapeBr.center().y() - textBr.height() / 2);
     textItem->setZValue(1);
 

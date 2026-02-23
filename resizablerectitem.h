@@ -8,6 +8,7 @@ struct KeyStyle;
 
 class ResizableRectItem : public QGraphicsRectItem {
 public:
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
     ResizableRectItem(const QRectF &rect, const QString &text, const std::list<int> keycodes, QGraphicsItem *parent = nullptr);
 
     void setText(const QString &text);
@@ -25,6 +26,7 @@ public:
 private:
     QGraphicsTextItem *textItem;
     QString m_shiftText;
+    qreal m_cornerRadius = 0;
     std::list<int> keyCodes;
     void centerText();
 };

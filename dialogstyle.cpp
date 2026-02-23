@@ -62,7 +62,7 @@ private:
     QString m_previewLabel;
 };
 
-DialogStyle::DialogStyle(QWidget *parent, const KeyStyle &currentStyle, const QString &previewLabel)
+DialogStyle::DialogStyle(QWidget *parent, const KeyStyle &currentStyle, const QString &previewLabel, bool isRectangle)
     : QDialog(parent)
     , m_outlineColor(currentStyle.outlineColor)
     , m_previewLabel(previewLabel)
@@ -82,6 +82,14 @@ DialogStyle::DialogStyle(QWidget *parent, const KeyStyle &currentStyle, const QS
     m_outlineWidthSpin->setSingleStep(0.5);
     m_outlineWidthSpin->setValue(currentStyle.outlineWidth);
     form->addRow(tr("Outline width (px):"), m_outlineWidthSpin);
+
+    if (isRectangle) {
+        m_cornerRadiusSpin = new QDoubleSpinBox(this);
+        m_cornerRadiusSpin->setRange(0, 999);
+        m_cornerRadiusSpin->setSingleStep(1);
+        m_cornerRadiusSpin->setValue(currentStyle.cornerRadius >= 0 ? currentStyle.cornerRadius : 0);
+        form->addRow(tr("Corner radius (px):"), m_cornerRadiusSpin);
+    }
 
     m_fontSizeSpin = new QSpinBox(this);
     m_fontSizeSpin->setRange(6, 72);
@@ -150,6 +158,7 @@ KeyStyle DialogStyle::getStyle() const {
     KeyStyle s;
     s.outlineColor = m_outlineColor;
     s.outlineWidth = m_outlineWidthSpin->value();
+    s.cornerRadius = m_cornerRadiusSpin ? m_cornerRadiusSpin->value() : 0;
     s.fontPointSize = m_fontSizeSpin->value();
     s.fontBold = m_fontBoldCheck->isChecked();
     s.fontItalic = m_fontItalicCheck->isChecked();

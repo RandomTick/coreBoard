@@ -1,5 +1,20 @@
 #include "resizablepolygonitem.h"
 #include "keystyle.h"
+#include <QPainter>
+#include <QStyleOptionGraphicsItem>
+#include <QTextDocument>
+#include <QTextOption>
+
+void ResizablePolygonItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
+    painter->setPen(pen());
+    painter->setBrush(brush());
+    painter->drawPolygon(polygon());
+    if (isSelected()) {
+        painter->setPen(QPen(Qt::white, 2, Qt::DashLine));
+        painter->setBrush(Qt::NoBrush);
+        painter->drawPolygon(polygon());
+    }
+}
 
 ResizablePolygonItem::ResizablePolygonItem(const QPolygonF &templatePolygon, const QString &text, const std::list<int> keycodes, QGraphicsItem *parent)
     : QGraphicsPolygonItem(templatePolygon, parent)
@@ -8,12 +23,19 @@ ResizablePolygonItem::ResizablePolygonItem(const QPolygonF &templatePolygon, con
     setFlag(QGraphicsItem::ItemIsSelectable);
     setPen(KeyStyle().pen());
     textItem = new QGraphicsTextItem(this);
+    textItem->document()->setDocumentMargin(0);
+    QTextOption opt;
+    opt.setAlignment(Qt::AlignHCenter);
+    textItem->document()->setDefaultTextOption(opt);
     textItem->setPlainText(text);
     textItem->setFont(KeyStyle().font());
+    const qreal margin = 8;
+    textItem->setTextWidth(qMax(0.0, boundingRect().width() - margin));
     centerText();
 }
 
 void ResizablePolygonItem::updatePolygonFromTemplate(qreal w, qreal h) {
+    const qreal margin = 8;
     QRectF tb = _templatePolygon.boundingRect();
     qreal tw = tb.width();
     qreal th = tb.height();
@@ -26,11 +48,14 @@ void ResizablePolygonItem::updatePolygonFromTemplate(qreal w, qreal h) {
         scaled << QPointF((p.x() - tb.left()) * sx, (p.y() - tb.top()) * sy);
     }
     setPolygon(scaled);
+    textItem->setTextWidth(qMax(0.0, w - margin));
     centerText();
 }
 
 void ResizablePolygonItem::setText(const QString &text) {
     textItem->setPlainText(text);
+    const qreal margin = 8;
+    textItem->setTextWidth(qMax(0.0, boundingRect().width() - margin));
     centerText();
 }
 

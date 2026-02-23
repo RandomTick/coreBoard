@@ -20,6 +20,7 @@
 #include "keystyle.h"
 #include <QMenu>
 #include <QKeyEvent>
+#include <QSet>
 #include <float.h>
 
 static KeyStyle keyStyleForItem(QGraphicsItem *item) {
@@ -55,6 +56,7 @@ LayoutEditorGraphicsView::LayoutEditorGraphicsView(QWidget *parent) : QGraphicsV
 void LayoutEditorGraphicsView::setSceneAndStore(QGraphicsScene *externScene){
     scene = externScene;
     this->setScene(scene);
+    connect(scene, &QGraphicsScene::selectionChanged, this, &LayoutEditorGraphicsView::updateAlignmentHelpersForSelection);
 }
 
 void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
@@ -65,9 +67,10 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
         item = item->parentItem();
     }
     if (event->button() == Qt::RightButton) {
-        if (m_pickStyleMode || m_applyStyleMode) {
+        if (m_pickStyleMode || m_applyStyleMode || m_copyMode) {
             m_pickStyleMode = false;
             m_applyStyleMode = false;
+            m_copyMode = false;
             setCursor(Qt::ArrowCursor);
             emit applyStyleModeExited();
             event->accept();
@@ -148,7 +151,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 } else if (selectedAction == actionStyle) {
                     KeyStyle current = keyStyleForItem(styleTargets.first());
                     QString previewLabel = (rect ? rect->getText() : (ellipse ? ellipse->getText() : polygon->getText()));
-                    DialogStyle *dialog = new DialogStyle(this, current, previewLabel);
+                    DialogStyle *dialog = new DialogStyle(this, current, previewLabel, rect != nullptr);
                     if (dialog->exec() == QDialog::Accepted) {
                         KeyStyle newStyle = dialog->getStyle();
                         Action *action = new Action(Actions::ChangeStyle, nullptr);
@@ -183,6 +186,10 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
         }
     } else {
         if (event->button() == Qt::LeftButton) {
+            if (m_copyMode && !item) {
+                event->accept();
+                return;
+            }
             if (item) {
                 ResizableRectItem *rect = dynamic_cast<ResizableRectItem*>(item);
                 ResizableEllipseItem *ellipse = dynamic_cast<ResizableEllipseItem*>(item);
@@ -194,6 +201,12 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                         m_pickStyleMode = false;
                         setCursor(Qt::ArrowCursor);
                         emit stylePicked();
+                        return;
+                    }
+                    if (m_copyMode) {
+                        emit keyCopied();
+                        layoutEditor->copyKeyFromItem(item);
+                        m_copyMode = false;
                         return;
                     }
                     if (m_applyStyleMode && m_hasPickedStyle) {
@@ -221,14 +234,26 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                     if (event->modifiers() & Qt::ControlModifier) {
                         item->setSelected(!item->isSelected());
                     } else {
-                        scene->clearSelection();
-                        item->setSelected(true);
+                        QList<QGraphicsItem*> sel = selectedKeyItems();
+                        if (!item->isSelected() || sel.size() <= 1) {
+                            scene->clearSelection();
+                            item->setSelected(true);
+                        }
                     }
                     currentItem = item;
                     offset = mapToScene(event->pos()) - item->pos();
                     startingPosition = item->pos();
                     startingBounds = getCorrectBoundingRect(item);
+                    m_dragItems.clear();
+                    QList<QGraphicsItem*> toDrag = item->isSelected() ? selectedKeyItems() : QList<QGraphicsItem*>{item};
+                    for (QGraphicsItem *dragItem : toDrag)
+                        m_dragItems.append(qMakePair(dragItem, dragItem->pos()));
+                    event->accept();
                 } else {
+                    if (m_copyMode) {
+                        event->accept();
+                        return;
+                    }
                     currentItem = nullptr;
                     QGraphicsView::mousePressEvent(event);
                 }
@@ -242,9 +267,16 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 offset = mapToScene(event->pos()) - item->pos();
                 startingPosition = item->pos();
                 startingBounds = getCorrectBoundingRect(item);
+                m_dragItems.clear();
+                if (dynamic_cast<ResizableRectItem*>(item) || dynamic_cast<ResizableEllipseItem*>(item) || dynamic_cast<ResizablePolygonItem*>(item)) {
+                    QList<QGraphicsItem*> toDrag = item->isSelected() ? selectedKeyItems() : QList<QGraphicsItem*>{item};
+                    for (QGraphicsItem *dragItem : toDrag)
+                        m_dragItems.append(qMakePair(dragItem, dragItem->pos()));
+                }
             } else {
                 offset = QPointF();
                 startingPosition = QPointF();
+                m_dragItems.clear();
             }
         }
     }
@@ -420,26 +452,32 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
         } else if (activeAction == None || activeAction == Move) {
             activeAction = Actions::Move;
             QPointF newPos = mouseScenePos - offset;
+            QPointF delta = newPos - startingPosition;
 
-            // Get the scene's boundaries
             qreal minX = scene->sceneRect().left();
             qreal minY = scene->sceneRect().top();
             qreal maxX = scene->sceneRect().right();
             qreal maxY = scene->sceneRect().bottom();
 
-
-            // Adjust the position to keep the item within the boundaries
             qreal newX = qMax(minX, qMin(newPos.x(), maxX - startingBounds.width()));
             qreal newY = qMax(minY, qMin(newPos.y(), maxY - startingBounds.height()));
-            currentItem->setPos(newX, newY);
+            delta = QPointF(newX, newY) - startingPosition;
 
-            updateAlignmentHelpers(currentItem);
+            QList<QPair<QGraphicsItem*, QPointF>> itemsToMove = m_dragItems.isEmpty() ? QList<QPair<QGraphicsItem*, QPointF>>{qMakePair(currentItem, startingPosition)} : m_dragItems;
+            for (const auto &p : itemsToMove) {
+                QPointF np = p.second + delta;
+                QRectF br = getCorrectBoundingRect(p.first);
+                qreal ix = qMax(minX, qMin(np.x(), maxX - br.width()));
+                qreal iy = qMax(minY, qMin(np.y(), maxY - br.height()));
+                p.first->setPos(ix, iy);
+            }
 
+            updateAlignmentHelpersForSelection();
         }
     }
 
     // Cursor and hover bounding box: always update when not in pick/apply style mode
-    if (!m_pickStyleMode && !m_applyStyleMode) {
+    if (!m_pickStyleMode && !m_applyStyleMode && !m_copyMode) {
         QGraphicsItem *item = currentItem;
         if (!item) {
             item = scene->itemAt(mouseScenePos, QTransform());
@@ -471,7 +509,7 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
         if (!edgeOrCorner){
             if (startingPosition != currentItem->pos()){
                 action = new Action(Actions::Move, nullptr);
-                action->moveItems.append(qMakePair(currentItem, startingPosition));
+                action->moveItems = m_dragItems.isEmpty() ? QList<QPair<QGraphicsItem*, QPointF>>{qMakePair(currentItem, startingPosition)} : m_dragItems;
                 action->moveDelta = currentItem->pos() - startingPosition;
                 action->moveApplied = true;
                 validAction = true;
@@ -484,12 +522,6 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
             }
 
         }
-
-        for (QGraphicsItem *helper : alignmentHelpers) {
-            if (scene) scene->removeItem(helper);
-            delete helper;
-        }
-        alignmentHelpers.clear();
 
         if (validAction){
             undoActions.push_back(action);
@@ -507,8 +539,9 @@ void LayoutEditorGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
             layoutEditor->markDirty();
             layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
         }
+        updateAlignmentHelpersForSelection();
         // Restore default cursor after resize/move ends
-        if (!m_pickStyleMode && !m_applyStyleMode)
+        if (!m_pickStyleMode && !m_applyStyleMode && !m_copyMode)
             setCursor(Qt::ArrowCursor);
     }
 }
@@ -688,25 +721,38 @@ void LayoutEditorGraphicsView::commitArrowKeyMoveSegment() {
 void LayoutEditorGraphicsView::setPickStyleMode(bool on) {
     m_pickStyleMode = on;
     m_applyStyleMode = on ? false : m_applyStyleMode;
+    m_copyMode = on ? false : m_copyMode;
     if (on)
         setCursor(Qt::CrossCursor);
-    else if (!m_applyStyleMode)
+    else if (!m_applyStyleMode && !m_copyMode)
         setCursor(Qt::ArrowCursor);
 }
 
 void LayoutEditorGraphicsView::setApplyStyleMode(bool on) {
     m_applyStyleMode = on;
     m_pickStyleMode = on ? false : m_pickStyleMode;
+    m_copyMode = on ? false : m_copyMode;
     if (on)
         setCursor(Qt::CrossCursor);
-    else if (!m_pickStyleMode)
+    else if (!m_pickStyleMode && !m_copyMode)
+        setCursor(Qt::ArrowCursor);
+}
+
+void LayoutEditorGraphicsView::setCopyMode(bool on) {
+    m_copyMode = on;
+    m_pickStyleMode = on ? false : m_pickStyleMode;
+    m_applyStyleMode = on ? false : m_applyStyleMode;
+    if (on)
+        setCursor(Qt::CrossCursor);
+    else if (!m_pickStyleMode && !m_applyStyleMode)
         setCursor(Qt::ArrowCursor);
 }
 
 void LayoutEditorGraphicsView::keyPressEvent(QKeyEvent *event) {
-    if (event->key() == Qt::Key_Escape && (m_pickStyleMode || m_applyStyleMode)) {
+    if (event->key() == Qt::Key_Escape && (m_pickStyleMode || m_applyStyleMode || m_copyMode)) {
         m_pickStyleMode = false;
         m_applyStyleMode = false;
+        m_copyMode = false;
         setCursor(Qt::ArrowCursor);
         emit applyStyleModeExited();
         event->accept();
@@ -715,10 +761,11 @@ void LayoutEditorGraphicsView::keyPressEvent(QKeyEvent *event) {
     int key = event->key();
     int direction = 0;
     int dx = 0, dy = 0;
-    if (key == Qt::Key_Left) { direction = 1; dx = -1; }
-    else if (key == Qt::Key_Right) { direction = 2; dx = 1; }
-    else if (key == Qt::Key_Up) { direction = 3; dy = -1; }
-    else if (key == Qt::Key_Down) { direction = 4; dy = 1; }
+    int step = (event->modifiers() & Qt::ControlModifier) ? 10 : 1;
+    if (key == Qt::Key_Left) { direction = 1; dx = -step; }
+    else if (key == Qt::Key_Right) { direction = 2; dx = step; }
+    else if (key == Qt::Key_Up) { direction = 3; dy = -step; }
+    else if (key == Qt::Key_Down) { direction = 4; dy = step; }
     if (direction != 0) {
         QList<QGraphicsItem*> items = selectedKeyItems();
         if (!items.isEmpty()) {
@@ -734,6 +781,7 @@ void LayoutEditorGraphicsView::keyPressEvent(QKeyEvent *event) {
             }
             m_arrowSegmentDelta += QPointF(dx, dy);
             nudgeSelection(dx, dy);
+            updateAlignmentHelpersForSelection();
             return;
         }
     }
@@ -765,7 +813,7 @@ void LayoutEditorGraphicsView::leaveEvent(QEvent *event) {
         alignmentHelpers.clear();
         currentItem = nullptr;
         activeAction = Actions::None;
-        if (!m_pickStyleMode && !m_applyStyleMode)
+        if (!m_pickStyleMode && !m_applyStyleMode && !m_copyMode)
             setCursor(Qt::ArrowCursor);
     }
     clearHoverBoundingBox();
@@ -781,7 +829,7 @@ void LayoutEditorGraphicsView::focusOutEvent(QFocusEvent *event) {
         alignmentHelpers.clear();
         currentItem = nullptr;
         activeAction = Actions::None;
-        if (!m_pickStyleMode && !m_applyStyleMode)
+        if (!m_pickStyleMode && !m_applyStyleMode && !m_copyMode)
             setCursor(Qt::ArrowCursor);
     }
     clearHoverBoundingBox();
@@ -852,73 +900,88 @@ int LayoutEditorGraphicsView::isOnEdgeOrCorner(QGraphicsItem *item, const QPoint
 }
 
 
-void LayoutEditorGraphicsView::updateAlignmentHelpers(QGraphicsItem* movingItem) {
-    // Clear existing alignment helpers
-    for (auto* item : alignmentHelpers) {
-        scene->removeItem(item);
-        delete item;
-    }
-    alignmentHelpers.clear();
+static bool rangesOverlapStatic(qreal start1, qreal end1, qreal start2, qreal end2) {
+    qreal middle1 = (start1 + end1) / 2;
+    return middle1 >= start2 && middle1 <= end2;
+}
 
+static void addAlignmentHelpersForItem(QGraphicsScene *scene, QList<QGraphicsItem*> &alignmentHelpers,
+    QGraphicsItem *movingItem, const QSet<QGraphicsItem*> &excludeItems) {
     qreal closestLeft = FLT_MAX;
     qreal closestRight = FLT_MAX;
     qreal closestTop = FLT_MAX;
     qreal closestBottom = FLT_MAX;
 
-
     QRectF movingRect = movingItem->boundingRect().translated(movingItem->pos());
 
-    // Find the closest items in each direction
     for (QGraphicsItem* item : scene->items()) {
-        if (item == movingItem || item->type() == QGraphicsLineItem::Type || item->type() == QGraphicsTextItem::Type) continue;
+        if (excludeItems.contains(item) || item->type() == QGraphicsLineItem::Type || item->type() == QGraphicsTextItem::Type) continue;
 
         QRectF itemRect = item->boundingRect().translated(item->pos());
 
-        // For left/right calculations, check if the y ranges overlap
-        if (rangesOverlap(movingRect.top(), movingRect.bottom(), itemRect.top(), itemRect.bottom())) {
-            // Check left
-            if (itemRect.right() < movingRect.left() && movingRect.left() - itemRect.right() < closestLeft) {
+        if (rangesOverlapStatic(movingRect.top(), movingRect.bottom(), itemRect.top(), itemRect.bottom())) {
+            if (itemRect.right() < movingRect.left() && movingRect.left() - itemRect.right() < closestLeft)
                 closestLeft = movingRect.left() - itemRect.right();
-            }
-            // Check right
-            if (itemRect.left() > movingRect.right() && itemRect.left() - movingRect.right() < closestRight) {
+            if (itemRect.left() > movingRect.right() && itemRect.left() - movingRect.right() < closestRight)
                 closestRight = itemRect.left() - movingRect.right();
-            }
         }
-
-        // For top/bottom calculations, check if the x ranges overlap
-        if (rangesOverlap(movingRect.left(), movingRect.right(), itemRect.left(), itemRect.right())) {
-            // Check top
-            if (itemRect.bottom() < movingRect.top() && movingRect.top() - itemRect.bottom() < closestTop) {
+        if (rangesOverlapStatic(movingRect.left(), movingRect.right(), itemRect.left(), itemRect.right())) {
+            if (itemRect.bottom() < movingRect.top() && movingRect.top() - itemRect.bottom() < closestTop)
                 closestTop = movingRect.top() - itemRect.bottom();
-            }
-            // Check bottom
-            if (itemRect.top() > movingRect.bottom() && itemRect.top() - movingRect.bottom() < closestBottom) {
+            if (itemRect.top() > movingRect.bottom() && itemRect.top() - movingRect.bottom() < closestBottom)
                 closestBottom = itemRect.top() - movingRect.bottom();
-            }
         }
     }
 
-    // Check scene borders as potential closest edges
     QRectF sceneRect = scene->sceneRect();
-    if (movingRect.left() - sceneRect.left() < closestLeft) {
-        closestLeft = movingRect.left() - sceneRect.left();
-    }
-    if (sceneRect.right() - movingRect.right() < closestRight) {
-        closestRight = sceneRect.right() - movingRect.right();
-    }
-    if (movingRect.top() - sceneRect.top() < closestTop) {
-        closestTop = movingRect.top() - sceneRect.top();
-    }
-    if (sceneRect.bottom() - movingRect.bottom() < closestBottom) {
-        closestBottom = sceneRect.bottom() - movingRect.bottom();
-    }
+    if (movingRect.left() - sceneRect.left() < closestLeft) closestLeft = movingRect.left() - sceneRect.left();
+    if (sceneRect.right() - movingRect.right() < closestRight) closestRight = sceneRect.right() - movingRect.right();
+    if (movingRect.top() - sceneRect.top() < closestTop) closestTop = movingRect.top() - sceneRect.top();
+    if (sceneRect.bottom() - movingRect.bottom() < closestBottom) closestBottom = sceneRect.bottom() - movingRect.bottom();
 
-    // Draw alignment lines for the closest items or borders
-    drawAlignmentLine(movingRect, closestLeft, Qt::Horizontal, true); // Left
-    drawAlignmentLine(movingRect, closestRight, Qt::Horizontal, false); // Right
-    drawAlignmentLine(movingRect, closestTop, Qt::Vertical, true); // Top
-    drawAlignmentLine(movingRect, closestBottom, Qt::Vertical, false); // Bottom
+    auto drawLine = [&](const QRectF &r, qreal d, Qt::Orientation o, bool start) {
+        if (d == FLT_MAX) return;
+        QPointF sp, ep, tp;
+        if (o == Qt::Horizontal) {
+            qreal y = r.top() + r.height() / 2;
+            sp.setY(y); ep.setY(y);
+            if (start) { sp.setX(r.left()); ep.setX(r.left() - d); tp = (sp + ep) / 2; if (ep.x() < 0) tp.setX(r.left() - d / 2); }
+            else { sp.setX(r.right()); ep.setX(r.right() + d); tp = (sp + ep) / 2; if (ep.x() > scene->width() - 27) tp.setX(r.right() + d / 2 - 27); }
+        } else {
+            qreal x = r.left() + r.width() / 2;
+            sp.setX(x); ep.setX(x);
+            if (start) { sp.setY(r.top()); ep.setY(r.top() - d); tp = (sp + ep) / 2; if (ep.y() < 0) tp.setY(r.top() - d / 2); }
+            else { sp.setY(r.bottom()); ep.setY(r.bottom() + d); tp = (sp + ep) / 2; if (ep.y() > scene->height() - 20) tp.setY(r.bottom() + d / 2 - 20); }
+        }
+        alignmentHelpers.append(scene->addLine(QLineF(sp, ep), QPen(Qt::red, 1, Qt::DashLine)));
+        QGraphicsTextItem *ti = scene->addText(QString::number(qRound(d < 0 ? 0 : d)) + " px");
+        ti->setDefaultTextColor(Qt::red);
+        ti->setPos(tp);
+        alignmentHelpers.append(ti);
+    };
+    drawLine(movingRect, closestLeft, Qt::Horizontal, true);
+    drawLine(movingRect, closestRight, Qt::Horizontal, false);
+    drawLine(movingRect, closestTop, Qt::Vertical, true);
+    drawLine(movingRect, closestBottom, Qt::Vertical, false);
+}
+
+void LayoutEditorGraphicsView::updateAlignmentHelpers(QGraphicsItem* movingItem) {
+    for (auto* item : alignmentHelpers) { scene->removeItem(item); delete item; }
+    alignmentHelpers.clear();
+    QSet<QGraphicsItem*> ex;
+    ex.insert(movingItem);
+    addAlignmentHelpersForItem(scene, alignmentHelpers, movingItem, ex);
+}
+
+void LayoutEditorGraphicsView::updateAlignmentHelpersForSelection() {
+    for (auto* item : alignmentHelpers) { scene->removeItem(item); delete item; }
+    alignmentHelpers.clear();
+    QList<QGraphicsItem*> items = selectedKeyItems();
+    if (items.isEmpty()) return;
+    QSet<QGraphicsItem*> exclude;
+    for (QGraphicsItem *i : items) exclude.insert(i);
+    for (QGraphicsItem *item : items)
+        addAlignmentHelpersForItem(scene, alignmentHelpers, item, exclude);
 }
 
 void LayoutEditorGraphicsView::drawAlignmentLine(const QRectF& movingRect, qreal distance, Qt::Orientation orientation, bool isStartSide) {

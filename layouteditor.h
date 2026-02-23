@@ -44,6 +44,8 @@ private:
     QPushButton *undoButton;
     QPushButton *redoButton;
     QPushButton *addButton;
+    QPushButton *copyButton;
+    QPushButton *pasteButton;
     QPushButton *pickStyleButton;
     QPushButton *applyStyleButton;
     QPushButton *saveButton;
@@ -62,6 +64,7 @@ private:
     void addShape();
     void onPickStyleToggled(bool checked);
     void onApplyStyleClicked(bool checked);
+    void onCopyToggled(bool checked);
     bool writeLayoutToFile(const QString &fileName);
 public slots:
     ResizableRectItem * addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y, const std::list<int> keyCodes = {}, const KeyStyle &keyStyle = KeyStyle());
@@ -72,8 +75,10 @@ public slots:
     void newLayout();
     void saveLayout();
     void saveLayoutAs();
-    void createKey(const QJsonObject &keyData);
+    QGraphicsItem* createKey(const QJsonObject &keyData);
     void updateLanguage();
+    void copyKeyFromItem(QGraphicsItem *item);
+    void pasteKey();
 
 };
 
