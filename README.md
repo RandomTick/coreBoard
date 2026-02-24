@@ -21,9 +21,12 @@ You can use your existing **NohBoard layouts as-is**—no conversion needed. cor
 | Feature | Description |
 |--------|-------------|
 | **Live overlay** | Real-time key press/release highlighting via Windows key listener |
-| **Layout editor** | Built-in editor with rectangles, ellipses, polygons, resize handles, and key bindings |
+| **Layout editor** | Rectangles, circles, stars, diamonds, hexagons, triangles, and advanced shapes (polygons with holes). Resize, rebind, and edit shapes (vertices, text anchor, corner radius). |
+| **Copy / paste & style** | Copy a key then paste onto another; pick style from one key and apply to others |
+| **Per-key colors** | Optional idle/pressed colors per key (key and text) in Edit Style |
 | **NohBoard compatible** | Load and save the same `.json` layouts—switch seamlessly from NohBoard |
-| **Undo/Redo** | Full history for layout edits |
+| **Undo/Redo** | Full history for layout and shape edits |
+| **Languages** | English, Deutsch, Français (Settings → Language) |
 | **Settings persistence** | Remembers last layout, recent files, and view/editor tab |
 | **Cross-platform ready** | Qt-based; Windows supported, others possible |
 
@@ -31,14 +34,14 @@ You can use your existing **NohBoard layouts as-is**—no conversion needed. cor
 
 ## Quick Start
 
-A **Windows installer** for the latest version is available under [Releases](https://github.com/YOUR_USERNAME/coreBoard/releases).
+A **Windows installer** for the latest version is available under [Releases](https://github.com/RandomTick/coreBoard/releases).
 
 ### Build from source
 
 **Requirements:** CMake 3.5+, Qt 5 or 6 (Widgets, Svg, LinguistTools), C++17 compiler
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/coreBoard.git
+git clone https://github.com/RandomTick/coreBoard.git
 cd coreBoard
 
 cmake -B build -DCMAKE_PREFIX_PATH=<path-to-Qt>
@@ -50,7 +53,7 @@ The executable is in `build/` (e.g. `build/CoreBoard.exe` on Windows). Run from 
 ### Run
 
 1. **View mode** — Shows the current layout and highlights keys as you press them. Use this for streaming or recording.
-2. **Editor tab** — Open, create, or edit layouts. Use **File → Open** to load any NohBoard `.json` layout.
+2. **Editor tab** — Open, create, or edit layouts. Use **File → Open** to load any NohBoard `.json` layout, or start from the included default WASD layout.
 
 ---
 
@@ -58,7 +61,8 @@ The executable is in `build/` (e.g. `build/CoreBoard.exe` on Windows). Run from 
 
 - **Open** — Load a `.json` layout (NohBoard format).
 - **New** — Start a blank layout.
-- **Add** — Add a rectangle, ellipse, or polygon; assign text and key codes.
+- **Add shape** — Rectangle, circle, star, diamond, hexagon, triangle, or advanced shapes (custom polygons, with optional holes). Assign text and key codes. Right‑click a key for **Edit style…**, **Edit shape…**, rebind, or delete.
+- **Copy / Paste key** — Copy a key, then click where to paste. **Pick style** from a key, then **Apply** to others.
 - **Save / Save as** — Write the layout to a JSON file (same format NohBoard uses).
 
 Layout and window settings (last layout, recent layouts, tab) are restored on next launch.
@@ -73,8 +77,8 @@ See the **[NohBoard Migration Guide](docs/NOHBOARD_MIGRATION.md)** for a quick s
 
 ## Project Structure
 
-- **Keyboard widget** — Renders the layout and key states
-- **Layout editor** — Scene-based editor (rectangles, ellipses, polygons) with undo/redo
+- **Keyboard widget** — Renders the layout and key states (including per-key colors)
+- **Layout editor** — Scene-based editor: shapes, resize, rebind, shape editor (vertices, holes, text anchor), undo/redo
 - **Layout settings** — Persists last layout, recent files, tab index
 - **Windows key listener** — Feeds key press/release events to the overlay
 
@@ -82,7 +86,7 @@ See the **[NohBoard Migration Guide](docs/NOHBOARD_MIGRATION.md)** for a quick s
 
 ## Contributing
 
-Contributions welcome: bug reports, feature ideas, or pull requests. Translation scaffolding exists for en/fr/de—help is appreciated there too.
+Contributions welcome: bug reports, feature ideas, or pull requests. Translations (en/de/fr) are in `translations/`—help is appreciated there too.
 
 ---
 
