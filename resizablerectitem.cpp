@@ -86,8 +86,19 @@ std::list<int> ResizableRectItem::getKeycodes(){
 
 void ResizableRectItem::centerText() {
     QRectF textRect = textItem->boundingRect();
-    QPointF center = rect().center() - QPointF(textRect.width() / 2, textRect.height() / 2);
-    textItem->setPos(center);
+    QPointF target = m_hasCustomTextPosition ? m_textPosition : rect().center();
+    target -= QPointF(textRect.width() / 2, textRect.height() / 2);
+    textItem->setPos(target);
+}
+
+QPointF ResizableRectItem::textPosition() const {
+    return m_hasCustomTextPosition ? m_textPosition : rect().center();
+}
+
+void ResizableRectItem::setTextPosition(const QPointF &pos) {
+    m_hasCustomTextPosition = true;
+    m_textPosition = pos;
+    centerText();
 }
 
 KeyStyle ResizableRectItem::keyStyle() const {

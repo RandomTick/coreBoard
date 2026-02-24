@@ -20,6 +20,7 @@ namespace {
 const int BaseTextRole = Qt::UserRole;
 const int ShiftTextRole = Qt::UserRole + 1;
 const int KeyColorRole = Qt::UserRole + 2;
+const int TextPositionLocalRole = Qt::UserRole + 6;  // QPointF in shape local coords, or invalid if use center
 const int KeyColorPressedRole = Qt::UserRole + 3;
 const int KeyTextColorRole = Qt::UserRole + 4;
 const int KeyTextColorPressedRole = Qt::UserRole + 5;
@@ -271,7 +272,8 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
         }
     }
 
-    if (!shapeItem && boundaries.size() >= 32) {
+    QString shapeType = keyData.value("ShapeType").toString();
+    if (!shapeItem && (shapeType == "ellipse" || (shapeType.isEmpty() && boundaries.size() >= 32))) {
         QGraphicsEllipseItem *ellipse = new QGraphicsEllipseItem(0, 0, w, h);
         ellipse->setPos(minX, minY);
         ellipse->setBrush(brushColor);
@@ -288,12 +290,42 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
             qreal py = po["Y"].toDouble();
             poly << QPointF(px - minX, py - minY);
         }
-        QGraphicsPolygonItem *polyItem = new QGraphicsPolygonItem(poly);
-        polyItem->setPos(minX, minY);
-        polyItem->setBrush(brushColor);
-        polyItem->setPen(keyStyle.pen());
-        m_scene->addItem(polyItem);
-        shapeItem = polyItem;
+        QList<QPolygonF> holesList;
+        if (keyData.contains("Holes")) {
+            QJsonArray holesArray = keyData["Holes"].toArray();
+            for (const QJsonValue &holeVal : holesArray) {
+                QJsonArray holeArr = holeVal.toArray();
+                QPolygonF holePoly;
+                for (const QJsonValue &pv : holeArr) {
+                    QJsonObject po = pv.toObject();
+                    holePoly << QPointF(po["X"].toDouble() - minX, po["Y"].toDouble() - minY);
+                }
+                if (holePoly.size() >= 3)
+                    holesList.append(holePoly);
+            }
+        }
+        if (!holesList.isEmpty()) {
+            QPainterPath path;
+            path.addPolygon(poly);
+            for (const QPolygonF &hole : holesList) {
+                QPainterPath holePath;
+                holePath.addPolygon(hole);
+                path = path.subtracted(holePath);
+            }
+            QGraphicsPathItem *pathItem = new QGraphicsPathItem(path);
+            pathItem->setPos(minX, minY);
+            pathItem->setBrush(brushColor);
+            pathItem->setPen(keyStyle.pen());
+            m_scene->addItem(pathItem);
+            shapeItem = pathItem;
+        } else {
+            QGraphicsPolygonItem *polyItem = new QGraphicsPolygonItem(poly);
+            polyItem->setPos(minX, minY);
+            polyItem->setBrush(brushColor);
+            polyItem->setPen(keyStyle.pen());
+            m_scene->addItem(polyItem);
+            shapeItem = polyItem;
+        }
     }
 
     if (!shapeItem)
@@ -323,7 +355,15 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     QRectF shapeBr = shapeItem->boundingRect();
     textItem->setTextWidth(qMax(0.0, shapeBr.width() - 8));
     QRectF textBr = textItem->boundingRect();
-    textItem->setPos(shapeBr.center().x() - textBr.width() / 2, shapeBr.center().y() - textBr.height() / 2);
+    QPointF textCenterLocal = shapeBr.center();
+    if (keyData.contains("TextPosition")) {
+        QJsonObject tp = keyData["TextPosition"].toObject();
+        qreal tpX = tp["X"].toDouble();
+        qreal tpY = tp["Y"].toDouble();
+        textCenterLocal = shapeItem->mapFromScene(QPointF(tpX, tpY));
+        shapeItem->setData(TextPositionLocalRole, textCenterLocal);
+    }
+    textItem->setPos(textCenterLocal.x() - textBr.width() / 2, textCenterLocal.y() - textBr.height() / 2);
     textItem->setZValue(1);
 
     for (int i = 0; i < kc.size(); ++i) {
@@ -425,7 +465,14 @@ void KeyboardWidget::updateLabelsForShiftState()
                 textItem->setPlainText(displayText);
                 QRectF textBr = textItem->boundingRect();
                 QRectF shapeBr = shape->boundingRect();
-                textItem->setPos(shapeBr.center().x() - textBr.width() / 2, shapeBr.center().y() - textBr.height() / 2);
+                QPointF anchor = shapeBr.center();
+                QVariant v = shape->data(TextPositionLocalRole);
+                if (v.isValid() && v.canConvert<QPointF>()) {
+                    QPointF customPos = v.toPointF();
+                    if (QPointF(customPos - shapeBr.center()).manhattanLength() > 0.5)
+                        anchor = customPos;
+                }
+                textItem->setPos(anchor.x() - textBr.width() / 2, anchor.y() - textBr.height() / 2);
                 break;
             }
         }

@@ -14,6 +14,7 @@
 #include "resizablerectitem.h"
 #include "resizableellipseitem.h"
 #include "resizablepolygonitem.h"
+#include "resizablepathitem.h"
 #include "keystyle.h"
 
 class LayoutSettings;
@@ -70,6 +71,7 @@ public slots:
     ResizableRectItem * addRectangle(const QString &text, qreal h, qreal w, qreal x, qreal y, const std::list<int> keyCodes = {}, const KeyStyle &keyStyle = KeyStyle());
     ResizableEllipseItem * addEllipse(const QString &text, qreal h, qreal w, qreal x, qreal y, const std::list<int> keyCodes = {}, const KeyStyle &keyStyle = KeyStyle());
     ResizablePolygonItem * addPolygon(const QPolygonF &templatePolygon, const QString &text, qreal x, qreal y, qreal w, qreal h, const std::list<int> keyCodes = {}, const KeyStyle &keyStyle = KeyStyle());
+    ResizablePathItem * addPathItem(const QPolygonF &outer, const QList<QPolygonF> &holes, const QString &text, qreal x, qreal y, qreal w, qreal h, const std::list<int> keyCodes = {}, const KeyStyle &keyStyle = KeyStyle());
     void addItemToScene(QGraphicsItem *item);
     void loadLayoutButton();
     void newLayout();

@@ -1,16 +1,20 @@
-#ifndef RESIZABLEELLIPSEITEM_H
-#define RESIZABLEELLIPSEITEM_H
+#ifndef RESIZABLEPATHITEM_H
+#define RESIZABLEPATHITEM_H
 
-#include <QGraphicsEllipseItem>
+#include <QGraphicsPathItem>
 #include <QGraphicsTextItem>
 #include <QColor>
 #include <QPointF>
+#include <QPolygonF>
+#include <QList>
 
 struct KeyStyle;
 
-class ResizableEllipseItem : public QGraphicsEllipseItem {
+class ResizablePathItem : public QGraphicsPathItem
+{
 public:
-    ResizableEllipseItem(const QRectF &rect, const QString &text, const std::list<int> keycodes, QGraphicsItem *parent = nullptr);
+    ResizablePathItem(const QPolygonF &outer, const QList<QPolygonF> &holes,
+                      const QString &text, const std::list<int> keycodes, QGraphicsItem *parent = nullptr);
 
     void setText(const QString &text);
     QString getText();
@@ -18,7 +22,8 @@ public:
     QString getShiftText() const;
     void setRect(const QRectF &rect);
     void setRect(qreal x, qreal y, qreal w, qreal h);
-    void setKeycodes(const std::list<int> newKeycodes);
+    void setSize(qreal w, qreal h);
+    void setKeycodes(const std::list<int> &newKeycodes);
     std::list<int> getKeycodes();
 
     KeyStyle keyStyle() const;
@@ -27,16 +32,24 @@ public:
     QPointF textPosition() const;
     void setTextPosition(const QPointF &pos);
 
+    QPolygonF outerPolygon() const;
+    QList<QPolygonF> holes() const;
+    void setPathFromOuterAndHoles(const QPolygonF &outer, const QList<QPolygonF> &holes);
+
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
 
 private:
-    QGraphicsTextItem *textItem;
+    void rebuildPath();
+    void centerText();
+
+    QPolygonF m_outer;
+    QList<QPolygonF> m_holes;
+    QGraphicsTextItem *textItem = nullptr;
     QString m_shiftText;
     std::list<int> keyCodes;
     QColor m_keyColor, m_keyColorPressed, m_keyTextColor, m_keyTextColorPressed;
     bool m_hasCustomTextPosition = false;
     QPointF m_textPosition;
-    void centerText();
 };
 
-#endif // RESIZABLEELLIPSEITEM_H
+#endif // RESIZABLEPATHITEM_H

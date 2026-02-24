@@ -4,6 +4,7 @@
 #include <QGraphicsPolygonItem>
 #include <QGraphicsTextItem>
 #include <QColor>
+#include <QPointF>
 
 struct KeyStyle;
 
@@ -24,6 +25,11 @@ public:
     KeyStyle keyStyle() const;
     void setKeyStyle(const KeyStyle &style);
 
+    QPointF textPosition() const;
+    void setTextPosition(const QPointF &pos);
+
+    void setPolygonDirect(const QPolygonF &polygon);
+
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
 
 private:
@@ -32,6 +38,8 @@ private:
     QString m_shiftText;
     std::list<int> keyCodes;
     QColor m_keyColor, m_keyColorPressed, m_keyTextColor, m_keyTextColorPressed;
+    bool m_hasCustomTextPosition = false;
+    QPointF m_textPosition;
     void centerText();
     void updatePolygonFromTemplate(qreal w, qreal h);
 };

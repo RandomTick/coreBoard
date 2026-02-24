@@ -84,6 +84,22 @@ void ResizablePolygonItem::setSize(qreal w, qreal h) {
     updatePolygonFromTemplate(w, h);
 }
 
+void ResizablePolygonItem::setPolygonDirect(const QPolygonF &polygon) {
+    setPolygon(polygon);
+    QRectF br = polygon.boundingRect();
+    qreal w = br.width();
+    qreal h = br.height();
+    if (w < 1e-6) w = 1;
+    if (h < 1e-6) h = 1;
+    _templatePolygon.clear();
+    for (const QPointF &p : polygon) {
+        _templatePolygon << QPointF(100.0 * (p.x() - br.left()) / w, 100.0 * (p.y() - br.top()) / h);
+    }
+    const qreal margin = 8;
+    textItem->setTextWidth(qMax(0.0, w - margin));
+    centerText();
+}
+
 void ResizablePolygonItem::setKeycodes(const std::list<int> newKeycodes) {
     keyCodes = newKeycodes;
 }
@@ -95,8 +111,19 @@ std::list<int> ResizablePolygonItem::getKeycodes() {
 void ResizablePolygonItem::centerText() {
     QRectF br = boundingRect();
     QRectF textRect = textItem->boundingRect();
-    QPointF center = br.center() - QPointF(textRect.width() / 2, textRect.height() / 2);
-    textItem->setPos(center);
+    QPointF target = m_hasCustomTextPosition ? m_textPosition : br.center();
+    target -= QPointF(textRect.width() / 2, textRect.height() / 2);
+    textItem->setPos(target);
+}
+
+QPointF ResizablePolygonItem::textPosition() const {
+    return m_hasCustomTextPosition ? m_textPosition : boundingRect().center();
+}
+
+void ResizablePolygonItem::setTextPosition(const QPointF &pos) {
+    m_hasCustomTextPosition = true;
+    m_textPosition = pos;
+    centerText();
 }
 
 KeyStyle ResizablePolygonItem::keyStyle() const {

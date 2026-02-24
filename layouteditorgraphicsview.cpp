@@ -3,15 +3,18 @@
 #include <QGraphicsItem>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsPolygonItem>
+#include <QGraphicsPathItem>
 #include <QPainter>
 #include "layouteditorgraphicsview.h"
 #include "layouteditor.h"
 #include "resizablerectitem.h"
 #include "resizableellipseitem.h"
 #include "resizablepolygonitem.h"
+#include "resizablepathitem.h"
 #include "dialogtextchange.h"
 #include "dialogkeycodechange.h"
 #include "dialogstyle.h"
+#include "shapeeditordialog.h"
 #include "mainwindow.h"
 #include "windowskeylistener.h"
 #ifdef Q_OS_WIN
@@ -27,12 +30,14 @@ static KeyStyle keyStyleForItem(QGraphicsItem *item) {
     if (ResizableRectItem *r = dynamic_cast<ResizableRectItem*>(item)) return r->keyStyle();
     if (ResizableEllipseItem *e = dynamic_cast<ResizableEllipseItem*>(item)) return e->keyStyle();
     if (ResizablePolygonItem *p = dynamic_cast<ResizablePolygonItem*>(item)) return p->keyStyle();
+    if (ResizablePathItem *path = dynamic_cast<ResizablePathItem*>(item)) return path->keyStyle();
     return KeyStyle();
 }
 static void setKeyStyleForItem(QGraphicsItem *item, const KeyStyle &s) {
     if (ResizableRectItem *r = dynamic_cast<ResizableRectItem*>(item)) { r->setKeyStyle(s); return; }
     if (ResizableEllipseItem *e = dynamic_cast<ResizableEllipseItem*>(item)) { e->setKeyStyle(s); return; }
-    if (ResizablePolygonItem *p = dynamic_cast<ResizablePolygonItem*>(item)) p->setKeyStyle(s);
+    if (ResizablePolygonItem *p = dynamic_cast<ResizablePolygonItem*>(item)) { p->setKeyStyle(s); return; }
+    if (ResizablePathItem *path = dynamic_cast<ResizablePathItem*>(item)) path->setKeyStyle(s);
 }
 
 LayoutEditor *layoutEditor;
@@ -80,31 +85,33 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
             ResizableRectItem *rect = dynamic_cast<ResizableRectItem*>(item);
             ResizableEllipseItem *ellipse = dynamic_cast<ResizableEllipseItem*>(item);
             ResizablePolygonItem *polygon = dynamic_cast<ResizablePolygonItem*>(item);
-            if (rect || ellipse || polygon){
+            ResizablePathItem *pathItem = dynamic_cast<ResizablePathItem*>(item);
+            if (rect || ellipse || polygon || pathItem){
                 QMenu menu;
                 QAction *actionRename = menu.addAction(tr("Rename"));
                 QAction *actionRebind = menu.addAction(tr("Rebind"));
                 QAction *actionStyle = menu.addAction(tr("Edit style..."));
+                QAction *actionEditShape = menu.addAction(tr("Edit shape..."));
                 menu.addSeparator();
                 QAction *actionDelete = menu.addAction(tr("Delete"));
                 QAction *selectedAction = menu.exec(QCursor::pos());
-                QGraphicsItem *keyItem = rect ? static_cast<QGraphicsItem*>(rect) : (ellipse ? static_cast<QGraphicsItem*>(ellipse) : static_cast<QGraphicsItem*>(polygon));
+                QGraphicsItem *keyItem = rect ? static_cast<QGraphicsItem*>(rect) : (ellipse ? static_cast<QGraphicsItem*>(ellipse) : (polygon ? static_cast<QGraphicsItem*>(polygon) : static_cast<QGraphicsItem*>(pathItem)));
 
                 QList<QGraphicsItem*> styleTargets;
                 if (item->isSelected()) {
                     for (QGraphicsItem *sel : scene->selectedItems()) {
-                        if (dynamic_cast<ResizableRectItem*>(sel) || dynamic_cast<ResizableEllipseItem*>(sel) || dynamic_cast<ResizablePolygonItem*>(sel))
+                        if (dynamic_cast<ResizableRectItem*>(sel) || dynamic_cast<ResizableEllipseItem*>(sel) || dynamic_cast<ResizablePolygonItem*>(sel) || dynamic_cast<ResizablePathItem*>(sel))
                             styleTargets.append(sel);
                     }
                 }
                 if (styleTargets.isEmpty())
                     styleTargets.append(keyItem);
-                auto getText = [rect, ellipse, polygon]() { return rect ? rect->getText() : (ellipse ? ellipse->getText() : polygon->getText()); };
-                auto setText = [rect, ellipse, polygon](const QString &t) { if (rect) rect->setText(t); else if (ellipse) ellipse->setText(t); else polygon->setText(t); };
-                auto getShiftText = [rect, ellipse, polygon]() { return rect ? rect->getShiftText() : (ellipse ? ellipse->getShiftText() : polygon->getShiftText()); };
-                auto setShiftText = [rect, ellipse, polygon](const QString &t) { if (rect) rect->setShiftText(t); else if (ellipse) ellipse->setShiftText(t); else polygon->setShiftText(t); };
-                auto getKeycodes = [rect, ellipse, polygon]() { return rect ? rect->getKeycodes() : (ellipse ? ellipse->getKeycodes() : polygon->getKeycodes()); };
-                auto setKeycodes = [rect, ellipse, polygon](const std::list<int> &kc) { if (rect) rect->setKeycodes(kc); else if (ellipse) ellipse->setKeycodes(kc); else polygon->setKeycodes(kc); };
+                auto getText = [rect, ellipse, polygon, pathItem]() { return rect ? rect->getText() : (ellipse ? ellipse->getText() : (polygon ? polygon->getText() : pathItem->getText())); };
+                auto setText = [rect, ellipse, polygon, pathItem](const QString &t) { if (rect) rect->setText(t); else if (ellipse) ellipse->setText(t); else if (polygon) polygon->setText(t); else pathItem->setText(t); };
+                auto getShiftText = [rect, ellipse, polygon, pathItem]() { return rect ? rect->getShiftText() : (ellipse ? ellipse->getShiftText() : (polygon ? polygon->getShiftText() : pathItem->getShiftText())); };
+                auto setShiftText = [rect, ellipse, polygon, pathItem](const QString &t) { if (rect) rect->setShiftText(t); else if (ellipse) ellipse->setShiftText(t); else if (polygon) polygon->setShiftText(t); else pathItem->setShiftText(t); };
+                auto getKeycodes = [rect, ellipse, polygon, pathItem]() { return rect ? rect->getKeycodes() : (ellipse ? ellipse->getKeycodes() : (polygon ? polygon->getKeycodes() : pathItem->getKeycodes())); };
+                auto setKeycodes = [rect, ellipse, polygon, pathItem](const std::list<int> &kc) { if (rect) rect->setKeycodes(kc); else if (ellipse) ellipse->setKeycodes(kc); else if (polygon) polygon->setKeycodes(kc); else pathItem->setKeycodes(kc); };
 
                 if (selectedAction == actionRename) {
                     QString oldText = getText();
@@ -150,8 +157,8 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                     }
                 } else if (selectedAction == actionStyle) {
                     KeyStyle current = keyStyleForItem(styleTargets.first());
-                    QString previewLabel = (rect ? rect->getText() : (ellipse ? ellipse->getText() : polygon->getText()));
-                    DialogStyle *dialog = new DialogStyle(this, current, previewLabel, rect != nullptr);
+                    QString previewLabel = (rect ? rect->getText() : (ellipse ? ellipse->getText() : (polygon ? polygon->getText() : pathItem->getText())));
+                    DialogStyle *dialog = new DialogStyle(this, current, previewLabel, rect != nullptr && !pathItem);
                     if (dialog->exec() == QDialog::Accepted) {
                         KeyStyle newStyle = dialog->getStyle();
                         Action *action = new Action(Actions::ChangeStyle, nullptr);
@@ -166,6 +173,84 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                         layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
                     }
                     delete dialog;
+                } else if (selectedAction == actionEditShape) {
+                    auto captureEditState = [](QGraphicsItem *it) -> EditShapeState {
+                        EditShapeState s;
+                        if (ResizableRectItem *r = dynamic_cast<ResizableRectItem*>(it)) {
+                            s.type = 1;
+                            s.rect = r->rect();
+                            s.textPos = r->textPosition();
+                        } else if (ResizableEllipseItem *e = dynamic_cast<ResizableEllipseItem*>(it)) {
+                            s.type = 2;
+                            s.rect = e->rect();
+                            s.textPos = e->textPosition();
+                        } else if (ResizablePolygonItem *p = dynamic_cast<ResizablePolygonItem*>(it)) {
+                            s.type = 3;
+                            s.polygon = p->polygon();
+                            s.textPos = p->textPosition();
+                        } else if (ResizablePathItem *path = dynamic_cast<ResizablePathItem*>(it)) {
+                            s.type = 4;
+                            s.polygon = path->outerPolygon();
+                            s.holes = path->holes();
+                            s.textPos = path->textPosition();
+                        }
+                        return s;
+                    };
+                    EditShapeState oldState = captureEditState(keyItem);
+                    QGraphicsItem *editKeyItem = keyItem;
+                    ShapeEditorDialog *shapeDialog = new ShapeEditorDialog(this, keyItem);
+                    connect(shapeDialog, &ShapeEditorDialog::requestItemReplacement, this, [this, &editKeyItem, rect, ellipse, polygon, pathItem](QGraphicsItem *oldItem, int newType, const QPolygonF &outer, const QList<QPolygonF> &holes, const QPointF &textPosLocal, const QPointF &itemPos, qreal w, qreal h) {
+                        auto getText = [oldItem]() {
+                            if (auto *r = dynamic_cast<ResizableRectItem*>(oldItem)) return r->getText();
+                            if (auto *e = dynamic_cast<ResizableEllipseItem*>(oldItem)) return e->getText();
+                            if (auto *p = dynamic_cast<ResizablePolygonItem*>(oldItem)) return p->getText();
+                            if (auto *path = dynamic_cast<ResizablePathItem*>(oldItem)) return path->getText();
+                            return QString();
+                        };
+                        auto getShiftText = [oldItem]() {
+                            if (auto *r = dynamic_cast<ResizableRectItem*>(oldItem)) return r->getShiftText();
+                            if (auto *e = dynamic_cast<ResizableEllipseItem*>(oldItem)) return e->getShiftText();
+                            if (auto *p = dynamic_cast<ResizablePolygonItem*>(oldItem)) return p->getShiftText();
+                            if (auto *path = dynamic_cast<ResizablePathItem*>(oldItem)) return path->getShiftText();
+                            return QString();
+                        };
+                        auto getKeycodes = [oldItem]() {
+                            if (auto *r = dynamic_cast<ResizableRectItem*>(oldItem)) return r->getKeycodes();
+                            if (auto *e = dynamic_cast<ResizableEllipseItem*>(oldItem)) return e->getKeycodes();
+                            if (auto *p = dynamic_cast<ResizablePolygonItem*>(oldItem)) return p->getKeycodes();
+                            if (auto *path = dynamic_cast<ResizablePathItem*>(oldItem)) return path->getKeycodes();
+                            return std::list<int>{};
+                        };
+                        KeyStyle style = keyStyleForItem(oldItem);
+                        scene->removeItem(oldItem);
+                        QGraphicsItem *newItem = nullptr;
+                        if (newType == 3) {
+                            ResizablePolygonItem *poly = layoutEditor->addPolygon(outer, getText(), itemPos.x(), itemPos.y(), w, h, getKeycodes(), style);
+                            poly->setShiftText(getShiftText());
+                            poly->setTextPosition(textPosLocal);
+                            newItem = poly;
+                        } else {
+                            ResizablePathItem *path = layoutEditor->addPathItem(outer, holes, getText(), itemPos.x(), itemPos.y(), w, h, getKeycodes(), style);
+                            path->setShiftText(getShiftText());
+                            path->setTextPosition(textPosLocal);
+                            newItem = path;
+                        }
+                        editKeyItem = newItem;
+                    });
+                    if (shapeDialog->exec() == QDialog::Accepted) {
+                        EditShapeState newState = captureEditState(editKeyItem);
+                        Action *action = new Action(Actions::EditShape, editKeyItem);
+                        action->editShapeOld = oldState;
+                        action->editShapeNew = newState;
+                        action->editShapeApplied = true;
+                        if (editKeyItem != keyItem)
+                            action->editShapeOldItem = keyItem;
+                        undoActions.push_back(action);
+                        redoActions.clear();
+                        layoutEditor->markDirty();
+                        layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    }
+                    delete shapeDialog;
                 } else if (selectedAction == actionDelete) {
                     Action * action = new Action(Actions::Remove, keyItem);
                     action->oldText = getText();
@@ -194,7 +279,8 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 ResizableRectItem *rect = dynamic_cast<ResizableRectItem*>(item);
                 ResizableEllipseItem *ellipse = dynamic_cast<ResizableEllipseItem*>(item);
                 ResizablePolygonItem *polygon = dynamic_cast<ResizablePolygonItem*>(item);
-                if (rect || ellipse || polygon) {
+                ResizablePathItem *pathItem = dynamic_cast<ResizablePathItem*>(item);
+                if (rect || ellipse || polygon || pathItem) {
                     if (m_pickStyleMode) {
                         m_pickedStyle = keyStyleForItem(item);
                         m_hasPickedStyle = true;
@@ -213,7 +299,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                         QList<QGraphicsItem*> targets;
                         if (item->isSelected()) {
                             for (QGraphicsItem *sel : scene->selectedItems()) {
-                                if (dynamic_cast<ResizableRectItem*>(sel) || dynamic_cast<ResizableEllipseItem*>(sel) || dynamic_cast<ResizablePolygonItem*>(sel))
+                                if (dynamic_cast<ResizableRectItem*>(sel) || dynamic_cast<ResizableEllipseItem*>(sel) || dynamic_cast<ResizablePolygonItem*>(sel) || dynamic_cast<ResizablePathItem*>(sel))
                                     targets.append(sel);
                             }
                         }
@@ -268,7 +354,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 startingPosition = item->pos();
                 startingBounds = getCorrectBoundingRect(item);
                 m_dragItems.clear();
-                if (dynamic_cast<ResizableRectItem*>(item) || dynamic_cast<ResizableEllipseItem*>(item) || dynamic_cast<ResizablePolygonItem*>(item)) {
+                if (dynamic_cast<ResizableRectItem*>(item) || dynamic_cast<ResizableEllipseItem*>(item) || dynamic_cast<ResizablePolygonItem*>(item) || dynamic_cast<ResizablePathItem*>(item)) {
                     QList<QGraphicsItem*> toDrag = item->isSelected() ? selectedKeyItems() : QList<QGraphicsItem*>{item};
                     for (QGraphicsItem *dragItem : toDrag)
                         m_dragItems.append(qMakePair(dragItem, dragItem->pos()));
@@ -346,7 +432,8 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
             ResizableRectItem *rect = dynamic_cast<ResizableRectItem*>(currentItem);
             ResizableEllipseItem *ellipse = dynamic_cast<ResizableEllipseItem*>(currentItem);
             ResizablePolygonItem *polygon = dynamic_cast<ResizablePolygonItem*>(currentItem);
-            if (rect || ellipse || polygon){
+            ResizablePathItem *pathItem = dynamic_cast<ResizablePathItem*>(currentItem);
+            if (rect || ellipse || polygon || pathItem){
                 switch (edgeOrCorner) {
                     case 1: // Top-Left Corner
                         newWidth = startingBounds.width() + xOffset;
@@ -356,7 +443,8 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
                         if (rect) { rect->setPos(newPos - edgeOffset); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(newPos - edgeOffset); ellipse->setRect(0, 0, newWidth, newHeight); }
-                        else { polygon->setPos(newPos - edgeOffset); polygon->setSize(newWidth, newHeight); }
+                        else if (polygon) { polygon->setPos(newPos - edgeOffset); polygon->setSize(newWidth, newHeight); }
+                        else { pathItem->setPos(newPos - edgeOffset); pathItem->setSize(newWidth, newHeight); }
                         break;
                     case 2: // Bottom-Left Corner
                         yOffset = startingPosition.y() - newPos.y() + startingBounds.height();
@@ -368,7 +456,8 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
                         if (rect) { rect->setPos(newPos.x() - edgeOffset.x(), startingPosition.y()); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(newPos.x() - edgeOffset.x(), startingPosition.y()); ellipse->setRect(0, 0, newWidth, newHeight); }
-                        else { polygon->setPos(newPos.x() - edgeOffset.x(), startingPosition.y()); polygon->setSize(newWidth, newHeight); }
+                        else if (polygon) { polygon->setPos(newPos.x() - edgeOffset.x(), startingPosition.y()); polygon->setSize(newWidth, newHeight); }
+                        else { pathItem->setPos(newPos.x() - edgeOffset.x(), startingPosition.y()); pathItem->setSize(newWidth, newHeight); }
                         break;
                     case 3: // Top-Right Corner
                         xOffset = startingPosition.x() - newPos.x() + startingBounds.width();
@@ -379,7 +468,8 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
                         if (rect) { rect->setPos(startingPosition.x(), newPos.y() - edgeOffset.y()); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(startingPosition.x(), newPos.y() - edgeOffset.y()); ellipse->setRect(0, 0, newWidth, newHeight); }
-                        else { polygon->setPos(startingPosition.x(), newPos.y() - edgeOffset.y()); polygon->setSize(newWidth, newHeight); }
+                        else if (polygon) { polygon->setPos(startingPosition.x(), newPos.y() - edgeOffset.y()); polygon->setSize(newWidth, newHeight); }
+                        else { pathItem->setPos(startingPosition.x(), newPos.y() - edgeOffset.y()); pathItem->setSize(newWidth, newHeight); }
                         break;
                     case 4: // Bottom-Right Corner
                         xOffset = startingPosition.x() - newPos.x() + startingBounds.width();
@@ -389,7 +479,7 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
                         enforceRectSize(newPos, newWidth, newHeight);
 
-                        if (rect) rect->setRect(0, 0, newWidth, newHeight); else if (ellipse) ellipse->setRect(0, 0, newWidth, newHeight); else polygon->setSize(newWidth, newHeight);
+                        if (rect) rect->setRect(0, 0, newWidth, newHeight); else if (ellipse) ellipse->setRect(0, 0, newWidth, newHeight); else if (polygon) polygon->setSize(newWidth, newHeight); else pathItem->setSize(newWidth, newHeight);
                         break;
 
                     case 5: // Left Edge
@@ -400,7 +490,8 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
                         if (rect) { rect->setPos(newPos.x() - edgeOffset.x(), newPos.y() - edgeOffset.y() + yOffset); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(newPos.x() - edgeOffset.x(), newPos.y() - edgeOffset.y() + yOffset); ellipse->setRect(0, 0, newWidth, newHeight); }
-                        else { polygon->setPos(newPos.x() - edgeOffset.x(), newPos.y() - edgeOffset.y() + yOffset); polygon->setSize(newWidth, newHeight); }
+                        else if (polygon) { polygon->setPos(newPos.x() - edgeOffset.x(), newPos.y() - edgeOffset.y() + yOffset); polygon->setSize(newWidth, newHeight); }
+                        else { pathItem->setPos(newPos.x() - edgeOffset.x(), newPos.y() - edgeOffset.y() + yOffset); pathItem->setSize(newWidth, newHeight); }
                         break;
                     case 6: // Right Edge
                         xOffset = startingPosition.x() - newPos.x() + startingBounds.width();
@@ -411,7 +502,8 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
                         if (rect) { rect->setPos(startingPosition.x(), newPos.y() - edgeOffset.y() + yOffset); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(startingPosition.x(), newPos.y() - edgeOffset.y() + yOffset); ellipse->setRect(0, 0, newWidth, newHeight); }
-                        else { polygon->setPos(startingPosition.x(), newPos.y() - edgeOffset.y() + yOffset); polygon->setSize(newWidth, newHeight); }
+                        else if (polygon) { polygon->setPos(startingPosition.x(), newPos.y() - edgeOffset.y() + yOffset); polygon->setSize(newWidth, newHeight); }
+                        else { pathItem->setPos(startingPosition.x(), newPos.y() - edgeOffset.y() + yOffset); pathItem->setSize(newWidth, newHeight); }
                         break;
                     case 7: // Top Edge
                         newWidth = startingBounds.width();
@@ -421,7 +513,8 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
                         if (rect) { rect->setPos(newPos.x() - edgeOffset.x() + xOffset, newPos.y() - edgeOffset.y()); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(newPos.x() - edgeOffset.x() + xOffset, newPos.y() - edgeOffset.y()); ellipse->setRect(0, 0, newWidth, newHeight); }
-                        else { polygon->setPos(newPos.x() - edgeOffset.x() + xOffset, newPos.y() - edgeOffset.y()); polygon->setSize(newWidth, newHeight); }
+                        else if (polygon) { polygon->setPos(newPos.x() - edgeOffset.x() + xOffset, newPos.y() - edgeOffset.y()); polygon->setSize(newWidth, newHeight); }
+                        else { pathItem->setPos(newPos.x() - edgeOffset.x() + xOffset, newPos.y() - edgeOffset.y()); pathItem->setSize(newWidth, newHeight); }
                         break;
                     case 8: // Bottom Edge
                         newWidth = startingBounds.width();
@@ -431,12 +524,14 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
 
                         if (rect) { rect->setPos(newPos.x() - edgeOffset.x() + xOffset, startingPosition.y()); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(newPos.x() - edgeOffset.x() + xOffset, startingPosition.y()); ellipse->setRect(0, 0, newWidth, newHeight); }
-                        else { polygon->setPos(newPos.x() - edgeOffset.x() + xOffset, startingPosition.y()); polygon->setSize(newWidth, newHeight); }
+                        else if (polygon) { polygon->setPos(newPos.x() - edgeOffset.x() + xOffset, startingPosition.y()); polygon->setSize(newWidth, newHeight); }
+                        else { pathItem->setPos(newPos.x() - edgeOffset.x() + xOffset, startingPosition.y()); pathItem->setSize(newWidth, newHeight); }
                         break;
                 }
                 if (rect) rect->setText(rect->getText());
                 else if (ellipse) ellipse->setText(ellipse->getText());
                 else if (polygon) polygon->setText(polygon->getText());
+                else if (pathItem) pathItem->setText(pathItem->getText());
 
                 QPointF mouseScene = mapToScene(event->pos());
                 if (currentItem && currentItem->sceneBoundingRect().contains(mouseScene)) {
@@ -607,6 +702,7 @@ void LayoutEditorGraphicsView::doAction(Action *action){
     ResizableRectItem *rect = action->item ? dynamic_cast<ResizableRectItem*>(action->item) : nullptr;
     ResizableEllipseItem *ellipse = action->item ? dynamic_cast<ResizableEllipseItem*>(action->item) : nullptr;
     ResizablePolygonItem *polygon = action->item ? dynamic_cast<ResizablePolygonItem*>(action->item) : nullptr;
+    ResizablePathItem *pathItem = action->item ? dynamic_cast<ResizablePathItem*>(action->item) : nullptr;
     if (action->actionType == Move) {
         if (!action->moveItems.isEmpty()) {
             if (action->moveApplied) {
@@ -623,35 +719,38 @@ void LayoutEditorGraphicsView::doAction(Action *action){
             action->item->setPos(action->position);
             action->position = currentPos;
         }
-    } else if (action->actionType == Resize && (rect || ellipse || polygon)) {
+    } else if (action->actionType == Resize && (rect || ellipse || polygon || pathItem)) {
         QPointF currentPos = action->item->pos();
         QPointF newPos = QPointF(action->position.x(), action->position.y());
-        if (rect) rect->setPos(newPos); else if (ellipse) ellipse->setPos(newPos); else polygon->setPos(newPos);
+        if (rect) rect->setPos(newPos); else if (ellipse) ellipse->setPos(newPos); else if (polygon) polygon->setPos(newPos); else pathItem->setPos(newPos);
         action->position = currentPos;
         QRectF currentBounds = getCorrectBoundingRect(action->item);
         qreal w = action->size.width();
         qreal h = action->size.height();
-        if (rect) rect->setRect(0, 0, w, h); else if (ellipse) ellipse->setRect(0, 0, w, h); else polygon->setSize(w, h);
+        if (rect) rect->setRect(0, 0, w, h); else if (ellipse) ellipse->setRect(0, 0, w, h); else if (polygon) polygon->setSize(w, h); else pathItem->setSize(w, h);
         action->size = currentBounds;
-    } else if (action->actionType == ChangeText && (rect || ellipse || polygon)) {
+    } else if (action->actionType == ChangeText && (rect || ellipse || polygon || pathItem)) {
         if (rect) {
             rect->setText(action->oldText);
             rect->setShiftText(action->oldShiftText);
         } else if (ellipse) {
             ellipse->setText(action->oldText);
             ellipse->setShiftText(action->oldShiftText);
-        } else {
+        } else if (polygon) {
             polygon->setText(action->oldText);
             polygon->setShiftText(action->oldShiftText);
+        } else {
+            pathItem->setText(action->oldText);
+            pathItem->setShiftText(action->oldShiftText);
         }
         action->oldText = action->newText;
-        action->newText = rect ? rect->getText() : (ellipse ? ellipse->getText() : polygon->getText());
+        action->newText = rect ? rect->getText() : (ellipse ? ellipse->getText() : (polygon ? polygon->getText() : pathItem->getText()));
         action->oldShiftText = action->newShiftText;
-        action->newShiftText = rect ? rect->getShiftText() : (ellipse ? ellipse->getShiftText() : polygon->getShiftText());
-    } else if (action->actionType == ChangeKeyCodes && (rect || ellipse || polygon)) {
-        if (rect) rect->setKeycodes(action->oldKeycodes); else if (ellipse) ellipse->setKeycodes(action->oldKeycodes); else polygon->setKeycodes(action->oldKeycodes);
+        action->newShiftText = rect ? rect->getShiftText() : (ellipse ? ellipse->getShiftText() : (polygon ? polygon->getShiftText() : pathItem->getShiftText()));
+    } else if (action->actionType == ChangeKeyCodes && (rect || ellipse || polygon || pathItem)) {
+        if (rect) rect->setKeycodes(action->oldKeycodes); else if (ellipse) ellipse->setKeycodes(action->oldKeycodes); else if (polygon) polygon->setKeycodes(action->oldKeycodes); else pathItem->setKeycodes(action->oldKeycodes);
         action->oldKeycodes = action->newKeycodes;
-        action->newKeycodes = rect ? rect->getKeycodes() : (ellipse ? ellipse->getKeycodes() : polygon->getKeycodes());
+        action->newKeycodes = rect ? rect->getKeycodes() : (ellipse ? ellipse->getKeycodes() : (polygon ? polygon->getKeycodes() : pathItem->getKeycodes()));
     } else if (action->actionType == Add) {
         action->actionType = Actions::Remove;
         scene->removeItem(action->item);
@@ -668,6 +767,49 @@ void LayoutEditorGraphicsView::doAction(Action *action){
                 setKeyStyleForItem(p.first, action->styleNew);
             action->styleApplied = true;
         }
+    } else if (action->actionType == EditShape && action->item) {
+        auto applyEditState = [](QGraphicsItem *it, const EditShapeState &st) {
+            if (ResizableRectItem *r = dynamic_cast<ResizableRectItem*>(it)) {
+                if (st.type == 1) {
+                    r->setRect(st.rect);
+                    r->setTextPosition(st.textPos);
+                }
+            } else if (ResizableEllipseItem *e = dynamic_cast<ResizableEllipseItem*>(it)) {
+                if (st.type == 2) {
+                    e->setRect(st.rect);
+                    e->setTextPosition(st.textPos);
+                }
+            } else if (ResizablePolygonItem *p = dynamic_cast<ResizablePolygonItem*>(it)) {
+                if (st.type == 3) {
+                    p->setPolygonDirect(st.polygon);
+                    p->setTextPosition(st.textPos);
+                }
+            } else if (ResizablePathItem *path = dynamic_cast<ResizablePathItem*>(it)) {
+                if (st.type == 4) {
+                    path->setPathFromOuterAndHoles(st.polygon, st.holes);
+                    path->setTextPosition(st.textPos);
+                }
+            }
+        };
+        if (action->editShapeApplied) {
+            if (action->editShapeOldItem) {
+                scene->removeItem(action->item);
+                layoutEditor->addItemToScene(action->editShapeOldItem);
+                applyEditState(action->editShapeOldItem, action->editShapeOld);
+            } else {
+                applyEditState(action->item, action->editShapeOld);
+            }
+            action->editShapeApplied = false;
+        } else {
+            if (action->editShapeOldItem) {
+                scene->removeItem(action->editShapeOldItem);
+                layoutEditor->addItemToScene(action->item);
+                applyEditState(action->item, action->editShapeNew);
+            } else {
+                applyEditState(action->item, action->editShapeNew);
+            }
+            action->editShapeApplied = true;
+        }
     }
 }
 
@@ -677,7 +819,7 @@ QList<QGraphicsItem*> LayoutEditorGraphicsView::selectedKeyItems() const {
     QList<QGraphicsItem*> out;
     if (!scene) return out;
     for (QGraphicsItem *item : scene->selectedItems()) {
-        if (dynamic_cast<ResizableRectItem*>(item) || dynamic_cast<ResizableEllipseItem*>(item) || dynamic_cast<ResizablePolygonItem*>(item))
+        if (dynamic_cast<ResizableRectItem*>(item) || dynamic_cast<ResizableEllipseItem*>(item) || dynamic_cast<ResizablePolygonItem*>(item) || dynamic_cast<ResizablePathItem*>(item))
             out.append(item);
     }
     return out;
@@ -1052,7 +1194,8 @@ void LayoutEditorGraphicsView::clearHoverBoundingBox() {
 void LayoutEditorGraphicsView::updateHoverState(QGraphicsItem *itemUnderCursor, const QPointF &mouseScenePos) {
     bool isKeyShape = itemUnderCursor && (dynamic_cast<ResizableRectItem*>(itemUnderCursor) ||
         dynamic_cast<ResizableEllipseItem*>(itemUnderCursor) ||
-        dynamic_cast<ResizablePolygonItem*>(itemUnderCursor));
+        dynamic_cast<ResizablePolygonItem*>(itemUnderCursor) ||
+        dynamic_cast<ResizablePathItem*>(itemUnderCursor));
 
     if (!isKeyShape) {
         clearHoverBoundingBox();
@@ -1094,7 +1237,7 @@ void LayoutEditorGraphicsView::drawForeground(QPainter *painter, const QRectF &r
 
 void LayoutEditorGraphicsView::updateSizeHelpers(QGraphicsItem* item) {
     // Ensure the item is valid and the type expected
-    if (!item || !(item->type() == QGraphicsRectItem::Type || item->type() == QGraphicsEllipseItem::Type || item->type() == QGraphicsPolygonItem::Type))
+    if (!item || !(item->type() == QGraphicsRectItem::Type || item->type() == QGraphicsEllipseItem::Type || item->type() == QGraphicsPolygonItem::Type || item->type() == QGraphicsPathItem::Type))
         return;
 
     for (QGraphicsItem *helper : alignmentHelpers) {

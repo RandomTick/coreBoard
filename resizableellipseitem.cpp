@@ -73,8 +73,19 @@ std::list<int> ResizableEllipseItem::getKeycodes() {
 
 void ResizableEllipseItem::centerText() {
     QRectF textRect = textItem->boundingRect();
-    QPointF center = rect().center() - QPointF(textRect.width() / 2, textRect.height() / 2);
-    textItem->setPos(center);
+    QPointF target = m_hasCustomTextPosition ? m_textPosition : rect().center();
+    target -= QPointF(textRect.width() / 2, textRect.height() / 2);
+    textItem->setPos(target);
+}
+
+QPointF ResizableEllipseItem::textPosition() const {
+    return m_hasCustomTextPosition ? m_textPosition : rect().center();
+}
+
+void ResizableEllipseItem::setTextPosition(const QPointF &pos) {
+    m_hasCustomTextPosition = true;
+    m_textPosition = pos;
+    centerText();
 }
 
 KeyStyle ResizableEllipseItem::keyStyle() const {

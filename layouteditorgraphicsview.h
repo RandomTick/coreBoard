@@ -4,9 +4,18 @@
 #include <QGraphicsView>
 #include <QList>
 #include <QPair>
+#include <QPolygonF>
 #include <QTimer>
 #include <QKeyEvent>
 #include "keystyle.h"
+
+struct EditShapeState {
+    int type = 0;
+    QRectF rect;
+    QPolygonF polygon;
+    QList<QPolygonF> holes;
+    QPointF textPos;
+};
 
 class LayoutEditorGraphicsView : public QGraphicsView {
     Q_OBJECT
@@ -22,7 +31,8 @@ public:
         Resize,
         ChangeText,
         ChangeKeyCodes,
-        ChangeStyle
+        ChangeStyle,
+        EditShape
     };
     class Action{
     public:
@@ -44,6 +54,10 @@ public:
         QList<QPair<QGraphicsItem*, KeyStyle>> styleItems;
         KeyStyle styleNew;
         bool styleApplied = true;
+        EditShapeState editShapeOld;
+        EditShapeState editShapeNew;
+        bool editShapeApplied = true;
+        QGraphicsItem *editShapeOldItem = nullptr;  // when replacement occurred, old item for undo
 
         Action(Actions actionType, QGraphicsItem *item)
             : actionType(actionType), item(item){}
