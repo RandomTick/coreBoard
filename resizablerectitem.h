@@ -3,6 +3,7 @@
 
 #include <QGraphicsRectItem>
 #include <QGraphicsTextItem>
+#include <QColor>
 
 struct KeyStyle;
 
@@ -28,6 +29,7 @@ private:
     QString m_shiftText;
     qreal m_cornerRadius = 0;
     std::list<int> keyCodes;
+    QColor m_keyColor, m_keyColorPressed, m_keyTextColor, m_keyTextColorPressed;
     void centerText();
 };
 

@@ -15,6 +15,11 @@ struct KeyStyle {
     bool fontBold{false};
     bool fontItalic{false};
     QString fontFamily;
+    // Per-key color overrides for visualization only (editor ignores these); invalid = use global
+    QColor keyColor;
+    QColor keyColorPressed;
+    QColor keyTextColor;
+    QColor keyTextColorPressed;
 
     QPen pen() const {
         return QPen(outlineColor, outlineWidth);
@@ -50,6 +55,22 @@ struct KeyStyle {
             s.cornerRadius = keyData.value("CornerRadius").toDouble(0.0);
         if (s.cornerRadius < 0)
             s.cornerRadius = 0;
+        if (keyData.contains("KeyColor")) {
+            QColor c(keyData.value("KeyColor").toString());
+            if (c.isValid()) s.keyColor = c;
+        }
+        if (keyData.contains("KeyColorPressed")) {
+            QColor c(keyData.value("KeyColorPressed").toString());
+            if (c.isValid()) s.keyColorPressed = c;
+        }
+        if (keyData.contains("KeyTextColor")) {
+            QColor c(keyData.value("KeyTextColor").toString());
+            if (c.isValid()) s.keyTextColor = c;
+        }
+        if (keyData.contains("KeyTextColorPressed")) {
+            QColor c(keyData.value("KeyTextColorPressed").toString());
+            if (c.isValid()) s.keyTextColorPressed = c;
+        }
         return s;
     }
 
@@ -64,6 +85,14 @@ struct KeyStyle {
             o.insert("CornerRadius", cornerRadius);
         if (!fontFamily.isEmpty())
             o.insert("FontFamily", fontFamily);
+        if (keyColor.isValid())
+            o.insert("KeyColor", keyColor.name());
+        if (keyColorPressed.isValid())
+            o.insert("KeyColorPressed", keyColorPressed.name());
+        if (keyTextColor.isValid())
+            o.insert("KeyTextColor", keyTextColor.name());
+        if (keyTextColorPressed.isValid())
+            o.insert("KeyTextColorPressed", keyTextColorPressed.name());
         return o;
     }
 };

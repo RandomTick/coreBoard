@@ -3,6 +3,7 @@
 
 #include <QGraphicsEllipseItem>
 #include <QGraphicsTextItem>
+#include <QColor>
 
 struct KeyStyle;
 
@@ -28,6 +29,7 @@ private:
     QGraphicsTextItem *textItem;
     QString m_shiftText;
     std::list<int> keyCodes;
+    QColor m_keyColor, m_keyColorPressed, m_keyTextColor, m_keyTextColorPressed;
     void centerText();
 };
 

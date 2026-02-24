@@ -19,6 +19,10 @@
 namespace {
 const int BaseTextRole = Qt::UserRole;
 const int ShiftTextRole = Qt::UserRole + 1;
+const int KeyColorRole = Qt::UserRole + 2;
+const int KeyColorPressedRole = Qt::UserRole + 3;
+const int KeyTextColorRole = Qt::UserRole + 4;
+const int KeyTextColorPressedRole = Qt::UserRole + 5;
 }
 
 KeyboardWidget::KeyboardWidget(QWidget *parent) : QWidget(parent)
@@ -95,8 +99,12 @@ void KeyboardWidget::applyColors()
             continue;
         QAbstractGraphicsShapeItem *shape = qgraphicsitem_cast<QAbstractGraphicsShapeItem*>(item);
         if (shape) {
-            shape->setBrush(m_keyColor);
-            setShapeTextColor(shape, m_textColor);
+            QColor effBrush = item->data(KeyColorRole).value<QColor>();
+            QColor effText = item->data(KeyTextColorRole).value<QColor>();
+            if (!effBrush.isValid()) effBrush = m_keyColor;
+            if (!effText.isValid()) effText = m_textColor;
+            shape->setBrush(effBrush);
+            setShapeTextColor(shape, effText);
         }
     }
 }
@@ -211,6 +219,8 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
         shiftText = label;
     QJsonArray kc = keyData.value("KeyCodes").toArray();
     KeyStyle keyStyle = KeyStyle::fromJson(keyData);
+    QColor brushColor = keyStyle.keyColor.isValid() ? keyStyle.keyColor : m_keyColor;
+    QColor textCol = keyStyle.keyTextColor.isValid() ? keyStyle.keyTextColor : m_textColor;
 
     qreal minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
     for (const QJsonValue &pv : boundaries) {
@@ -246,14 +256,14 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
                 path.addRoundedRect(0, 0, w, h, keyStyle.cornerRadius, keyStyle.cornerRadius);
                 QGraphicsPathItem *pathItem = new QGraphicsPathItem(path);
                 pathItem->setPos(minX, minY);
-                pathItem->setBrush(m_keyColor);
+                pathItem->setBrush(brushColor);
                 pathItem->setPen(keyStyle.pen());
                 m_scene->addItem(pathItem);
                 shapeItem = pathItem;
             } else {
                 QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, w, h);
                 rect->setPos(minX, minY);
-                rect->setBrush(m_keyColor);
+                rect->setBrush(brushColor);
                 rect->setPen(keyStyle.pen());
                 m_scene->addItem(rect);
                 shapeItem = rect;
@@ -264,7 +274,7 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     if (!shapeItem && boundaries.size() >= 32) {
         QGraphicsEllipseItem *ellipse = new QGraphicsEllipseItem(0, 0, w, h);
         ellipse->setPos(minX, minY);
-        ellipse->setBrush(m_keyColor);
+        ellipse->setBrush(brushColor);
         ellipse->setPen(keyStyle.pen());
         m_scene->addItem(ellipse);
         shapeItem = ellipse;
@@ -280,7 +290,7 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
         }
         QGraphicsPolygonItem *polyItem = new QGraphicsPolygonItem(poly);
         polyItem->setPos(minX, minY);
-        polyItem->setBrush(m_keyColor);
+        polyItem->setBrush(brushColor);
         polyItem->setPen(keyStyle.pen());
         m_scene->addItem(polyItem);
         shapeItem = polyItem;
@@ -291,6 +301,16 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
 
     shapeItem->setData(BaseTextRole, label);
     shapeItem->setData(ShiftTextRole, shiftText);
+    if (keyStyle.keyColor.isValid())
+        shapeItem->setData(KeyColorRole, keyStyle.keyColor);
+    if (keyStyle.keyColorPressed.isValid())
+        shapeItem->setData(KeyColorPressedRole, keyStyle.keyColorPressed);
+    if (keyStyle.keyTextColor.isValid())
+        shapeItem->setData(KeyTextColorRole, keyStyle.keyTextColor);
+    if (keyStyle.keyTextColorPressed.isValid())
+        shapeItem->setData(KeyTextColorPressedRole, keyStyle.keyTextColorPressed);
+
+    shapeItem->setBrush(brushColor);
 
     QGraphicsTextItem *textItem = new QGraphicsTextItem(shapeItem);
     textItem->document()->setDocumentMargin(0);
@@ -298,7 +318,7 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     opt.setAlignment(Qt::AlignHCenter);
     textItem->document()->setDefaultTextOption(opt);
     textItem->setPlainText(label);
-    textItem->setDefaultTextColor(m_textColor);
+    textItem->setDefaultTextColor(textCol);
     textItem->setFont(keyStyle.font());
     QRectF shapeBr = shapeItem->boundingRect();
     textItem->setTextWidth(qMax(0.0, shapeBr.width() - 8));
@@ -315,7 +335,7 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     keyCounter[label] = 0;
 }
 
-void KeyboardWidget::changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor)
+void KeyboardWidget::changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor, bool isPressed)
 {
     auto it = m_keys.find(keyCode);
     if (it == m_keys.end())
@@ -325,8 +345,12 @@ void KeyboardWidget::changeKeyColor(const int &keyCode, const QColor &brushColor
             continue;
         QAbstractGraphicsShapeItem *shape = qgraphicsitem_cast<QAbstractGraphicsShapeItem*>(item);
         if (shape) {
-            shape->setBrush(brushColor);
-            setShapeTextColor(shape, textColor);
+            QColor effBrush = isPressed ? item->data(KeyColorPressedRole).value<QColor>() : item->data(KeyColorRole).value<QColor>();
+            QColor effText = isPressed ? item->data(KeyTextColorPressedRole).value<QColor>() : item->data(KeyTextColorRole).value<QColor>();
+            if (!effBrush.isValid()) effBrush = brushColor;
+            if (!effText.isValid()) effText = textColor;
+            shape->setBrush(effBrush);
+            setShapeTextColor(shape, effText);
         }
     }
 }
@@ -339,12 +363,12 @@ void KeyboardWidget::resetCounter()
 
 void KeyboardWidget::onKeyPressed(int key)
 {
-    changeKeyColor(key, m_highlightColor, m_highlightedTextColor);
+    changeKeyColor(key, m_highlightColor, m_highlightedTextColor, true);
 }
 
 void KeyboardWidget::onKeyReleased(int key)
 {
-    changeKeyColor(key, m_keyColor, m_textColor);
+    changeKeyColor(key, m_keyColor, m_textColor, false);
 }
 
 void KeyboardWidget::setLabelMode(LabelMode mode)

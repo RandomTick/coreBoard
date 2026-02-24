@@ -36,7 +36,7 @@ public:
 private:
     void createKey(const QJsonObject &keyData);
     void applyLayoutData(const QByteArray &jsonData);
-    void changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor);
+    void changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor, bool isPressed);
     static void setShapeTextColor(QGraphicsItem *shapeItem, const QColor &color);
     void updateLabelsForShiftState();
     void resetCounter();

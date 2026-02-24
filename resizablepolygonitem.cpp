@@ -107,11 +107,19 @@ KeyStyle ResizablePolygonItem::keyStyle() const {
     s.fontBold = textItem->font().bold();
     s.fontItalic = textItem->font().italic();
     s.fontFamily = textItem->font().family();
+    s.keyColor = m_keyColor;
+    s.keyColorPressed = m_keyColorPressed;
+    s.keyTextColor = m_keyTextColor;
+    s.keyTextColorPressed = m_keyTextColorPressed;
     return s;
 }
 
 void ResizablePolygonItem::setKeyStyle(const KeyStyle &style) {
     setPen(style.pen());
     textItem->setFont(style.font());
+    m_keyColor = style.keyColor;
+    m_keyColorPressed = style.keyColorPressed;
+    m_keyTextColor = style.keyTextColor;
+    m_keyTextColorPressed = style.keyTextColorPressed;
     centerText();
 }
