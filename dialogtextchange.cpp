@@ -4,20 +4,24 @@
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QSignalMapper>
+#include <QKeyEvent>
 
 DialogTextChange::DialogTextChange(QWidget *parent, QString currentText, QString currentShiftText) : QDialog(parent) {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
     mainLayout->addWidget(new QLabel(tr("Text (normal):")));
-    lineEdit = new QLineEdit(this);
+    lineEdit = new QPlainTextEdit(this);
+    lineEdit->setMaximumBlockCount(5);
+    lineEdit->setPlaceholderText(tr("Use ¶ or Ctrl+Enter for newlines"));
     mainLayout->addWidget(lineEdit);
-    lineEdit->setText(currentText);
+    lineEdit->setPlainText(currentText);
 
     mainLayout->addWidget(new QLabel(tr("Text when Shift held:")));
-    shiftLineEdit = new QLineEdit(this);
+    shiftLineEdit = new QPlainTextEdit(this);
+    shiftLineEdit->setMaximumBlockCount(5);
     shiftLineEdit->setPlaceholderText(tr("Leave empty to use same as normal"));
     mainLayout->addWidget(shiftLineEdit);
-    shiftLineEdit->setText(currentShiftText);
+    shiftLineEdit->setPlainText(currentShiftText);
 
     // Symbol buttons layout
     QHBoxLayout *symbolsLayout = new QHBoxLayout();
@@ -26,15 +30,16 @@ DialogTextChange::DialogTextChange(QWidget *parent, QString currentText, QString
     // Initialize a signal mapper to map button clicks to specific slots
     QSignalMapper *signalMapper = new QSignalMapper(this);
 
-    // List of symbols to create buttons for
-    QStringList symbols = {"⇧", "↵", "⇑", "⇓"};
+    // List of symbols to create buttons for (including pilcrow for newline)
+    QStringList symbols = {"⇧", "↵", "⇑", "⇓", QString::fromUtf8("¶")};
     foreach (const QString &symbol, symbols) {
         QPushButton *button = new QPushButton(symbol, this);
-        button->setFixedSize(40, 40); // Makes buttons smaller
+        button->setFixedSize(40, 40);
+        button->setFocusPolicy(Qt::NoFocus);
         symbolsLayout->addWidget(button);
 
         connect(button, SIGNAL(clicked()), signalMapper, SLOT(map()));
-        signalMapper->setMapping(button, symbol);
+        signalMapper->setMapping(button, symbol == QString::fromUtf8("¶") ? QString("\n") : symbol);
     }
 
     connect(signalMapper, SIGNAL(mappedString(QString)), this, SLOT(insertSymbol(QString)));
@@ -56,17 +61,30 @@ DialogTextChange::DialogTextChange(QWidget *parent, QString currentText, QString
 
 }
 
+void DialogTextChange::keyPressEvent(QKeyEvent *event) {
+    if ((event->modifiers() & Qt::ControlModifier) && event->key() == Qt::Key_Return) {
+        if (QWidget *focus = focusWidget()) {
+            if (focus == lineEdit || focus == shiftLineEdit) {
+                static_cast<QPlainTextEdit*>(focus)->insertPlainText("\n");
+                event->accept();
+                return;
+            }
+        }
+    }
+    QDialog::keyPressEvent(event);
+}
+
 void DialogTextChange::insertSymbol(const QString &symbol) {
     if (lineEdit->hasFocus())
-        lineEdit->insert(symbol);
+        lineEdit->insertPlainText(symbol);
     else if (shiftLineEdit->hasFocus())
-        shiftLineEdit->insert(symbol);
+        shiftLineEdit->insertPlainText(symbol);
 }
 
 QString DialogTextChange::getText() const {
-    return lineEdit->text();
+    return lineEdit->toPlainText();
 }
 
 QString DialogTextChange::getShiftText() const {
-    return shiftLineEdit->text();
+    return shiftLineEdit->toPlainText();
 }

@@ -17,6 +17,7 @@ LanguageSettingsDialog::LanguageSettingsDialog(LayoutSettings *settings, QWidget
     m_languageCombo = new QComboBox(this);
     m_languageCombo->addItem(tr("English"), QStringLiteral("en_US"));
     m_languageCombo->addItem(QStringLiteral("Deutsch"), QStringLiteral("de_DE"));
+    m_languageCombo->addItem(QStringLiteral("Français"), QStringLiteral("fr_FR"));
     mainLayout->addWidget(m_languageCombo);
 
     QString currentCode = m_settings ? m_settings->languageCode() : QString();

@@ -10,6 +10,9 @@
 #include <QMenu>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QShortcut>
+#include <QApplication>
+#include <QClipboard>
 #include <cmath>
 #include "layoutsettings.h"
 #include "keystyle.h"
@@ -93,6 +96,7 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     undoButton->setIconSize(QSize(18,18));
     undoButton->setFixedSize(24,24);
     undoButton->setStyleSheet(buttonStyleSheet);
+    undoButton->setToolTip(tr("Undo (Ctrl+Z)"));
     undoButton->setEnabled(false);
 
     redoButton = new QPushButton("", this);
@@ -100,10 +104,33 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     redoButton->setIconSize(QSize(18,18));
     redoButton->setFixedSize(24,24);
     redoButton->setStyleSheet(buttonStyleSheet);
+    redoButton->setToolTip(tr("Redo (Ctrl+Y)"));
     redoButton->setEnabled(false);
+
+    QShortcut *undoShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Z), this);
+    connect(undoShortcut, &QShortcut::activated, view, &LayoutEditorGraphicsView::undoLastAction);
+    QShortcut *redoShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Y), this);
+    connect(redoShortcut, &QShortcut::activated, view, &LayoutEditorGraphicsView::redoLastAction);
 
     addButton = new QPushButton(tr("Add Shape"), this);
     addButton->setStyleSheet(buttonStyleSheet);
+
+    copyButton = new QPushButton(this);
+    copyButton->setCheckable(true);
+    copyButton->setIcon(QIcon(":/icons/content_copy.svg"));
+    copyButton->setIconSize(QSize(18, 18));
+    copyButton->setFixedSize(24, 24);
+    copyButton->setStyleSheet(buttonStyleSheet);
+    copyButton->setToolTip(tr("Copy key (click, then click a key to copy)"));
+
+    pasteButton = new QPushButton(this);
+    pasteButton->setCheckable(false);
+    pasteButton->setIcon(QIcon(":/icons/content_paste.svg"));
+    pasteButton->setIconSize(QSize(18, 18));
+    pasteButton->setFixedSize(24, 24);
+    pasteButton->setStyleSheet(buttonStyleSheet);
+    pasteButton->setToolTip(tr("Paste key"));
+    pasteButton->setEnabled(true);
 
     pickStyleButton = new QPushButton(this);
     pickStyleButton->setCheckable(true);
@@ -126,7 +153,7 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     m_actRect = m_addShapeMenu->addAction(tr("Rectangle"));
     m_actCircle = m_addShapeMenu->addAction(tr("Circle"));
     m_addShapeMenu->addSeparator();
-    m_customShapeMenu = m_addShapeMenu->addMenu(tr("Custom shape"));
+    m_customShapeMenu = m_addShapeMenu->addMenu(tr("Advanced shapes"));
     m_actStar = m_customShapeMenu->addAction(tr("Star"));
     m_actDiamond = m_customShapeMenu->addAction(tr("Diamond"));
     m_actHexagon = m_customShapeMenu->addAction(tr("Hexagon"));
@@ -182,7 +209,17 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
         applyStyleButton->blockSignals(true);
         applyStyleButton->setChecked(false);
         applyStyleButton->blockSignals(false);
+        copyButton->blockSignals(true);
+        copyButton->setChecked(false);
+        copyButton->blockSignals(false);
     });
+    connect(view, &LayoutEditorGraphicsView::keyCopied, this, [this]() {
+        copyButton->blockSignals(true);
+        copyButton->setChecked(false);
+        copyButton->blockSignals(false);
+    });
+    connect(copyButton, &QPushButton::toggled, this, &LayoutEditor::onCopyToggled);
+    connect(pasteButton, &QPushButton::clicked, this, &LayoutEditor::pasteKey);
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(openButton);
@@ -191,6 +228,8 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     buttonLayout->addWidget(saveAsButton);
     buttonLayout->addWidget(undoButton);
     buttonLayout->addWidget(redoButton);
+    buttonLayout->addWidget(copyButton);
+    buttonLayout->addWidget(pasteButton);
     buttonLayout->addWidget(addButton);
     buttonLayout->addWidget(pickStyleButton);
     buttonLayout->addWidget(applyStyleButton);
@@ -327,16 +366,16 @@ void LayoutEditor::loadLayout(const QString &fileName){
     minW = qMax(minW, kMinimumEditorWidth);
     setMinimumSize(minW, minH);
 
-    if (m_layoutSettings)
+    if (m_layoutSettings && fileName != QLatin1String(":/default.json"))
         m_layoutSettings->updateLastAndRecent(fileName);
     emit layoutLoaded(fileName);
 }
 
-void LayoutEditor::createKey(const QJsonObject &keyData){
+QGraphicsItem* LayoutEditor::createKey(const QJsonObject &keyData){
     QJsonArray boundaries = keyData.value("Boundaries").toArray();
     if (boundaries.size() < 4) {
         qWarning("Invalid boundaries data (need at least 4 points).");
-        return;
+        return nullptr;
     }
     QString label = keyData.value("Text").toString();
     QString shiftText = keyData.value("ShiftText").toString();
@@ -378,6 +417,13 @@ void LayoutEditor::createKey(const QJsonObject &keyData){
             qreal height = maxY - minY;
             ResizableRectItem *rect = addRectangle(label, width, height, x, y, keyCodes, keyStyle);
             rect->setShiftText(shiftText);
+            if (keyData.contains("TextPosition")) {
+                QJsonObject tp = keyData["TextPosition"].toObject();
+                qreal tpX = tp["X"].toDouble();
+                qreal tpY = tp["Y"].toDouble();
+                rect->setTextPosition(rect->mapFromScene(QPointF(tpX, tpY)));
+            }
+            return rect;
         } else {
             qreal w = maxX - minX;
             qreal h = maxY - minY;
@@ -387,6 +433,13 @@ void LayoutEditor::createKey(const QJsonObject &keyData){
             }
             ResizablePolygonItem *polyItem = addPolygon(templatePolygon, label, minX, minY, w, h, keyCodes, keyStyle);
             polyItem->setShiftText(shiftText);
+            if (keyData.contains("TextPosition")) {
+                QJsonObject tp = keyData["TextPosition"].toObject();
+                qreal tpX = tp["X"].toDouble();
+                qreal tpY = tp["Y"].toDouble();
+                polyItem->setTextPosition(polyItem->mapFromScene(QPointF(tpX, tpY)));
+            }
+            return polyItem;
         }
     } else {
         qreal minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
@@ -401,11 +454,20 @@ void LayoutEditor::createKey(const QJsonObject &keyData){
         }
         qreal w = maxX - minX;
         qreal h = maxY - minY;
-        // High point count => saved ellipse (we write 64 points for circles); load as ellipse so it stays smooth
+        // ShapeType prevents polygons with many points from being mistaken for ellipses
+        QString shapeType = keyData.value("ShapeType").toString();
         const int ellipsePointThreshold = 32;
-        if (boundaries.size() >= ellipsePointThreshold) {
+        bool loadAsEllipse = (shapeType == "ellipse") || (shapeType.isEmpty() && boundaries.size() >= ellipsePointThreshold);
+        if (loadAsEllipse) {
             ResizableEllipseItem *ellipse = addEllipse(label, w, h, minX, minY, keyCodes, keyStyle);
             ellipse->setShiftText(shiftText);
+            if (keyData.contains("TextPosition")) {
+                QJsonObject tp = keyData["TextPosition"].toObject();
+                qreal tpX = tp["X"].toDouble();
+                qreal tpY = tp["Y"].toDouble();
+                ellipse->setTextPosition(ellipse->mapFromScene(QPointF(tpX, tpY)));
+            }
+            return ellipse;
         } else {
             QPolygonF poly;
             for (const QJsonValue &pv : boundaries) {
@@ -414,14 +476,43 @@ void LayoutEditor::createKey(const QJsonObject &keyData){
                 qreal py = po["Y"].toDouble();
                 poly << QPointF(px, py);
             }
-            QPolygonF templatePolygon;
+            QPolygonF outerPoly;
             for (const QPointF &p : poly) {
-                templatePolygon << QPointF(p.x() - minX, p.y() - minY);
+                outerPoly << QPointF(p.x() - minX, p.y() - minY);
             }
-            ResizablePolygonItem *polyItem = addPolygon(templatePolygon, label, minX, minY, w, h, keyCodes, keyStyle);
+            QList<QPolygonF> holesList;
+            if (keyData.contains("Holes")) {
+                QJsonArray holesArray = keyData["Holes"].toArray();
+                for (const QJsonValue &holeVal : holesArray) {
+                    QJsonArray holeArr = holeVal.toArray();
+                    QPolygonF holePoly;
+                    for (const QJsonValue &pv : holeArr) {
+                        QJsonObject po = pv.toObject();
+                        holePoly << QPointF(po["X"].toDouble() - minX, po["Y"].toDouble() - minY);
+                    }
+                    if (holePoly.size() >= 3)
+                        holesList.append(holePoly);
+                }
+            }
+            if (!holesList.isEmpty()) {
+                ResizablePathItem *pathItem = addPathItem(outerPoly, holesList, label, minX, minY, w, h, keyCodes, keyStyle);
+                pathItem->setShiftText(shiftText);
+                if (keyData.contains("TextPosition")) {
+                    QJsonObject tp = keyData["TextPosition"].toObject();
+                    pathItem->setTextPosition(pathItem->mapFromScene(QPointF(tp["X"].toDouble(), tp["Y"].toDouble())));
+                }
+                return pathItem;
+            }
+            ResizablePolygonItem *polyItem = addPolygon(outerPoly, label, minX, minY, w, h, keyCodes, keyStyle);
             polyItem->setShiftText(shiftText);
+            if (keyData.contains("TextPosition")) {
+                QJsonObject tp = keyData["TextPosition"].toObject();
+                polyItem->setTextPosition(polyItem->mapFromScene(QPointF(tp["X"].toDouble(), tp["Y"].toDouble())));
+            }
+            return polyItem;
         }
     }
+    return nullptr;
 }
 
 void LayoutEditor::addShape(){
@@ -474,6 +565,14 @@ ResizableRectItem * LayoutEditor::addRectangle(const QString &text, qreal h, qre
     return rect;
 }
 
+ResizablePathItem * LayoutEditor::addPathItem(const QPolygonF &outer, const QList<QPolygonF> &holes, const QString &text, qreal x, qreal y, qreal w, qreal h, const std::list<int> keyCodes, const KeyStyle &keyStyle) {
+    ResizablePathItem *pathItem = new ResizablePathItem(outer, holes, text, keyCodes);
+    pathItem->setKeyStyle(keyStyle);
+    scene->addItem(pathItem);
+    pathItem->setRect(x, y, w, h);
+    return pathItem;
+}
+
 void LayoutEditor::addItemToScene(QGraphicsItem *item){
     scene->addItem(item);
 }
@@ -492,7 +591,8 @@ void LayoutEditor::updateMinimumSizeFromScene()
         ResizableRectItem *rectItem = dynamic_cast<ResizableRectItem *>(item);
         ResizableEllipseItem *ellipseItem = dynamic_cast<ResizableEllipseItem *>(item);
         ResizablePolygonItem *polygonItem = dynamic_cast<ResizablePolygonItem *>(item);
-        if (!rectItem && !ellipseItem && !polygonItem)
+        ResizablePathItem *pathItem = dynamic_cast<ResizablePathItem *>(item);
+        if (!rectItem && !ellipseItem && !polygonItem && !pathItem)
             continue;
         QRectF sceneBr = item->sceneBoundingRect();
         maxX = qMax(maxX, sceneBr.right());
@@ -510,7 +610,7 @@ void LayoutEditor::updateMinimumSizeFromScene()
 }
 
 void LayoutEditor::saveLayout() {
-    if (_currentLayoutPath.isEmpty()) {
+    if (_currentLayoutPath.isEmpty() || _currentLayoutPath == QLatin1String(":/default.json")) {
         saveLayoutAs();
         return;
     }
@@ -520,11 +620,19 @@ void LayoutEditor::saveLayout() {
         if (m_layoutSettings)
             m_layoutSettings->updateLastAndRecent(_currentLayoutPath);
         emit layoutLoaded(_currentLayoutPath);
+    } else {
+        QMessageBox::warning(this, tr("Save failed"),
+            tr("Could not save the layout to:\n\n%1\n\nPossible causes:\n• The file or folder is read-only\n• Another program has the file open\n• You don't have permission to write to this location\n\nTry \"Save As\" to save to a different location.").arg(_currentLayoutPath));
     }
 }
 
 void LayoutEditor::saveLayoutAs() {
-    QString filePath = QFileDialog::getSaveFileName(this, tr("Save Layout As"), "", tr("Layout Files (*.json);;All Files (*)"));
+    QString initialDir;
+    if (!_currentLayoutPath.isEmpty() && _currentLayoutPath != QLatin1String(":/default.json"))
+        initialDir = QFileInfo(_currentLayoutPath).absolutePath();
+    if (initialDir.isEmpty() && m_layoutSettings && !m_layoutSettings->lastLayoutPath().isEmpty())
+        initialDir = QFileInfo(m_layoutSettings->lastLayoutPath()).absolutePath();
+    QString filePath = QFileDialog::getSaveFileName(this, tr("Save Layout As"), initialDir, tr("Layout Files (*.json);;All Files (*)"));
     if (!filePath.isEmpty()) {
         if (writeLayoutToFile(filePath)) {
             _currentLayoutPath = filePath;
@@ -533,6 +641,9 @@ void LayoutEditor::saveLayoutAs() {
             if (m_layoutSettings)
                 m_layoutSettings->updateLastAndRecent(_currentLayoutPath);
             emit layoutLoaded(_currentLayoutPath);
+        } else {
+            QMessageBox::warning(this, tr("Save failed"),
+                tr("Could not save the layout to:\n\n%1\n\nPossible causes:\n• The file or folder is read-only\n• Another program has the file open\n• You don't have permission to write to this location").arg(filePath));
         }
     }
 }
@@ -557,6 +668,7 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
         ResizableRectItem *rectItem = dynamic_cast<ResizableRectItem *>(item);
         ResizableEllipseItem *ellipseItem = dynamic_cast<ResizableEllipseItem *>(item);
         ResizablePolygonItem *polygonItem = dynamic_cast<ResizablePolygonItem *>(item);
+        ResizablePathItem *pathItem = dynamic_cast<ResizablePathItem *>(item);
 
         if (rectItem) {
             QRectF r = rectItem->rect();
@@ -569,7 +681,7 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
             }
             text = rectItem->getText();
             shiftText = rectItem->getShiftText();
-            QPointF centerSc = rectItem->mapToScene(QPointF(w / 2, h / 2));
+            QPointF centerSc = rectItem->mapToScene(rectItem->textPosition());
             centerX = centerSc.x();
             centerY = centerSc.y();
             for (int kc : rectItem->getKeycodes()) keyCodesArray.append(kc);
@@ -591,7 +703,7 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
             }
             text = ellipseItem->getText();
             shiftText = ellipseItem->getShiftText();
-            QPointF centerSc = ellipseItem->mapToScene(QPointF(cx, cy));
+            QPointF centerSc = ellipseItem->mapToScene(ellipseItem->textPosition());
             centerX = centerSc.x();
             centerY = centerSc.y();
             for (int kc : ellipseItem->getKeycodes()) keyCodesArray.append(kc);
@@ -605,11 +717,25 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
             }
             text = polygonItem->getText();
             shiftText = polygonItem->getShiftText();
-            QPointF centerSc = polygonItem->mapToScene(polygonItem->boundingRect().center());
+            QPointF centerSc = polygonItem->mapToScene(polygonItem->textPosition());
             centerX = centerSc.x();
             centerY = centerSc.y();
             for (int kc : polygonItem->getKeycodes()) keyCodesArray.append(kc);
             QRectF sceneBr = polygonItem->sceneBoundingRect();
+            itemMinX = sceneBr.left(); itemMinY = sceneBr.top();
+            itemMaxX = sceneBr.right(); itemMaxY = sceneBr.bottom();
+        } else if (pathItem) {
+            for (const QPointF &p : pathItem->outerPolygon()) {
+                QPointF sc = pathItem->mapToScene(p);
+                boundaries.append(QJsonObject{{"X", static_cast<int>(sc.x())}, {"Y", static_cast<int>(sc.y())}});
+            }
+            text = pathItem->getText();
+            shiftText = pathItem->getShiftText();
+            QPointF centerSc = pathItem->mapToScene(pathItem->textPosition());
+            centerX = centerSc.x();
+            centerY = centerSc.y();
+            for (int kc : pathItem->getKeycodes()) keyCodesArray.append(kc);
+            QRectF sceneBr = pathItem->sceneBoundingRect();
             itemMinX = sceneBr.left(); itemMinY = sceneBr.top();
             itemMaxX = sceneBr.right(); itemMaxY = sceneBr.bottom();
         } else {
@@ -623,9 +749,12 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
             itemStyle = ellipseItem->keyStyle();
         else if (polygonItem)
             itemStyle = polygonItem->keyStyle();
+        else if (pathItem)
+            itemStyle = pathItem->keyStyle();
 
         QJsonObject keyObj;
         keyObj.insert("__type", "KeyboardKey");
+        keyObj.insert("ShapeType", rectItem ? "rectangle" : (ellipseItem ? "ellipse" : (pathItem ? "path" : "polygon")));
         keyObj.insert("Id", id++);
         keyObj.insert("Boundaries", boundaries);
         keyObj.insert("KeyCodes", keyCodesArray);
@@ -633,6 +762,19 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
         keyObj.insert("TextPosition", QJsonObject{{"X", static_cast<int>(centerX)}, {"Y", static_cast<int>(centerY)}});
         keyObj.insert("ChangeOnCaps", false);
         keyObj.insert("ShiftText", shiftText.isEmpty() ? text : shiftText);
+        if (pathItem) {
+            QJsonArray holesArray;
+            for (const QPolygonF &hole : pathItem->holes()) {
+                QJsonArray holeArr;
+                for (const QPointF &p : hole) {
+                    QPointF sc = pathItem->mapToScene(p);
+                    holeArr.append(QJsonObject{{"X", static_cast<int>(sc.x())}, {"Y", static_cast<int>(sc.y())}});
+                }
+                holesArray.append(holeArr);
+            }
+            if (!holesArray.isEmpty())
+                keyObj.insert("Holes", holesArray);
+        }
         QJsonObject styleObj = itemStyle.toJson();
         for (auto it = styleObj.begin(); it != styleObj.end(); ++it)
             keyObj.insert(it.key(), it.value());
@@ -669,17 +811,199 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
     return true;
 }
 
+static QJsonObject keyItemToJson(QGraphicsItem *item) {
+    const int ellipsePoints = 64;
+    ResizableRectItem *rectItem = dynamic_cast<ResizableRectItem *>(item);
+    ResizableEllipseItem *ellipseItem = dynamic_cast<ResizableEllipseItem *>(item);
+    ResizablePolygonItem *polygonItem = dynamic_cast<ResizablePolygonItem *>(item);
+    ResizablePathItem *pathItem = dynamic_cast<ResizablePathItem *>(item);
+    if (!rectItem && !ellipseItem && !polygonItem && !pathItem) return QJsonObject();
+
+    QJsonArray boundaries;
+    QString text, shiftText;
+    qreal centerX = 0, centerY = 0;
+    QJsonArray keyCodesArray;
+
+    if (rectItem) {
+        QRectF r = rectItem->rect();
+        qreal w = r.width(), h = r.height();
+        QPointF corners[4] = { QPointF(0, 0), QPointF(w, 0), QPointF(w, h), QPointF(0, h) };
+        for (const QPointF &p : corners) {
+            QPointF sc = rectItem->mapToScene(p);
+            boundaries.append(QJsonObject{{"X", static_cast<int>(sc.x())}, {"Y", static_cast<int>(sc.y())}});
+        }
+        text = rectItem->getText(); shiftText = rectItem->getShiftText();
+        QPointF centerSc = rectItem->mapToScene(rectItem->textPosition());
+        centerX = centerSc.x(); centerY = centerSc.y();
+        for (int kc : rectItem->getKeycodes()) keyCodesArray.append(kc);
+    } else if (ellipseItem) {
+        QRectF r = ellipseItem->rect();
+        qreal w = r.width(), h = r.height();
+        qreal rx = w / 2, ry = h / 2, cx = w / 2, cy = h / 2;
+        for (int i = 0; i < ellipsePoints; ++i) {
+            qreal angle = 2.0 * M_PI * i / ellipsePoints;
+            QPointF local(cx + rx * std::cos(angle), cy + ry * std::sin(angle));
+            QPointF sc = ellipseItem->mapToScene(local);
+            boundaries.append(QJsonObject{{"X", static_cast<int>(sc.x())}, {"Y", static_cast<int>(sc.y())}});
+        }
+        text = ellipseItem->getText(); shiftText = ellipseItem->getShiftText();
+        QPointF centerSc = ellipseItem->mapToScene(ellipseItem->textPosition());
+        centerX = centerSc.x(); centerY = centerSc.y();
+        for (int kc : ellipseItem->getKeycodes()) keyCodesArray.append(kc);
+    } else if (polygonItem) {
+        QPolygonF poly = polygonItem->polygon();
+        for (const QPointF &p : poly) {
+            QPointF sc = polygonItem->mapToScene(p);
+            boundaries.append(QJsonObject{{"X", static_cast<int>(sc.x())}, {"Y", static_cast<int>(sc.y())}});
+        }
+        text = polygonItem->getText(); shiftText = polygonItem->getShiftText();
+        QPointF centerSc = polygonItem->mapToScene(polygonItem->textPosition());
+        centerX = centerSc.x(); centerY = centerSc.y();
+        for (int kc : polygonItem->getKeycodes()) keyCodesArray.append(kc);
+    } else if (pathItem) {
+        for (const QPointF &p : pathItem->outerPolygon()) {
+            QPointF sc = pathItem->mapToScene(p);
+            boundaries.append(QJsonObject{{"X", static_cast<int>(sc.x())}, {"Y", static_cast<int>(sc.y())}});
+        }
+        text = pathItem->getText(); shiftText = pathItem->getShiftText();
+        QPointF centerSc = pathItem->mapToScene(pathItem->textPosition());
+        centerX = centerSc.x(); centerY = centerSc.y();
+        for (int kc : pathItem->getKeycodes()) keyCodesArray.append(kc);
+    }
+
+    KeyStyle itemStyle = rectItem ? rectItem->keyStyle() : (ellipseItem ? ellipseItem->keyStyle() : (polygonItem ? polygonItem->keyStyle() : pathItem->keyStyle()));
+    QJsonObject keyObj;
+    keyObj.insert("__type", "KeyboardKey");
+    keyObj.insert("ShapeType", rectItem ? "rectangle" : (ellipseItem ? "ellipse" : (pathItem ? "path" : "polygon")));
+    keyObj.insert("Id", 0);
+    keyObj.insert("Boundaries", boundaries);
+    keyObj.insert("KeyCodes", keyCodesArray);
+    keyObj.insert("Text", text);
+    keyObj.insert("TextPosition", QJsonObject{{"X", static_cast<int>(centerX)}, {"Y", static_cast<int>(centerY)}});
+    keyObj.insert("ChangeOnCaps", false);
+    keyObj.insert("ShiftText", shiftText.isEmpty() ? text : shiftText);
+    if (pathItem && !pathItem->holes().isEmpty()) {
+        QJsonArray holesArray;
+        for (const QPolygonF &hole : pathItem->holes()) {
+            QJsonArray holeArr;
+            for (const QPointF &p : hole) {
+                QPointF sc = pathItem->mapToScene(p);
+                holeArr.append(QJsonObject{{"X", static_cast<int>(sc.x())}, {"Y", static_cast<int>(sc.y())}});
+            }
+            holesArray.append(holeArr);
+        }
+        keyObj.insert("Holes", holesArray);
+    }
+    QJsonObject styleObj = itemStyle.toJson();
+    for (auto it = styleObj.begin(); it != styleObj.end(); ++it)
+        keyObj.insert(it.key(), it.value());
+    return keyObj;
+}
+
+static void offsetKeyJson(QJsonObject &keyObj, qreal dx, qreal dy) {
+    QJsonArray boundaries = keyObj["Boundaries"].toArray();
+    QJsonArray newBoundaries;
+    for (const QJsonValue &v : boundaries) {
+        QJsonObject p = v.toObject();
+        newBoundaries.append(QJsonObject{
+            {"X", static_cast<int>(p["X"].toDouble() + dx)},
+            {"Y", static_cast<int>(p["Y"].toDouble() + dy)}
+        });
+    }
+    keyObj["Boundaries"] = newBoundaries;
+    if (keyObj.contains("Holes")) {
+        QJsonArray holesArray = keyObj["Holes"].toArray();
+        QJsonArray newHoles;
+        for (const QJsonValue &holeVal : holesArray) {
+            QJsonArray holeArr = holeVal.toArray();
+            QJsonArray newHole;
+            for (const QJsonValue &pv : holeArr) {
+                QJsonObject p = pv.toObject();
+                newHole.append(QJsonObject{
+                    {"X", static_cast<int>(p["X"].toDouble() + dx)},
+                    {"Y", static_cast<int>(p["Y"].toDouble() + dy)}
+                });
+            }
+            newHoles.append(newHole);
+        }
+        keyObj["Holes"] = newHoles;
+    }
+    QJsonObject tp = keyObj["TextPosition"].toObject();
+    keyObj["TextPosition"] = QJsonObject{
+        {"X", static_cast<int>(tp["X"].toDouble() + dx)},
+        {"Y", static_cast<int>(tp["Y"].toDouble() + dy)}
+    };
+}
+
+void LayoutEditor::onCopyToggled(bool checked) {
+    if (checked) {
+        view->setPickStyleMode(false);
+        view->setApplyStyleMode(false);
+        pickStyleButton->setChecked(false);
+        applyStyleButton->setChecked(false);
+        view->setCopyMode(true);
+    } else {
+        view->setCopyMode(false);
+    }
+}
+
+void LayoutEditor::copyKeyFromItem(QGraphicsItem *item) {
+    if (!item) return;
+    QJsonObject keyObj = keyItemToJson(item);
+    if (keyObj.isEmpty()) return;
+    QJsonArray arr; arr.append(keyObj);
+    QJsonObject root;
+    root.insert("Elements", arr);
+    root.insert("Width", 100);
+    root.insert("Height", 100);
+    QApplication::clipboard()->setText(QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Compact)));
+}
+
+void LayoutEditor::pasteKey() {
+    QString txt = QApplication::clipboard()->text();
+    if (txt.isEmpty()) return;
+    QJsonParseError err;
+    QJsonDocument doc = QJsonDocument::fromJson(txt.toUtf8(), &err);
+    if (err.error != QJsonParseError::NoError || !doc.isObject()) return;
+    QJsonObject root = doc.object();
+    QJsonArray elements = root["Elements"].toArray();
+    if (elements.isEmpty()) return;
+    QJsonObject keyObj = elements.first().toObject();
+    if (keyObj["__type"].toString() != "KeyboardKey") return;
+
+    QJsonArray boundaries = keyObj["Boundaries"].toArray();
+    if (boundaries.isEmpty()) return;
+    qreal minX = 1e9, minY = 1e9;
+    for (const QJsonValue &v : boundaries) {
+        QJsonObject p = v.toObject();
+        minX = qMin(minX, p["X"].toDouble());
+        minY = qMin(minY, p["Y"].toDouble());
+    }
+    qreal dx = 100 - minX;
+    qreal dy = 100 - minY;
+    offsetKeyJson(keyObj, dx, dy);
+
+    QGraphicsItem *added = createKey(keyObj);
+    if (added) {
+        view->addRectAction(added);
+        scene->clearSelection();
+        added->setSelected(true);
+    }
+}
+
 void LayoutEditor::updateLanguage() {
     addButton->setText(tr("Add Shape"));
     openButton->setText(tr("Open Layout"));
     newButton->setText(tr("New Layout"));
     saveButton->setText(tr("Save"));
     saveAsButton->setText(tr("Save As"));
+    copyButton->setToolTip(tr("Copy key"));
+    pasteButton->setToolTip(tr("Paste key"));
     pickStyleButton->setToolTip(tr("Pick style from a key"));
     applyStyleButton->setToolTip(tr("Apply picked style to key(s)"));
     if (m_actRect) m_actRect->setText(tr("Rectangle"));
     if (m_actCircle) m_actCircle->setText(tr("Circle"));
-    if (m_customShapeMenu) m_customShapeMenu->setTitle(tr("Custom shape"));
+    if (m_customShapeMenu) m_customShapeMenu->setTitle(tr("Advanced shapes"));
     if (m_actStar) m_actStar->setText(tr("Star"));
     if (m_actDiamond) m_actDiamond->setText(tr("Diamond"));
     if (m_actHexagon) m_actHexagon->setText(tr("Hexagon"));

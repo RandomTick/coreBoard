@@ -3,11 +3,14 @@
 
 #include <QGraphicsRectItem>
 #include <QGraphicsTextItem>
+#include <QColor>
+#include <QPointF>
 
 struct KeyStyle;
 
 class ResizableRectItem : public QGraphicsRectItem {
 public:
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
     ResizableRectItem(const QRectF &rect, const QString &text, const std::list<int> keycodes, QGraphicsItem *parent = nullptr);
 
     void setText(const QString &text);
@@ -22,10 +25,17 @@ public:
     KeyStyle keyStyle() const;
     void setKeyStyle(const KeyStyle &style);
 
+    QPointF textPosition() const;
+    void setTextPosition(const QPointF &pos);
+
 private:
     QGraphicsTextItem *textItem;
     QString m_shiftText;
+    qreal m_cornerRadius = 0;
     std::list<int> keyCodes;
+    QColor m_keyColor, m_keyColorPressed, m_keyTextColor, m_keyTextColorPressed;
+    bool m_hasCustomTextPosition = false;
+    QPointF m_textPosition;
     void centerText();
 };
 

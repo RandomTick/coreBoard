@@ -1,0 +1,158 @@
+{
+    "Elements": [
+        {
+            "Boundaries": [
+                {
+                    "X": 426,
+                    "Y": 151
+                },
+                {
+                    "X": 476,
+                    "Y": 151
+                },
+                {
+                    "X": 476,
+                    "Y": 201
+                },
+                {
+                    "X": 426,
+                    "Y": 201
+                }
+            ],
+            "ChangeOnCaps": false,
+            "FontBold": false,
+            "FontFamily": "Segoe UI",
+            "FontItalic": false,
+            "FontSize": 10,
+            "Id": 0,
+            "KeyCodes": [
+                68
+            ],
+            "OutlineColor": "#000000",
+            "OutlineWidth": 1,
+            "ShiftText": "D",
+            "Text": "d",
+            "TextPosition": {
+                "X": 451,
+                "Y": 176
+            },
+            "__type": "KeyboardKey"
+        },
+        {
+            "Boundaries": [
+                {
+                    "X": 371,
+                    "Y": 151
+                },
+                {
+                    "X": 421,
+                    "Y": 151
+                },
+                {
+                    "X": 421,
+                    "Y": 201
+                },
+                {
+                    "X": 371,
+                    "Y": 201
+                }
+            ],
+            "ChangeOnCaps": false,
+            "FontBold": false,
+            "FontFamily": "Segoe UI",
+            "FontItalic": false,
+            "FontSize": 10,
+            "Id": 1,
+            "KeyCodes": [
+                83
+            ],
+            "OutlineColor": "#000000",
+            "OutlineWidth": 1,
+            "ShiftText": "S",
+            "Text": "s",
+            "TextPosition": {
+                "X": 396,
+                "Y": 176
+            },
+            "__type": "KeyboardKey"
+        },
+        {
+            "Boundaries": [
+                {
+                    "X": 316,
+                    "Y": 151
+                },
+                {
+                    "X": 366,
+                    "Y": 151
+                },
+                {
+                    "X": 366,
+                    "Y": 201
+                },
+                {
+                    "X": 316,
+                    "Y": 201
+                }
+            ],
+            "ChangeOnCaps": false,
+            "FontBold": false,
+            "FontFamily": "Segoe UI",
+            "FontItalic": false,
+            "FontSize": 10,
+            "Id": 2,
+            "KeyCodes": [
+                65
+            ],
+            "OutlineColor": "#000000",
+            "OutlineWidth": 1,
+            "ShiftText": "A",
+            "Text": "a",
+            "TextPosition": {
+                "X": 341,
+                "Y": 176
+            },
+            "__type": "KeyboardKey"
+        },
+        {
+            "Boundaries": [
+                {
+                    "X": 371,
+                    "Y": 96
+                },
+                {
+                    "X": 421,
+                    "Y": 96
+                },
+                {
+                    "X": 421,
+                    "Y": 146
+                },
+                {
+                    "X": 371,
+                    "Y": 146
+                }
+            ],
+            "ChangeOnCaps": false,
+            "FontBold": false,
+            "FontFamily": "Segoe UI",
+            "FontItalic": false,
+            "FontSize": 10,
+            "Id": 3,
+            "KeyCodes": [
+                87
+            ],
+            "OutlineColor": "#000000",
+            "OutlineWidth": 1,
+            "ShiftText": "W",
+            "Text": "w",
+            "TextPosition": {
+                "X": 396,
+                "Y": 121
+            },
+            "__type": "KeyboardKey"
+        }
+    ],
+    "Height": 106,
+    "Width": 161
+}

@@ -50,11 +50,15 @@ MainWindow::MainWindow(QWidget *parent)
 #endif
 
     QString lastPath = m_layoutSettings->lastLayoutPath();
+    QString pathToLoad;
     if (!lastPath.isEmpty() && QFileInfo::exists(lastPath)) {
-        m_keyboardWidget->loadLayout(lastPath);
-        m_layoutEditor->loadLayout(lastPath);
-        QTimer::singleShot(100, this, &MainWindow::ensureWindowFitsLayoutEditor);
+        pathToLoad = lastPath;
+    } else {
+        pathToLoad = QLatin1String(":/default.json");
     }
+    m_keyboardWidget->loadLayout(pathToLoad);
+    m_layoutEditor->loadLayout(pathToLoad);
+    QTimer::singleShot(100, this, &MainWindow::ensureWindowFitsLayoutEditor);
     int tab = m_layoutSettings->lastTabIndex();
     m_stackedWidget->setCurrentIndex(qBound(0, tab, 1));
 

@@ -59,6 +59,16 @@ DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> current
         addButton->setText(tr("Press a key or mouse button..."));
         setFocus();
         auto finishAdd = [this, keyCodesDisplay, addButton](int keyCode) {
+            if (keyListener)
+                disconnect(keyListener, &WindowsKeyListener::keyPressed, this, nullptr);
+#ifdef Q_OS_WIN
+            if (mouseListener)
+                disconnect(mouseListener, &WindowsMouseListener::keyPressed, this, nullptr);
+            if (mouseListener && !this->mainMouseListener)
+                mouseListener->stopListening();
+#endif
+            if (keyListener && !this->mainKeyListener)
+                keyListener->stopListening();
             insertKeycode(keyCode);
             updateDisplay(keyCodesDisplay);
             addButton->setEnabled(true);

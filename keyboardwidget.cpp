@@ -6,8 +6,12 @@
 #include <QGraphicsRectItem>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsPolygonItem>
+#include <QGraphicsPathItem>
+#include <QPainterPath>
 #include <QGraphicsTextItem>
 #include <QAbstractGraphicsShapeItem>
+#include <QTextDocument>
+#include <QTextOption>
 #include <QVBoxLayout>
 #include <QTimer>
 #include <cmath>
@@ -15,6 +19,11 @@
 namespace {
 const int BaseTextRole = Qt::UserRole;
 const int ShiftTextRole = Qt::UserRole + 1;
+const int KeyColorRole = Qt::UserRole + 2;
+const int TextPositionLocalRole = Qt::UserRole + 6;  // QPointF in shape local coords, or invalid if use center
+const int KeyColorPressedRole = Qt::UserRole + 3;
+const int KeyTextColorRole = Qt::UserRole + 4;
+const int KeyTextColorPressedRole = Qt::UserRole + 5;
 }
 
 KeyboardWidget::KeyboardWidget(QWidget *parent) : QWidget(parent)
@@ -91,8 +100,12 @@ void KeyboardWidget::applyColors()
             continue;
         QAbstractGraphicsShapeItem *shape = qgraphicsitem_cast<QAbstractGraphicsShapeItem*>(item);
         if (shape) {
-            shape->setBrush(m_keyColor);
-            setShapeTextColor(shape, m_textColor);
+            QColor effBrush = item->data(KeyColorRole).value<QColor>();
+            QColor effText = item->data(KeyTextColorRole).value<QColor>();
+            if (!effBrush.isValid()) effBrush = m_keyColor;
+            if (!effText.isValid()) effText = m_textColor;
+            shape->setBrush(effBrush);
+            setShapeTextColor(shape, effText);
         }
     }
 }
@@ -149,16 +162,45 @@ void KeyboardWidget::applyLayoutData(const QByteArray &jsonData)
     m_keys.clear();
     keyCounter.clear();
 
+    // Compute bounding box from all elements (same logic as editor) so scene rect matches
+    qreal overallMinX = 1e9, overallMinY = 1e9, overallMaxX = -1e9, overallMaxY = -1e9;
+    bool hasBounds = false;
+    for (const QJsonValue &element : elements) {
+        QJsonObject keyData = element.toObject();
+        if (keyData.value("__type").toString() != "KeyboardKey")
+            continue;
+        QJsonArray boundaries = keyData.value("Boundaries").toArray();
+        if (boundaries.size() < 4)
+            continue;
+        for (const QJsonValue &pv : boundaries) {
+            QJsonObject po = pv.toObject();
+            qreal px = po["X"].toDouble();
+            qreal py = po["Y"].toDouble();
+            overallMinX = qMin(overallMinX, px);
+            overallMinY = qMin(overallMinY, py);
+            overallMaxX = qMax(overallMaxX, px);
+            overallMaxY = qMax(overallMaxY, py);
+            hasBounds = true;
+        }
+    }
+
     for (const QJsonValue &element : elements) {
         if (element.toObject().value("__type").toString() == "KeyboardKey") {
             createKey(element.toObject());
         }
     }
 
-    int maxWidth = rootObject.value("Width").toInt();
-    int maxHeight = rootObject.value("Height").toInt();
-    m_scene->setSceneRect(0, 0, qMax(1, maxWidth), qMax(1, maxHeight));
-    setMinimumSize(maxWidth, maxHeight);
+    if (hasBounds) {
+        qreal w = qMax(qreal(1), overallMaxX - overallMinX);
+        qreal h = qMax(qreal(1), overallMaxY - overallMinY);
+        m_scene->setSceneRect(overallMinX, overallMinY, w, h);
+        setMinimumSize(static_cast<int>(w), static_cast<int>(h));
+    } else {
+        int maxWidth = rootObject.value("Width").toInt();
+        int maxHeight = rootObject.value("Height").toInt();
+        m_scene->setSceneRect(0, 0, qMax(1, maxWidth), qMax(1, maxHeight));
+        setMinimumSize(maxWidth, maxHeight);
+    }
     updateLabelsForShiftState();
     m_view->viewport()->update();
     update();
@@ -178,6 +220,8 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
         shiftText = label;
     QJsonArray kc = keyData.value("KeyCodes").toArray();
     KeyStyle keyStyle = KeyStyle::fromJson(keyData);
+    QColor brushColor = keyStyle.keyColor.isValid() ? keyStyle.keyColor : m_keyColor;
+    QColor textCol = keyStyle.keyTextColor.isValid() ? keyStyle.keyTextColor : m_textColor;
 
     qreal minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
     for (const QJsonValue &pv : boundaries) {
@@ -208,19 +252,31 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
             }
         }
         if (isAxisAlignedRect && w > 0 && h > 0) {
-            QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, w, h);
-            rect->setPos(minX, minY);
-            rect->setBrush(m_keyColor);
-            rect->setPen(keyStyle.pen());
-            m_scene->addItem(rect);
-            shapeItem = rect;
+            if (keyStyle.cornerRadius > 0) {
+                QPainterPath path;
+                path.addRoundedRect(0, 0, w, h, keyStyle.cornerRadius, keyStyle.cornerRadius);
+                QGraphicsPathItem *pathItem = new QGraphicsPathItem(path);
+                pathItem->setPos(minX, minY);
+                pathItem->setBrush(brushColor);
+                pathItem->setPen(keyStyle.pen());
+                m_scene->addItem(pathItem);
+                shapeItem = pathItem;
+            } else {
+                QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, w, h);
+                rect->setPos(minX, minY);
+                rect->setBrush(brushColor);
+                rect->setPen(keyStyle.pen());
+                m_scene->addItem(rect);
+                shapeItem = rect;
+            }
         }
     }
 
-    if (!shapeItem && boundaries.size() >= 32) {
+    QString shapeType = keyData.value("ShapeType").toString();
+    if (!shapeItem && (shapeType == "ellipse" || (shapeType.isEmpty() && boundaries.size() >= 32))) {
         QGraphicsEllipseItem *ellipse = new QGraphicsEllipseItem(0, 0, w, h);
         ellipse->setPos(minX, minY);
-        ellipse->setBrush(m_keyColor);
+        ellipse->setBrush(brushColor);
         ellipse->setPen(keyStyle.pen());
         m_scene->addItem(ellipse);
         shapeItem = ellipse;
@@ -234,12 +290,42 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
             qreal py = po["Y"].toDouble();
             poly << QPointF(px - minX, py - minY);
         }
-        QGraphicsPolygonItem *polyItem = new QGraphicsPolygonItem(poly);
-        polyItem->setPos(minX, minY);
-        polyItem->setBrush(m_keyColor);
-        polyItem->setPen(keyStyle.pen());
-        m_scene->addItem(polyItem);
-        shapeItem = polyItem;
+        QList<QPolygonF> holesList;
+        if (keyData.contains("Holes")) {
+            QJsonArray holesArray = keyData["Holes"].toArray();
+            for (const QJsonValue &holeVal : holesArray) {
+                QJsonArray holeArr = holeVal.toArray();
+                QPolygonF holePoly;
+                for (const QJsonValue &pv : holeArr) {
+                    QJsonObject po = pv.toObject();
+                    holePoly << QPointF(po["X"].toDouble() - minX, po["Y"].toDouble() - minY);
+                }
+                if (holePoly.size() >= 3)
+                    holesList.append(holePoly);
+            }
+        }
+        if (!holesList.isEmpty()) {
+            QPainterPath path;
+            path.addPolygon(poly);
+            for (const QPolygonF &hole : holesList) {
+                QPainterPath holePath;
+                holePath.addPolygon(hole);
+                path = path.subtracted(holePath);
+            }
+            QGraphicsPathItem *pathItem = new QGraphicsPathItem(path);
+            pathItem->setPos(minX, minY);
+            pathItem->setBrush(brushColor);
+            pathItem->setPen(keyStyle.pen());
+            m_scene->addItem(pathItem);
+            shapeItem = pathItem;
+        } else {
+            QGraphicsPolygonItem *polyItem = new QGraphicsPolygonItem(poly);
+            polyItem->setPos(minX, minY);
+            polyItem->setBrush(brushColor);
+            polyItem->setPen(keyStyle.pen());
+            m_scene->addItem(polyItem);
+            shapeItem = polyItem;
+        }
     }
 
     if (!shapeItem)
@@ -247,14 +333,37 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
 
     shapeItem->setData(BaseTextRole, label);
     shapeItem->setData(ShiftTextRole, shiftText);
+    if (keyStyle.keyColor.isValid())
+        shapeItem->setData(KeyColorRole, keyStyle.keyColor);
+    if (keyStyle.keyColorPressed.isValid())
+        shapeItem->setData(KeyColorPressedRole, keyStyle.keyColorPressed);
+    if (keyStyle.keyTextColor.isValid())
+        shapeItem->setData(KeyTextColorRole, keyStyle.keyTextColor);
+    if (keyStyle.keyTextColorPressed.isValid())
+        shapeItem->setData(KeyTextColorPressedRole, keyStyle.keyTextColorPressed);
+
+    shapeItem->setBrush(brushColor);
 
     QGraphicsTextItem *textItem = new QGraphicsTextItem(shapeItem);
+    textItem->document()->setDocumentMargin(0);
+    QTextOption opt;
+    opt.setAlignment(Qt::AlignHCenter);
+    textItem->document()->setDefaultTextOption(opt);
     textItem->setPlainText(label);
-    textItem->setDefaultTextColor(m_textColor);
+    textItem->setDefaultTextColor(textCol);
     textItem->setFont(keyStyle.font());
-    QRectF textBr = textItem->boundingRect();
     QRectF shapeBr = shapeItem->boundingRect();
-    textItem->setPos(shapeBr.center().x() - textBr.width() / 2, shapeBr.center().y() - textBr.height() / 2);
+    textItem->setTextWidth(qMax(0.0, shapeBr.width() - 8));
+    QRectF textBr = textItem->boundingRect();
+    QPointF textCenterLocal = shapeBr.center();
+    if (keyData.contains("TextPosition")) {
+        QJsonObject tp = keyData["TextPosition"].toObject();
+        qreal tpX = tp["X"].toDouble();
+        qreal tpY = tp["Y"].toDouble();
+        textCenterLocal = shapeItem->mapFromScene(QPointF(tpX, tpY));
+        shapeItem->setData(TextPositionLocalRole, textCenterLocal);
+    }
+    textItem->setPos(textCenterLocal.x() - textBr.width() / 2, textCenterLocal.y() - textBr.height() / 2);
     textItem->setZValue(1);
 
     for (int i = 0; i < kc.size(); ++i) {
@@ -266,7 +375,7 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     keyCounter[label] = 0;
 }
 
-void KeyboardWidget::changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor)
+void KeyboardWidget::changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor, bool isPressed)
 {
     auto it = m_keys.find(keyCode);
     if (it == m_keys.end())
@@ -276,8 +385,12 @@ void KeyboardWidget::changeKeyColor(const int &keyCode, const QColor &brushColor
             continue;
         QAbstractGraphicsShapeItem *shape = qgraphicsitem_cast<QAbstractGraphicsShapeItem*>(item);
         if (shape) {
-            shape->setBrush(brushColor);
-            setShapeTextColor(shape, textColor);
+            QColor effBrush = isPressed ? item->data(KeyColorPressedRole).value<QColor>() : item->data(KeyColorRole).value<QColor>();
+            QColor effText = isPressed ? item->data(KeyTextColorPressedRole).value<QColor>() : item->data(KeyTextColorRole).value<QColor>();
+            if (!effBrush.isValid()) effBrush = brushColor;
+            if (!effText.isValid()) effText = textColor;
+            shape->setBrush(effBrush);
+            setShapeTextColor(shape, effText);
         }
     }
 }
@@ -290,12 +403,12 @@ void KeyboardWidget::resetCounter()
 
 void KeyboardWidget::onKeyPressed(int key)
 {
-    changeKeyColor(key, m_highlightColor, m_highlightedTextColor);
+    changeKeyColor(key, m_highlightColor, m_highlightedTextColor, true);
 }
 
 void KeyboardWidget::onKeyReleased(int key)
 {
-    changeKeyColor(key, m_keyColor, m_textColor);
+    changeKeyColor(key, m_keyColor, m_textColor, false);
 }
 
 void KeyboardWidget::setLabelMode(LabelMode mode)
@@ -352,7 +465,14 @@ void KeyboardWidget::updateLabelsForShiftState()
                 textItem->setPlainText(displayText);
                 QRectF textBr = textItem->boundingRect();
                 QRectF shapeBr = shape->boundingRect();
-                textItem->setPos(shapeBr.center().x() - textBr.width() / 2, shapeBr.center().y() - textBr.height() / 2);
+                QPointF anchor = shapeBr.center();
+                QVariant v = shape->data(TextPositionLocalRole);
+                if (v.isValid() && v.canConvert<QPointF>()) {
+                    QPointF customPos = v.toPointF();
+                    if (QPointF(customPos - shapeBr.center()).manhattanLength() > 0.5)
+                        anchor = customPos;
+                }
+                textItem->setPos(anchor.x() - textBr.width() / 2, anchor.y() - textBr.height() / 2);
                 break;
             }
         }

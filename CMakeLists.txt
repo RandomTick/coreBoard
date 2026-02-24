@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(CoreBoard VERSION 0.4.0 LANGUAGES CXX)
+project(CoreBoard VERSION 0.5.2 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -29,6 +29,7 @@ set(TRANSLATABLE_SOURCES
     dialogstyle.cpp
     dialogtextchange.cpp
     dialogkeycodechange.cpp
+    shapeeditordialog.cpp
     languagesettingsdialog.cpp
     keycode_nameutil.h keycode_nameutil.cpp
     windowsmouselistener.h windowsmouselistener.cpp
@@ -39,11 +40,14 @@ set(PROJECT_SOURCES
         resources.qrc
         resizableellipseitem.h resizableellipseitem.cpp
         resizablepolygonitem.h resizablepolygonitem.cpp
+        resizablepathitem.h resizablepathitem.cpp
         layoutsettings.h layoutsettings.cpp
         settingsdialog.h settingsdialog.cpp
         labelsettingsdialog.h labelsettingsdialog.cpp
         languagesettingsdialog.h languagesettingsdialog.cpp
         dialogstyle.h dialogstyle.cpp
+    shapeeditordialog.h shapeeditordialog.cpp
+        resizablepathitem.h resizablepathitem.cpp
         ${TRANSLATABLE_SOURCES}
         ${TS_FILES}
 )

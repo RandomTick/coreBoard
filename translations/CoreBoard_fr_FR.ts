@@ -4,537 +4,709 @@
 <context>
     <name>DialogKeycodeChange</name>
     <message>
-        <location filename="../dialogkeycodechange.cpp" line="23"/>
+        <location filename="../dialogkeycodechange.cpp" line="+23"/>
         <source>Change Key Codes</source>
-        <translation type="unfinished"></translation>
+        <translation>Modifier les codes touches</translation>
     </message>
     <message>
-        <location filename="../dialogkeycodechange.cpp" line="27"/>
+        <location line="+4"/>
         <source>Current Key Codes:</source>
-        <translation type="unfinished"></translation>
+        <translation>Codes touches actuels :</translation>
     </message>
     <message>
-        <location filename="../dialogkeycodechange.cpp" line="37"/>
+        <location line="+10"/>
         <source>Cancel</source>
-        <translation type="unfinished"></translation>
+        <translation>Annuler</translation>
     </message>
     <message>
-        <location filename="../dialogkeycodechange.cpp" line="40"/>
-        <location filename="../dialogkeycodechange.cpp" line="65"/>
+        <location line="+3"/>
+        <location line="+35"/>
         <source>Add Key Code</source>
-        <translation type="unfinished"></translation>
+        <translation>Ajouter un code touche</translation>
     </message>
     <message>
-        <location filename="../dialogkeycodechange.cpp" line="43"/>
+        <location line="-32"/>
         <source>Clear Key Codes</source>
-        <translation type="unfinished"></translation>
+        <translation>Effacer les codes touches</translation>
     </message>
     <message>
-        <location filename="../dialogkeycodechange.cpp" line="46"/>
+        <location line="+3"/>
         <source>Save</source>
-        <translation type="unfinished"></translation>
+        <translation>Enregistrer</translation>
     </message>
     <message>
-        <location filename="../dialogkeycodechange.cpp" line="59"/>
+        <location line="+13"/>
         <source>Press a key or mouse button...</source>
-        <translation type="unfinished"></translation>
+        <translation>Appuyez sur une touche ou un bouton de souris...</translation>
     </message>
 </context>
 <context>
     <name>DialogStyle</name>
     <message>
-        <location filename="../dialogstyle.cpp" line="70"/>
+        <location filename="../dialogstyle.cpp" line="+70"/>
         <source>Edit style</source>
-        <translation type="unfinished"></translation>
+        <translation>Modifier le style</translation>
     </message>
     <message>
-        <location filename="../dialogstyle.cpp" line="75"/>
+        <location line="+5"/>
         <source>Outline color...</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur du contour...</translation>
     </message>
     <message>
-        <location filename="../dialogstyle.cpp" line="78"/>
+        <location line="+3"/>
         <source>Outline color:</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur du contour :</translation>
     </message>
     <message>
-        <location filename="../dialogstyle.cpp" line="84"/>
+        <location line="+6"/>
         <source>Outline width (px):</source>
-        <translation type="unfinished"></translation>
+        <translation>Épaisseur du contour (px) :</translation>
     </message>
     <message>
-        <location filename="../dialogstyle.cpp" line="89"/>
+        <location line="+7"/>
+        <source>Corner radius (px):</source>
+        <translation>Rayon des coins (px) :</translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Font size:</source>
-        <translation type="unfinished"></translation>
+        <translation>Taille de police :</translation>
     </message>
     <message>
-        <location filename="../dialogstyle.cpp" line="93"/>
+        <location line="+4"/>
         <source>Bold:</source>
-        <translation type="unfinished"></translation>
+        <translation>Gras :</translation>
     </message>
     <message>
-        <location filename="../dialogstyle.cpp" line="97"/>
+        <location line="+4"/>
         <source>Italic:</source>
-        <translation type="unfinished"></translation>
+        <translation>Italique :</translation>
     </message>
     <message>
-        <location filename="../dialogstyle.cpp" line="109"/>
+        <location line="+12"/>
         <source>(Default)</source>
-        <translation type="unfinished"></translation>
+        <translation>(Par défaut)</translation>
     </message>
     <message>
-        <location filename="../dialogstyle.cpp" line="123"/>
+        <location line="+14"/>
         <source>Font family:</source>
-        <translation type="unfinished"></translation>
+        <translation>Police :</translation>
     </message>
     <message>
-        <location filename="../dialogstyle.cpp" line="128"/>
+        <location line="+2"/>
+        <source>Per-key colors (visualization only):</source>
+        <translation>Couleurs par touche (visualisation uniquement) :</translation>
+    </message>
+    <message>
+        <location line="+20"/>
+        <source>Clear</source>
+        <translation>Effacer</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Key color (idle)</source>
+        <translation>Couleur touche (repos)</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Key color (pressed)</source>
+        <translation>Couleur touche (appuyé)</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Text color (idle)</source>
+        <translation>Couleur texte (repos)</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Text color (pressed)</source>
+        <translation>Couleur texte (appuyé)</translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Cancel</source>
-        <translation type="unfinished"></translation>
+        <translation>Annuler</translation>
     </message>
     <message>
-        <location filename="../dialogstyle.cpp" line="129"/>
+        <location line="+1"/>
         <source>Apply</source>
-        <translation type="unfinished"></translation>
+        <translation>Appliquer</translation>
     </message>
     <message>
-        <location filename="../dialogstyle.cpp" line="138"/>
+        <location line="+9"/>
         <source>Outline color</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur du contour</translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>Default</source>
+        <translation>Par défaut</translation>
     </message>
 </context>
 <context>
     <name>DialogTextChange</name>
     <message>
-        <location filename="../dialogtextchange.cpp" line="11"/>
+        <location filename="../dialogtextchange.cpp" line="+12"/>
         <source>Text (normal):</source>
-        <translation type="unfinished"></translation>
+        <translation>Texte (normal) :</translation>
     </message>
     <message>
-        <location filename="../dialogtextchange.cpp" line="16"/>
+        <location line="+3"/>
+        <source>Use ¶ or Ctrl+Enter for newlines</source>
+        <translation>Utilisez ¶ ou Ctrl+Entrée pour les retours à la ligne</translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Text when Shift held:</source>
-        <translation type="unfinished"></translation>
+        <translation>Texte avec Maj enfoncée :</translation>
     </message>
     <message>
-        <location filename="../dialogtextchange.cpp" line="18"/>
+        <location line="+3"/>
         <source>Leave empty to use same as normal</source>
-        <translation type="unfinished"></translation>
+        <translation>Laissez vide pour utiliser le même que normal</translation>
     </message>
     <message>
-        <location filename="../dialogtextchange.cpp" line="47"/>
+        <location line="+30"/>
         <source>Cancel</source>
-        <translation type="unfinished"></translation>
+        <translation>Annuler</translation>
     </message>
     <message>
-        <location filename="../dialogtextchange.cpp" line="52"/>
+        <location line="+5"/>
         <source>Save</source>
-        <translation type="unfinished"></translation>
+        <translation>Enregistrer</translation>
     </message>
 </context>
 <context>
     <name>LabelSettingsDialog</name>
     <message>
-        <location filename="../labelsettingsdialog.cpp" line="12"/>
+        <location filename="../labelsettingsdialog.cpp" line="+12"/>
         <source>Label display</source>
-        <translation type="unfinished"></translation>
+        <translation>Affichage des étiquettes</translation>
     </message>
     <message>
-        <location filename="../labelsettingsdialog.cpp" line="14"/>
+        <location line="+2"/>
         <source>Follow Caps Lock and Shift</source>
-        <translation type="unfinished"></translation>
+        <translation>Suivre Verr. Maj et Maj</translation>
     </message>
     <message>
-        <location filename="../labelsettingsdialog.cpp" line="15"/>
+        <location line="+1"/>
         <source>All uppercase</source>
-        <translation type="unfinished"></translation>
+        <translation>Tout en majuscules</translation>
     </message>
     <message>
-        <location filename="../labelsettingsdialog.cpp" line="16"/>
+        <location line="+1"/>
         <source>All lowercase</source>
-        <translation type="unfinished"></translation>
+        <translation>Tout en minuscules</translation>
     </message>
 </context>
 <context>
     <name>LanguageSettingsDialog</name>
     <message>
-        <location filename="../languagesettingsdialog.cpp" line="12"/>
+        <location filename="../languagesettingsdialog.cpp" line="+12"/>
         <source>Language</source>
-        <translation type="unfinished"></translation>
+        <translation>Langue</translation>
     </message>
     <message>
-        <location filename="../languagesettingsdialog.cpp" line="16"/>
+        <location line="+4"/>
         <source>Interface language:</source>
-        <translation type="unfinished"></translation>
+        <translation>Langue de l'interface :</translation>
     </message>
     <message>
-        <location filename="../languagesettingsdialog.cpp" line="18"/>
+        <location line="+2"/>
         <source>English</source>
-        <translation type="unfinished"></translation>
+        <translation>Anglais</translation>
     </message>
 </context>
 <context>
     <name>LayoutEditor</name>
     <message>
-        <location filename="../layouteditor.cpp" line="85"/>
-        <location filename="../layouteditor.cpp" line="674"/>
+        <location filename="../layouteditor.cpp" line="+88"/>
+        <location line="+908"/>
         <source>Open Layout</source>
-        <translation type="unfinished"></translation>
+        <translation>Ouvrir une disposition</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="88"/>
-        <location filename="../layouteditor.cpp" line="675"/>
+        <location line="-905"/>
+        <location line="+906"/>
         <source>New Layout</source>
-        <translation type="unfinished"></translation>
+        <translation>Nouvelle disposition</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="105"/>
-        <location filename="../layouteditor.cpp" line="673"/>
+        <location line="-898"/>
+        <source>Undo (Ctrl+Z)</source>
+        <translation>Annuler (Ctrl+Z)</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Redo (Ctrl+Y)</source>
+        <translation>Rétablir (Ctrl+Y)</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <location line="+880"/>
         <source>Add Shape</source>
-        <translation type="unfinished"></translation>
+        <translation>Ajouter une forme</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="114"/>
-        <location filename="../layouteditor.cpp" line="678"/>
+        <location line="-871"/>
+        <source>Copy key (click, then click a key to copy)</source>
+        <translation>Copier une touche (cliquez, puis cliquez sur une touche)</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <location line="+869"/>
+        <source>Paste key</source>
+        <translation>Coller la touche</translation>
+    </message>
+    <message>
+        <location line="-860"/>
+        <location line="+861"/>
         <source>Pick style from a key</source>
-        <translation type="unfinished"></translation>
+        <translation>Prendre le style d'une touche</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="122"/>
-        <location filename="../layouteditor.cpp" line="679"/>
+        <location line="-853"/>
+        <location line="+854"/>
         <source>Apply picked style to key(s)</source>
-        <translation type="unfinished"></translation>
+        <translation>Appliquer le style pris aux touche(s)</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="126"/>
-        <location filename="../layouteditor.cpp" line="680"/>
+        <location line="-850"/>
+        <location line="+851"/>
         <source>Rectangle</source>
-        <translation type="unfinished"></translation>
+        <translation>Rectangle</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="127"/>
-        <location filename="../layouteditor.cpp" line="681"/>
+        <location line="-850"/>
+        <location line="+851"/>
         <source>Circle</source>
-        <translation type="unfinished"></translation>
+        <translation>Cercle</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="129"/>
-        <location filename="../layouteditor.cpp" line="682"/>
-        <source>Custom shape</source>
-        <translation type="unfinished"></translation>
+        <location line="-849"/>
+        <location line="+850"/>
+        <source>Advanced shapes</source>
+        <translation>Formes avancées</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="130"/>
-        <location filename="../layouteditor.cpp" line="683"/>
+        <location line="-849"/>
+        <location line="+850"/>
         <source>Star</source>
-        <translation type="unfinished"></translation>
+        <translation>Étoile</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="131"/>
-        <location filename="../layouteditor.cpp" line="684"/>
+        <location line="-849"/>
+        <location line="+850"/>
         <source>Diamond</source>
-        <translation type="unfinished"></translation>
+        <translation>Losange</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="132"/>
-        <location filename="../layouteditor.cpp" line="685"/>
+        <location line="-849"/>
+        <location line="+850"/>
         <source>Hexagon</source>
-        <translation type="unfinished"></translation>
+        <translation>Hexagone</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="133"/>
-        <location filename="../layouteditor.cpp" line="686"/>
+        <location line="-849"/>
+        <location line="+850"/>
         <source>Triangle</source>
-        <translation type="unfinished"></translation>
+        <translation>Triangle</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="136"/>
-        <location filename="../layouteditor.cpp" line="676"/>
+        <location line="-847"/>
+        <location line="+835"/>
         <source>Save</source>
-        <translation type="unfinished"></translation>
+        <translation>Enregistrer</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="139"/>
-        <location filename="../layouteditor.cpp" line="677"/>
+        <location line="-832"/>
+        <location line="+833"/>
         <source>Save As</source>
-        <translation type="unfinished"></translation>
+        <translation>Enregistrer sous</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="238"/>
+        <location line="-722"/>
         <source>Open...</source>
-        <translation type="unfinished"></translation>
+        <translation>Ouvrir...</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="249"/>
+        <location line="+11"/>
         <source>No recent files</source>
-        <translation type="unfinished"></translation>
+        <translation>Aucun fichier récent</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="255"/>
+        <location line="+6"/>
         <source>Select Layout File to Edit</source>
-        <translation type="unfinished"></translation>
+        <translation>Sélectionner le fichier de disposition à modifier</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="255"/>
-        <location filename="../layouteditor.cpp" line="527"/>
+        <location line="+0"/>
+        <location line="+341"/>
         <source>Layout Files (*.json);;All Files (*)</source>
-        <translation type="unfinished"></translation>
+        <translation>Fichiers de disposition (*.json);;Tous les fichiers (*)</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="267"/>
+        <location line="-329"/>
         <source>Layout not found</source>
-        <translation type="unfinished"></translation>
+        <translation>Disposition introuvable</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="268"/>
+        <location line="+1"/>
         <source>The layout file could not be opened. It may have been moved or deleted.
 
 &quot;%1&quot;
 
 It has been removed from the recent list.</source>
-        <translation type="unfinished"></translation>
+        <translation>Le fichier de disposition n'a pas pu être ouvert. Il a peut-être été déplacé ou supprimé.
+
+« %1 »
+
+Il a été retiré de la liste des fichiers récents.</translation>
     </message>
     <message>
-        <location filename="../layouteditor.cpp" line="527"/>
+        <location line="+317"/>
+        <location line="+21"/>
+        <source>Save failed</source>
+        <translation>Échec de l'enregistrement</translation>
+    </message>
+    <message>
+        <location line="-20"/>
+        <source>Could not save the layout to:
+
+%1
+
+Possible causes:
+• The file or folder is read-only
+• Another program has the file open
+• You don&apos;t have permission to write to this location
+
+Try &quot;Save As&quot; to save to a different location.</source>
+        <translation>Impossible d'enregistrer la disposition dans :
+
+%1
+
+Causes possibles :
+• Le fichier ou le dossier est en lecture seule
+• Un autre programme utilise le fichier
+• Vous n'avez pas les droits d'écriture à cet emplacement
+
+Essayez « Enregistrer sous » pour enregistrer ailleurs.</translation>
+    </message>
+    <message>
+        <location line="+10"/>
         <source>Save Layout As</source>
-        <translation type="unfinished"></translation>
+        <translation>Enregistrer la disposition sous</translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>Could not save the layout to:
+
+%1
+
+Possible causes:
+• The file or folder is read-only
+• Another program has the file open
+• You don&apos;t have permission to write to this location</source>
+        <translation>Impossible d'enregistrer la disposition dans :
+
+%1
+
+Causes possibles :
+• Le fichier ou le dossier est en lecture seule
+• Un autre programme utilise le fichier
+• Vous n'avez pas les droits d'écriture à cet emplacement</translation>
+    </message>
+    <message>
+        <location line="+354"/>
+        <source>Copy key</source>
+        <translation>Copier la touche</translation>
     </message>
 </context>
 <context>
     <name>LayoutEditorGraphicsView</name>
     <message>
-        <location filename="../layouteditorgraphicsview.cpp" line="82"/>
+        <location filename="../layouteditorgraphicsview.cpp" line="+91"/>
         <source>Rename</source>
-        <translation type="unfinished"></translation>
+        <translation>Renommer</translation>
     </message>
     <message>
-        <location filename="../layouteditorgraphicsview.cpp" line="83"/>
+        <location line="+1"/>
         <source>Rebind</source>
-        <translation type="unfinished"></translation>
+        <translation>Réassigner</translation>
     </message>
     <message>
-        <location filename="../layouteditorgraphicsview.cpp" line="84"/>
+        <location line="+1"/>
         <source>Edit style...</source>
-        <translation type="unfinished"></translation>
+        <translation>Modifier le style...</translation>
     </message>
     <message>
-        <location filename="../layouteditorgraphicsview.cpp" line="86"/>
+        <location line="+1"/>
+        <source>Edit shape...</source>
+        <translation>Modifier la forme...</translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Delete</source>
-        <translation type="unfinished"></translation>
+        <translation>Supprimer</translation>
     </message>
 </context>
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../version_info.ui" line="14"/>
+        <location filename="../version_info.ui" line="+14"/>
         <source>MainWindow</source>
-        <translation type="unfinished"></translation>
+        <translation>Fenêtre principale</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="14"/>
-        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="86"/>
+        <location filename="../mainwindow.ui" line="+14"/>
+        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="+86"/>
         <source>CoreBoard</source>
-        <translation type="unfinished"></translation>
+        <translation>CoreBoard</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="73"/>
-        <location filename="../version_info.ui" line="65"/>
-        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="92"/>
+        <location line="+59"/>
+        <location filename="../version_info.ui" line="+51"/>
+        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="+6"/>
         <source>Info</source>
-        <translation type="unfinished"></translation>
+        <translation>Infos</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="48"/>
-        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="87"/>
+        <location line="-25"/>
+        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="-5"/>
         <source>Visualization</source>
-        <translation type="unfinished"></translation>
+        <translation>Visualisation</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="28"/>
-        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="93"/>
+        <location line="-20"/>
+        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="+6"/>
         <source>View</source>
-        <translation type="unfinished"></translation>
+        <translation>Affichage</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="35"/>
-        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="94"/>
+        <location line="+7"/>
+        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>Paramètres</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="53"/>
-        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="88"/>
+        <location line="+18"/>
+        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="-6"/>
         <source>Edit Layout</source>
-        <translation type="unfinished"></translation>
+        <translation>Modifier la disposition</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="58"/>
-        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="89"/>
+        <location line="+5"/>
+        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>Colors...</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleurs...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="63"/>
-        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="90"/>
+        <location line="+5"/>
+        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>Label display...</source>
-        <translation type="unfinished"></translation>
+        <translation>Affichage des étiquettes...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="68"/>
-        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="91"/>
+        <location line="+5"/>
+        <location filename="../build/CoreBoard_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>Language...</source>
-        <translation type="unfinished"></translation>
+        <translation>Langue...</translation>
     </message>
     <message>
-        <location filename="../version_info.ui" line="27"/>
-        <location filename="../version_info.ui" line="40"/>
+        <location filename="../version_info.ui" line="-38"/>
+        <location line="+13"/>
         <source>TextLabel</source>
-        <translation type="unfinished"></translation>
+        <translation>Étiquette de texte</translation>
     </message>
     <message>
-        <location filename="../version_info.ui" line="58"/>
+        <location line="+18"/>
         <source>Config</source>
-        <translation type="unfinished"></translation>
+        <translation>Configuration</translation>
     </message>
     <message>
-        <location filename="../version_info.ui" line="74"/>
+        <location line="+16"/>
         <source>Layout</source>
-        <translation type="unfinished"></translation>
+        <translation>Disposition</translation>
     </message>
     <message>
-        <location filename="../version_info.ui" line="79"/>
+        <location line="+5"/>
         <source>Binding</source>
-        <translation type="unfinished"></translation>
+        <translation>Assignation</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="104"/>
+        <location filename="../mainwindow.cpp" line="+108"/>
         <source>About coreBoard</source>
-        <translation type="unfinished"></translation>
+        <translation>À propos de coreBoard</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="105"/>
+        <location line="+1"/>
         <source>&lt;h3&gt;coreBoard&lt;/h3&gt;&lt;p&gt;coreBoard is a keyboard visualization tool for streaming and video. It displays key presses on screen in real time and is designed to be fast and easy to capture with OBS or similar software.&lt;/p&gt;&lt;p&gt;Built with C++ and Qt.&lt;/p&gt;&lt;p&gt;All source code is publicly available under the GPL-3.0 license:&lt;br&gt;&lt;a href=&quot;https://github.com/RandomTick/coreBoard&quot;&gt;https://github.com/RandomTick/coreBoard&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Version %1&lt;/p&gt;</source>
-        <translation type="unfinished"></translation>
+        <translation>&lt;h3&gt;coreBoard&lt;/h3&gt;&lt;p&gt;coreBoard est un outil de visualisation de clavier pour le streaming et la vidéo. Il affiche les frappes en temps réel et est conçu pour être rapide et facile à capturer avec OBS ou un logiciel similaire.&lt;/p&gt;&lt;p&gt;Réalisé avec C++ et Qt.&lt;/p&gt;&lt;p&gt;Tout le code source est disponible sous licence GPL-3.0 :&lt;br&gt;&lt;a href=&quot;https://github.com/RandomTick/coreBoard&quot;&gt;https://github.com/RandomTick/coreBoard&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Version %1&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="185"/>
-        <location filename="../mainwindow.cpp" line="201"/>
+        <location line="+80"/>
+        <location line="+16"/>
         <source>Unsaved changes</source>
-        <translation type="unfinished"></translation>
+        <translation>Modifications non enregistrées</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="186"/>
+        <location line="-15"/>
         <source>Save changes to the layout before switching?</source>
-        <translation type="unfinished"></translation>
+        <translation>Enregistrer les modifications de la disposition avant de changer ?</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="202"/>
+        <location line="+16"/>
         <source>Save changes to the layout before closing?</source>
-        <translation type="unfinished"></translation>
+        <translation>Enregistrer les modifications de la disposition avant de fermer ?</translation>
     </message>
 </context>
 <context>
     <name>SettingsDialog</name>
     <message>
-        <location filename="../settingsdialog.cpp" line="14"/>
+        <location filename="../settingsdialog.cpp" line="+14"/>
         <source>Colors</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleurs</translation>
     </message>
     <message>
-        <location filename="../settingsdialog.cpp" line="23"/>
-        <location filename="../settingsdialog.cpp" line="24"/>
-        <location filename="../settingsdialog.cpp" line="25"/>
-        <location filename="../settingsdialog.cpp" line="26"/>
-        <location filename="../settingsdialog.cpp" line="27"/>
+        <location line="+9"/>
+        <location line="+1"/>
+        <location line="+1"/>
+        <location line="+1"/>
+        <location line="+1"/>
         <source>Choose...</source>
-        <translation type="unfinished"></translation>
+        <translation>Choisir...</translation>
     </message>
     <message>
-        <location filename="../settingsdialog.cpp" line="28"/>
+        <location line="+1"/>
         <source>Key color:</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur des touches :</translation>
     </message>
     <message>
-        <location filename="../settingsdialog.cpp" line="30"/>
+        <location line="+2"/>
         <source>Highlight color:</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur de surbrillance :</translation>
     </message>
     <message>
-        <location filename="../settingsdialog.cpp" line="32"/>
+        <location line="+2"/>
         <source>Background color:</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur d'arrière-plan :</translation>
     </message>
     <message>
-        <location filename="../settingsdialog.cpp" line="34"/>
+        <location line="+2"/>
         <source>Text color:</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur du texte :</translation>
     </message>
     <message>
-        <location filename="../settingsdialog.cpp" line="36"/>
+        <location line="+2"/>
         <source>Highlighted text color:</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur du texte surligné :</translation>
     </message>
     <message>
-        <location filename="../settingsdialog.cpp" line="62"/>
+        <location line="+26"/>
         <source>Key color</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur des touches</translation>
     </message>
     <message>
-        <location filename="../settingsdialog.cpp" line="71"/>
+        <location line="+9"/>
         <source>Highlight color</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur de surbrillance</translation>
     </message>
     <message>
-        <location filename="../settingsdialog.cpp" line="80"/>
+        <location line="+9"/>
         <source>Background color</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur d'arrière-plan</translation>
     </message>
     <message>
-        <location filename="../settingsdialog.cpp" line="89"/>
+        <location line="+9"/>
         <source>Text color</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur du texte</translation>
     </message>
     <message>
-        <location filename="../settingsdialog.cpp" line="98"/>
+        <location line="+9"/>
         <source>Highlighted text color</source>
-        <translation type="unfinished"></translation>
+        <translation>Couleur du texte surligné</translation>
+    </message>
+</context>
+<context>
+    <name>ShapeEditorDialog</name>
+    <message>
+        <location filename="../shapeeditordialog.cpp" line="+132"/>
+        <source>Edit shape</source>
+        <translation>Modifier la forme</translation>
+    </message>
+    <message>
+        <location filename="../shapeeditordialog.cpp" line="71"/>
+        <source>Add point after this</source>
+        <translation>Ajouter un point après celui-ci</translation>
+    </message>
+    <message>
+        <location filename="../shapeeditordialog.cpp" line="72"/>
+        <source>Delete point</source>
+        <translation>Supprimer le point</translation>
+    </message>
+    <message>
+        <location filename="../shapeeditordialog.cpp" line="75"/>
+        <location filename="../shapeeditordialog.cpp" line="121"/>
+        <source>Delete hole</source>
+        <translation>Supprimer le trou</translation>
+    </message>
+    <message>
+        <location line="+91"/>
+        <source>Add polygon hole</source>
+        <translation>Ajouter un trou polygonal</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Add circular hole</source>
+        <translation>Ajouter un trou circulaire</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Cancel</source>
+        <translation>Annuler</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Apply</source>
+        <translation>Appliquer</translation>
     </message>
 </context>
 <context>
     <name>keycode_nameutil</name>
     <message>
-        <location filename="../keycode_nameutil.cpp" line="14"/>
+        <location filename="../keycode_nameutil.cpp" line="+14"/>
         <source>Left Click (%1)</source>
-        <translation type="unfinished"></translation>
+        <translation>Clic gauche (%1)</translation>
     </message>
     <message>
-        <location filename="../keycode_nameutil.cpp" line="15"/>
+        <location line="+1"/>
         <source>Right Click (%1)</source>
-        <translation type="unfinished"></translation>
+        <translation>Clic droit (%1)</translation>
     </message>
     <message>
-        <location filename="../keycode_nameutil.cpp" line="16"/>
+        <location line="+1"/>
         <source>Middle Click (%1)</source>
-        <translation type="unfinished"></translation>
+        <translation>Clic central (%1)</translation>
     </message>
     <message>
-        <location filename="../keycode_nameutil.cpp" line="17"/>
+        <location line="+1"/>
         <source>Mouse 4 (%1)</source>
-        <translation type="unfinished"></translation>
+        <translation>Souris 4 (%1)</translation>
     </message>
     <message>
-        <location filename="../keycode_nameutil.cpp" line="18"/>
+        <location line="+1"/>
         <source>Mouse 5 (%1)</source>
-        <translation type="unfinished"></translation>
+        <translation>Souris 5 (%1)</translation>
     </message>
     <message>
-        <location filename="../keycode_nameutil.cpp" line="19"/>
+        <location line="+1"/>
         <source>Scroll Up (%1)</source>
-        <translation type="unfinished"></translation>
+        <translation>Molette haut (%1)</translation>
     </message>
     <message>
-        <location filename="../keycode_nameutil.cpp" line="20"/>
+        <location line="+1"/>
         <source>Scroll Down (%1)</source>
-        <translation type="unfinished"></translation>
+        <translation>Molette bas (%1)</translation>
     </message>
 </context>
 </TS>
