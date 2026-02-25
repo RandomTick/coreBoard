@@ -7,12 +7,14 @@
 DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> currentKeyCodes,
     WindowsKeyListener *mainKeyListener
 #ifdef Q_OS_WIN
-    , WindowsMouseListener *mainMouseListenerParam
+    , WindowsMouseListener *mainMouseListenerParam,
+    GamepadListener *mainGamepadListenerParam
 #endif
 )
     : QDialog(parent), keyCodes(currentKeyCodes), mainKeyListener(mainKeyListener)
 #ifdef Q_OS_WIN
-    , mainMouseListener(mainMouseListenerParam)
+    , mainMouseListener(mainMouseListenerParam),
+    mainGamepadListener(mainGamepadListenerParam)
 #endif
 {
 #ifdef Q_OS_WIN
@@ -64,6 +66,8 @@ DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> current
 #ifdef Q_OS_WIN
             if (mouseListener)
                 disconnect(mouseListener, &WindowsMouseListener::keyPressed, this, nullptr);
+            if (mainGamepadListener)
+                disconnect(mainGamepadListener, &GamepadListener::keyPressed, this, nullptr);
             if (mouseListener && !this->mainMouseListener)
                 mouseListener->stopListening();
 #endif
@@ -86,6 +90,10 @@ DialogKeycodeChange::DialogKeycodeChange(QWidget *parent, std::list<int> current
                 this, finishAdd, Qt::SingleShotConnection);
             if (!this->mainMouseListener)
                 mouseListener->startListening();
+        }
+        if (mainGamepadListener) {
+            connect(mainGamepadListener, &GamepadListener::keyPressed,
+                this, finishAdd, Qt::SingleShotConnection);
         }
 #endif
     });

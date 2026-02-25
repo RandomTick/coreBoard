@@ -7,6 +7,7 @@
 #include "windowskeylistener.h"
 #ifdef Q_OS_WIN
 #include "windowsmouselistener.h"
+#include "gamepadlistener.h"
 #endif
 
 class DialogKeycodeChange : public QDialog {
@@ -16,7 +17,8 @@ public:
     explicit DialogKeycodeChange(QWidget *parent = nullptr, std::list<int> currentKeyCodes = {},
         class WindowsKeyListener *mainKeyListener = nullptr,
 #ifdef Q_OS_WIN
-        class WindowsMouseListener *mainMouseListener = nullptr
+        class WindowsMouseListener *mainMouseListener = nullptr,
+        class GamepadListener *mainGamepadListener = nullptr
 #endif
     );
     ~DialogKeycodeChange();
@@ -35,6 +37,7 @@ private:
 #ifdef Q_OS_WIN
     WindowsMouseListener* mouseListener = nullptr;
     WindowsMouseListener* mainMouseListener = nullptr;
+    GamepadListener* mainGamepadListener = nullptr;
 #endif
     std::list<int> keyCodes;
 

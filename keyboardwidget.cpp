@@ -14,6 +14,8 @@
 #include <QTextOption>
 #include <QVBoxLayout>
 #include <QTimer>
+#include <QCursor>
+#include <QDateTime>
 #include <cmath>
 
 namespace {
@@ -116,6 +118,9 @@ void KeyboardWidget::loadLayout(const QString &fileName, int retryCount)
         m_scene->clear();
         m_keys.clear();
         keyCounter.clear();
+        m_mouseSpeedIndicators.clear();
+        m_angularViewers.clear();
+        if (m_mouseIndicatorTimer) m_mouseIndicatorTimer->stop();
         update();
         return;
     }
@@ -142,6 +147,9 @@ void KeyboardWidget::loadLayoutFromData(const QByteArray &jsonData)
         m_scene->clear();
         m_keys.clear();
         keyCounter.clear();
+        m_mouseSpeedIndicators.clear();
+        m_angularViewers.clear();
+        if (m_mouseIndicatorTimer) m_mouseIndicatorTimer->stop();
         update();
         return;
     }
@@ -161,34 +169,87 @@ void KeyboardWidget::applyLayoutData(const QByteArray &jsonData)
     m_scene->clear();
     m_keys.clear();
     keyCounter.clear();
+    m_mouseSpeedIndicators.clear();
+    m_angularViewers.clear();
+    if (m_mouseIndicatorTimer)
+        m_mouseIndicatorTimer->stop();
 
     // Compute bounding box from all elements (same logic as editor) so scene rect matches
     qreal overallMinX = 1e9, overallMinY = 1e9, overallMaxX = -1e9, overallMaxY = -1e9;
     bool hasBounds = false;
     for (const QJsonValue &element : elements) {
         QJsonObject keyData = element.toObject();
-        if (keyData.value("__type").toString() != "KeyboardKey")
-            continue;
-        QJsonArray boundaries = keyData.value("Boundaries").toArray();
-        if (boundaries.size() < 4)
-            continue;
-        for (const QJsonValue &pv : boundaries) {
-            QJsonObject po = pv.toObject();
-            qreal px = po["X"].toDouble();
-            qreal py = po["Y"].toDouble();
-            overallMinX = qMin(overallMinX, px);
-            overallMinY = qMin(overallMinY, py);
-            overallMaxX = qMax(overallMaxX, px);
-            overallMaxY = qMax(overallMaxY, py);
+        QString type = keyData.value("__type").toString();
+        if (type == QLatin1String("KeyboardKey")) {
+            QJsonArray boundaries = keyData.value("Boundaries").toArray();
+            if (boundaries.size() < 4)
+                continue;
+            for (const QJsonValue &pv : boundaries) {
+                QJsonObject po = pv.toObject();
+                qreal px = po["X"].toDouble();
+                qreal py = po["Y"].toDouble();
+                overallMinX = qMin(overallMinX, px);
+                overallMinY = qMin(overallMinY, py);
+                overallMaxX = qMax(overallMaxX, px);
+                overallMaxY = qMax(overallMaxY, py);
+                hasBounds = true;
+            }
+        } else if (type == QLatin1String("MouseSpeedIndicator")) {
+            QJsonObject loc = keyData.value("Location").toObject();
+            qreal cx = loc["X"].toDouble();
+            qreal cy = loc["Y"].toDouble();
+            qreal r = keyData.value("Radius").toDouble(15);
+            if (r < 1) r = 1;
+            overallMinX = qMin(overallMinX, cx - r);
+            overallMinY = qMin(overallMinY, cy - r);
+            overallMaxX = qMax(overallMaxX, cx + r);
+            overallMaxY = qMax(overallMaxY, cy + r);
+            hasBounds = true;
+        } else if (type == QLatin1String("AngularViewer")) {
+            QJsonArray boundaries = keyData.value("Boundaries").toArray();
+            if (boundaries.size() >= 4) {
+                for (const QJsonValue &pv : boundaries) {
+                    QJsonObject po = pv.toObject();
+                    qreal px = po["X"].toDouble();
+                    qreal py = po["Y"].toDouble();
+                    overallMinX = qMin(overallMinX, px);
+                    overallMinY = qMin(overallMinY, py);
+                    overallMaxX = qMax(overallMaxX, px);
+                    overallMaxY = qMax(overallMaxY, py);
+                    hasBounds = true;
+                }
+            }
+        } else if (type == QLatin1String("Label")) {
+            qreal lx = keyData.value("X").toDouble();
+            qreal ly = keyData.value("Y").toDouble();
+            overallMinX = qMin(overallMinX, lx);
+            overallMinY = qMin(overallMinY, ly);
+            overallMaxX = qMax(overallMaxX, lx + 80);
+            overallMaxY = qMax(overallMaxY, ly + 20);
             hasBounds = true;
         }
     }
 
     for (const QJsonValue &element : elements) {
-        if (element.toObject().value("__type").toString() == "KeyboardKey") {
-            createKey(element.toObject());
+        QJsonObject keyData = element.toObject();
+        QString type = keyData.value("__type").toString();
+        if (type == QLatin1String("KeyboardKey")) {
+            createKey(keyData);
+        } else if (type == QLatin1String("MouseSpeedIndicator")) {
+            createMouseSpeedIndicatorOverlay(keyData);
+        } else if (type == QLatin1String("AngularViewer")) {
+            createAngularViewerOverlay(keyData);
+        } else if (type == QLatin1String("Label")) {
+            createLabelOverlay(keyData);
         }
     }
+
+    if (!m_mouseSpeedIndicators.isEmpty() && !m_mouseIndicatorTimer) {
+        m_mouseIndicatorTimer = new QTimer(this);
+        connect(m_mouseIndicatorTimer, &QTimer::timeout, this, &KeyboardWidget::updateMouseIndicatorsFromCursor);
+    }
+    if (m_mouseIndicatorTimer && !m_mouseSpeedIndicators.isEmpty())
+        m_mouseIndicatorTimer->start(50);
 
     if (hasBounds) {
         qreal w = qMax(qreal(1), overallMaxX - overallMinX);
@@ -373,6 +434,200 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
             m_keys[code].push_back(shapeItem);
     }
     keyCounter[label] = 0;
+}
+
+void KeyboardWidget::createMouseSpeedIndicatorOverlay(const QJsonObject &keyData)
+{
+    QJsonObject loc = keyData.value("Location").toObject();
+    qreal cx = loc["X"].toDouble();
+    qreal cy = loc["Y"].toDouble();
+    qreal r = keyData.value("Radius").toDouble(15);
+    if (r < 1) r = 1;
+    KeyStyle keyStyle = KeyStyle::fromJson(keyData);
+
+    QGraphicsEllipseItem *track = new QGraphicsEllipseItem(cx - r, cy - r, 2 * r, 2 * r);
+    track->setBrush(Qt::NoBrush);
+    track->setPen(keyStyle.pen());
+    track->setZValue(0);
+    m_scene->addItem(track);
+
+    const qreal indR = 5;
+    QGraphicsEllipseItem *indicator = new QGraphicsEllipseItem(-indR, -indR, 2 * indR, 2 * indR);
+    indicator->setBrush(keyStyle.keyColor.isValid() ? keyStyle.keyColor : m_keyColor);
+    indicator->setPen(keyStyle.pen());
+    indicator->setPos(cx, cy);
+    indicator->setZValue(1);
+    m_scene->addItem(indicator);
+
+    MouseSpeedIndicatorOverlay entry;
+    entry.centerX = cx;
+    entry.centerY = cy;
+    entry.radius = r;
+    entry.trackItem = track;
+    entry.indicatorItem = indicator;
+    m_mouseSpeedIndicators.append(entry);
+}
+
+void KeyboardWidget::createAngularViewerOverlay(const QJsonObject &keyData)
+{
+    QJsonArray boundaries = keyData.value("Boundaries").toArray();
+    if (boundaries.size() < 4) return;
+    qreal minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    for (const QJsonValue &pv : boundaries) {
+        QJsonObject po = pv.toObject();
+        qreal px = po["X"].toDouble();
+        qreal py = po["Y"].toDouble();
+        minX = qMin(minX, px);
+        minY = qMin(minY, py);
+        maxX = qMax(maxX, px);
+        maxY = qMax(maxY, py);
+    }
+    qreal w = qMax(qreal(1), maxX - minX);
+    qreal h = qMax(qreal(1), maxY - minY);
+    QString subTypeStr = keyData.value("SubType").toString();
+    bool isLeftStick = (subTypeStr != QLatin1String("rightStick"));
+    int controllerIndex = keyData.value("ControllerIndex").toInt(0);
+    controllerIndex = qBound(0, controllerIndex, 3);
+    bool flipX = keyData.value("FlipX").toBool(false);
+    bool flipY = keyData.value("FlipY").toBool(true);
+    KeyStyle keyStyle = KeyStyle::fromJson(keyData);
+
+    QGraphicsEllipseItem *track = new QGraphicsEllipseItem(0, 0, w, h);
+    track->setPos(minX, minY);
+    track->setBrush(Qt::NoBrush);
+    track->setPen(keyStyle.pen());
+    track->setZValue(0);
+    m_scene->addItem(track);
+
+    const qreal indR = 5;
+    QGraphicsEllipseItem *indicator = new QGraphicsEllipseItem(-indR, -indR, 2 * indR, 2 * indR);
+    indicator->setBrush(keyStyle.keyColor.isValid() ? keyStyle.keyColor : m_keyColor);
+    indicator->setPen(keyStyle.pen());
+    indicator->setPos(minX + w / 2, minY + h / 2);
+    indicator->setZValue(1);
+    m_scene->addItem(indicator);
+
+    AngularViewerOverlay entry;
+    entry.controllerIndex = controllerIndex;
+    entry.isLeftStick = isLeftStick;
+    entry.flipX = flipX;
+    entry.flipY = flipY;
+    entry.rect = QRectF(minX, minY, w, h);
+    entry.trackItem = track;
+    entry.indicatorItem = indicator;
+    m_angularViewers.append(entry);
+}
+
+void KeyboardWidget::createLabelOverlay(const QJsonObject &keyData)
+{
+    qreal x = keyData.value("X").toDouble();
+    qreal y = keyData.value("Y").toDouble();
+    QString text = keyData.value("Text").toString();
+    KeyStyle keyStyle = KeyStyle::fromJson(keyData);
+    QColor textColor = keyStyle.keyTextColor.isValid() ? keyStyle.keyTextColor : m_textColor;
+    QGraphicsTextItem *label = new QGraphicsTextItem(text);
+    label->setPos(x, y);
+    if (keyStyle.fontPointSize > 0 || !keyStyle.fontFamily.isEmpty())
+        label->setFont(keyStyle.font());
+    label->setDefaultTextColor(textColor);
+    label->setZValue(0);
+    m_scene->addItem(label);
+}
+
+void KeyboardWidget::updateMouseIndicatorsFromCursor()
+{
+    if (m_mouseSpeedIndicators.isEmpty() || !m_view) return;
+    QPoint globalPos = QCursor::pos();
+    QPoint viewPos = m_view->mapFromGlobal(globalPos);
+    QPointF scenePos = m_view->mapToScene(viewPos);
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    for (MouseSpeedIndicatorOverlay &entry : m_mouseSpeedIndicators) {
+        if (!entry.indicatorItem) continue;
+        QPointF speed(0, 0);
+        if (entry.lastTime > 0) {
+            qint64 dt = now - entry.lastTime;
+            if (dt >= 30) {
+                qreal dx = scenePos.x() - entry.lastScenePos.x();
+                qreal dy = scenePos.y() - entry.lastScenePos.y();
+                qreal scale = 50.0 / qMax(qint64(1), dt);
+                speed.setX(dx * scale);
+                speed.setY(dy * scale);
+            }
+        }
+        entry.lastScenePos = scenePos;
+        entry.lastTime = now;
+
+        entry.speedHistory.append(speed);
+        while (entry.speedHistory.size() > MouseSpeedIndicatorOverlay::kMouseSmooth)
+            entry.speedHistory.removeFirst();
+        QPointF avg(0, 0);
+        for (const QPointF &v : entry.speedHistory) {
+            avg.setX(avg.x() + v.x());
+            avg.setY(avg.y() + v.y());
+        }
+        int n = entry.speedHistory.size();
+        if (n > 0) {
+            avg.setX(avg.x() / n);
+            avg.setY(avg.y() / n);
+        }
+        qreal mag = std::sqrt(avg.x() * avg.x() + avg.y() * avg.y());
+        const qreal pixelsPerFrameForFullRadius = 80.0;
+        qreal r = qMin(mag / pixelsPerFrameForFullRadius, 1.0) * entry.radius;
+        qreal dx = 0, dy = 0;
+        if (mag > 1e-6) {
+            dx = (avg.x() / mag) * r;
+            dy = (avg.y() / mag) * r;
+        }
+        entry.indicatorItem->setPos(entry.centerX + dx, entry.centerY + dy);
+    }
+}
+
+void KeyboardWidget::onLeftStickChanged(int controllerIndex, qreal x, qreal y)
+{
+    for (const AngularViewerOverlay &entry : m_angularViewers) {
+        if (entry.controllerIndex != controllerIndex || !entry.isLeftStick || !entry.indicatorItem) continue;
+        qreal sx = entry.flipX ? -x : x;
+        qreal sy = entry.flipY ? -y : y;
+        qreal hw = entry.rect.width() / 2;
+        qreal hh = entry.rect.height() / 2;
+        qreal ox = sx * hw;
+        qreal oy = -sy * hh;
+        if (hw > 1e-6 && hh > 1e-6) {
+            qreal n = (ox * ox) / (hw * hw) + (oy * oy) / (hh * hh);
+            if (n > 1.0) {
+                qreal s = 1.0 / std::sqrt(n);
+                ox *= s;
+                oy *= s;
+            }
+        }
+        qreal cx = entry.rect.x() + entry.rect.width() / 2;
+        qreal cy = entry.rect.y() + entry.rect.height() / 2;
+        entry.indicatorItem->setPos(cx + ox, cy + oy);
+    }
+}
+
+void KeyboardWidget::onRightStickChanged(int controllerIndex, qreal x, qreal y)
+{
+    for (const AngularViewerOverlay &entry : m_angularViewers) {
+        if (entry.controllerIndex != controllerIndex || entry.isLeftStick || !entry.indicatorItem) continue;
+        qreal sx = entry.flipX ? -x : x;
+        qreal sy = entry.flipY ? -y : y;
+        qreal hw = entry.rect.width() / 2;
+        qreal hh = entry.rect.height() / 2;
+        qreal ox = sx * hw;
+        qreal oy = -sy * hh;
+        if (hw > 1e-6 && hh > 1e-6) {
+            qreal n = (ox * ox) / (hw * hw) + (oy * oy) / (hh * hh);
+            if (n > 1.0) {
+                qreal s = 1.0 / std::sqrt(n);
+                ox *= s;
+                oy *= s;
+            }
+        }
+        qreal cx = entry.rect.x() + entry.rect.width() / 2;
+        qreal cy = entry.rect.y() + entry.rect.height() / 2;
+        entry.indicatorItem->setPos(cx + ox, cy + oy);
+    }
 }
 
 void KeyboardWidget::changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor, bool isPressed)

@@ -17,6 +17,7 @@ class QStackedWidget;
 class WindowsKeyListener;
 #ifdef Q_OS_WIN
 class WindowsMouseListener;
+class GamepadListener;
 #endif
 
 class MainWindow : public QMainWindow
@@ -30,6 +31,7 @@ public:
     WindowsKeyListener* keyListener() const;
 #ifdef Q_OS_WIN
     WindowsMouseListener* mouseListener() const;
+    GamepadListener* gamepadListener() const;
 #endif
     void resize(int width, int height);
     bool changeLanguage(const QApplication *a, const QString languageCode);
@@ -62,6 +64,7 @@ private:
     WindowsKeyListener *m_keyListener = nullptr;
 #ifdef Q_OS_WIN
     WindowsMouseListener *m_mouseListener = nullptr;
+    GamepadListener *m_gamepadListener = nullptr;
 #endif
 };
 #endif // MAINWINDOW_H

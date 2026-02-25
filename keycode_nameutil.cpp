@@ -4,11 +4,44 @@
 
 #ifdef Q_OS_WIN
 #include <windows.h>
+#include "gamepadlistener.h"
+#endif
+
+#ifdef Q_OS_WIN
+static const char *gamepadButtonName(int buttonIndex) {
+    switch (buttonIndex) {
+    case 0:  return "A";
+    case 1:  return "B";
+    case 2:  return "X";
+    case 3:  return "Y";
+    case 4:  return "LB";
+    case 5:  return "RB";
+    case 6:  return "Back";
+    case 7:  return "Start";
+    case 8:  return "L3";
+    case 9:  return "R3";
+    case 10: return "D-pad Up";
+    case 11: return "D-pad Down";
+    case 12: return "D-pad Left";
+    case 13: return "D-pad Right";
+    default: return "?";
+    }
+}
 #endif
 
 QString keyCodeToDisplayName(int code)
 {
 #ifdef Q_OS_WIN
+    // Gamepad buttons (controller index encoded in code)
+    if (code >= GAMEPAD_KEY_BASE && code < GAMEPAD_KEY_BASE + (4 << GAMEPAD_CONTROLLER_SHIFT)) {
+        int ci = gamepadControllerIndex(code);
+        int bi = gamepadButtonIndex(code);
+        if (ci >= 0 && bi >= 0) {
+            QString btn = QCoreApplication::translate("keycode_nameutil", gamepadButtonName(bi));
+            return QCoreApplication::translate("keycode_nameutil", "%1 (Controller %2)").arg(btn).arg(ci + 1);
+        }
+    }
+
     // Mouse buttons (Windows VK codes)
     switch (code) {
     case 1:  return QCoreApplication::translate("keycode_nameutil", "Left Click (%1)").arg(code);

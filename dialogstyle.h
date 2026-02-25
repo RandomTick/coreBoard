@@ -17,7 +17,8 @@ class DialogStyle : public QDialog {
     Q_OBJECT
 
 public:
-    explicit DialogStyle(QWidget *parent, const KeyStyle &currentStyle, const QString &previewLabel = QString(), bool isRectangle = false);
+    /** When indicatorStyle is true, only outline color, outline width and key color (idle) are shown (for mouse/joystick indicators). */
+    explicit DialogStyle(QWidget *parent, const KeyStyle &currentStyle, const QString &previewLabel = QString(), bool isRectangle = false, bool indicatorStyle = false);
     KeyStyle getStyle() const;
 
 private:

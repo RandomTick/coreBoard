@@ -15,6 +15,9 @@
 #include "resizableellipseitem.h"
 #include "resizablepolygonitem.h"
 #include "resizablepathitem.h"
+#include "mousespeedindicatoritem.h"
+#include "angularvieweritem.h"
+#include "labelitem.h"
 #include "keystyle.h"
 
 class LayoutSettings;
@@ -59,6 +62,11 @@ private:
     QAction *m_actDiamond = nullptr;
     QAction *m_actHexagon = nullptr;
     QAction *m_actTriangle = nullptr;
+    QAction *m_actMouseSpeedIndicator = nullptr;
+    QMenu *m_angularViewerMenu = nullptr;
+    QAction *m_actLeftStick = nullptr;
+    QAction *m_actRightStick = nullptr;
+    QAction *m_actLabel = nullptr;
     QString _currentLayoutPath;
     bool m_dirty = false;
     LayoutSettings *m_layoutSettings = nullptr;
@@ -78,6 +86,12 @@ public slots:
     void saveLayout();
     void saveLayoutAs();
     QGraphicsItem* createKey(const QJsonObject &keyData);
+    MouseSpeedIndicatorItem* createMouseSpeedIndicator(const QJsonObject &keyData);
+    MouseSpeedIndicatorItem* addMouseSpeedIndicator(qreal centerX, qreal centerY, qreal radius, const QString &label = QString());
+    AngularViewerItem* createAngularViewer(const QJsonObject &keyData);
+    AngularViewerItem* addAngularViewer(AngularViewerSubType subType, qreal x, qreal y, qreal w, qreal h, const QString &label = QString());
+    LabelItem* createLabel(const QJsonObject &keyData);
+    LabelItem* addLabel(const QString &text, qreal x, qreal y);
     void updateLanguage();
     void copyKeyFromItem(QGraphicsItem *item);
     void pasteKey();

@@ -7,10 +7,34 @@
 #include <QGraphicsView>
 #include <QGraphicsScene>
 #include <QGraphicsItem>
+#include <QGraphicsEllipseItem>
 #include <map>
 #include <vector>
+#include <QList>
+#include <QRectF>
 #include <QColor>
+#include <QTimer>
 #include "layoutsettings.h"
+
+struct MouseSpeedIndicatorOverlay {
+    qreal centerX = 0, centerY = 0, radius = 15;
+    QGraphicsEllipseItem *trackItem = nullptr;
+    QGraphicsEllipseItem *indicatorItem = nullptr;
+    QPointF lastScenePos;
+    qint64 lastTime = 0;
+    QList<QPointF> speedHistory;
+    static const int kMouseSmooth = 5;
+};
+
+struct AngularViewerOverlay {
+    int controllerIndex = 0;
+    bool isLeftStick = true;
+    bool flipX = false;
+    bool flipY = true;
+    QRectF rect;
+    QGraphicsEllipseItem *trackItem = nullptr;
+    QGraphicsEllipseItem *indicatorItem = nullptr;
+};
 
 class KeyboardWidget : public QWidget
 {
@@ -35,11 +59,15 @@ public:
 
 private:
     void createKey(const QJsonObject &keyData);
+    void createMouseSpeedIndicatorOverlay(const QJsonObject &keyData);
+    void createAngularViewerOverlay(const QJsonObject &keyData);
+    void createLabelOverlay(const QJsonObject &keyData);
     void applyLayoutData(const QByteArray &jsonData);
     void changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor, bool isPressed);
     static void setShapeTextColor(QGraphicsItem *shapeItem, const QColor &color);
     void updateLabelsForShiftState();
     void resetCounter();
+    void updateMouseIndicatorsFromCursor();
 
     QGraphicsView *m_view = nullptr;
     QGraphicsScene *m_scene = nullptr;
@@ -54,9 +82,15 @@ private:
     bool m_shiftPressed = false;
     bool m_capsLockOn = false;
 
+    QList<MouseSpeedIndicatorOverlay> m_mouseSpeedIndicators;
+    QList<AngularViewerOverlay> m_angularViewers;
+    QTimer *m_mouseIndicatorTimer = nullptr;
+
 public slots:
     void onKeyPressed(int key);
     void onKeyReleased(int key);
+    void onLeftStickChanged(int controllerIndex, qreal x, qreal y);
+    void onRightStickChanged(int controllerIndex, qreal x, qreal y);
 };
 
 #endif // KEYBOARDWIDGET_H

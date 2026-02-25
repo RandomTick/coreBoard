@@ -11,14 +11,19 @@
 #include "resizableellipseitem.h"
 #include "resizablepolygonitem.h"
 #include "resizablepathitem.h"
+#include "mousespeedindicatoritem.h"
+#include "angularvieweritem.h"
+#include "labelitem.h"
 #include "dialogtextchange.h"
 #include "dialogkeycodechange.h"
 #include "dialogstyle.h"
+#include "dialoglabelstyle.h"
 #include "shapeeditordialog.h"
 #include "mainwindow.h"
 #include "windowskeylistener.h"
 #ifdef Q_OS_WIN
 #include "windowsmouselistener.h"
+#include "gamepadlistener.h"
 #endif
 #include "keystyle.h"
 #include <QMenu>
@@ -31,13 +36,19 @@ static KeyStyle keyStyleForItem(QGraphicsItem *item) {
     if (ResizableEllipseItem *e = dynamic_cast<ResizableEllipseItem*>(item)) return e->keyStyle();
     if (ResizablePolygonItem *p = dynamic_cast<ResizablePolygonItem*>(item)) return p->keyStyle();
     if (ResizablePathItem *path = dynamic_cast<ResizablePathItem*>(item)) return path->keyStyle();
+    if (MouseSpeedIndicatorItem *mouse = dynamic_cast<MouseSpeedIndicatorItem*>(item)) return mouse->keyStyle();
+    if (AngularViewerItem *ang = dynamic_cast<AngularViewerItem*>(item)) return ang->keyStyle();
+    if (LabelItem *lbl = dynamic_cast<LabelItem*>(item)) return lbl->keyStyle();
     return KeyStyle();
 }
 static void setKeyStyleForItem(QGraphicsItem *item, const KeyStyle &s) {
     if (ResizableRectItem *r = dynamic_cast<ResizableRectItem*>(item)) { r->setKeyStyle(s); return; }
     if (ResizableEllipseItem *e = dynamic_cast<ResizableEllipseItem*>(item)) { e->setKeyStyle(s); return; }
     if (ResizablePolygonItem *p = dynamic_cast<ResizablePolygonItem*>(item)) { p->setKeyStyle(s); return; }
-    if (ResizablePathItem *path = dynamic_cast<ResizablePathItem*>(item)) path->setKeyStyle(s);
+    if (ResizablePathItem *path = dynamic_cast<ResizablePathItem*>(item)) { path->setKeyStyle(s); return; }
+    if (MouseSpeedIndicatorItem *mouse = dynamic_cast<MouseSpeedIndicatorItem*>(item)) { mouse->setKeyStyle(s); return; }
+    if (AngularViewerItem *ang = dynamic_cast<AngularViewerItem*>(item)) { ang->setKeyStyle(s); return; }
+    if (LabelItem *lbl = dynamic_cast<LabelItem*>(item)) { lbl->setKeyStyle(s); return; }
 }
 
 LayoutEditor *layoutEditor;
@@ -67,9 +78,9 @@ void LayoutEditorGraphicsView::setSceneAndStore(QGraphicsScene *externScene){
 void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
     QGraphicsItem *item = scene->itemAt(mapToScene(event->pos()), QTransform());
     QGraphicsTextItem* textItem = dynamic_cast<QGraphicsTextItem*>(item);
-    if(textItem){
-        //when text gets selected, we need to select the closest rectangle in order to move/resize the correct one
-        item = item->parentItem();
+    // When the hit item is a text child of a shape (e.g. key label), use the parent shape. Do not replace for LabelItem (standalone text, no parent).
+    if (textItem && textItem->parentItem()) {
+        item = textItem->parentItem();
     }
     if (event->button() == Qt::RightButton) {
         if (m_pickStyleMode || m_applyStyleMode || m_copyMode) {
@@ -82,6 +93,171 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
             return;
         }
         if(item){
+            MouseSpeedIndicatorItem *mouseIndicatorItem = dynamic_cast<MouseSpeedIndicatorItem*>(item);
+            if (mouseIndicatorItem) {
+                QMenu menu;
+                QAction *actionStyle = menu.addAction(tr("Edit style..."));
+                menu.addSeparator();
+                QAction *actionDelete = menu.addAction(tr("Delete"));
+                QAction *selectedAction = menu.exec(QCursor::pos());
+                if (selectedAction == actionStyle) {
+                    KeyStyle current = mouseIndicatorItem->keyStyle();
+                    DialogStyle *dialog = new DialogStyle(this, current, mouseIndicatorItem->getText(), false, true);
+                    if (dialog->exec() == QDialog::Accepted) {
+                        KeyStyle newStyle = dialog->getStyle();
+                        Action *action = new Action(Actions::ChangeStyle, nullptr);
+                        action->styleNew = newStyle;
+                        action->styleItems.append(qMakePair(mouseIndicatorItem, keyStyleForItem(mouseIndicatorItem)));
+                        setKeyStyleForItem(mouseIndicatorItem, newStyle);
+                        undoActions.push_back(action);
+                        redoActions.clear();
+                        layoutEditor->markDirty();
+                        layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    }
+                    delete dialog;
+                } else if (selectedAction == actionDelete) {
+                    Action *action = new Action(Actions::Remove, mouseIndicatorItem);
+                    action->position = mouseIndicatorItem->pos();
+                    action->size = mouseIndicatorItem->rect();
+                    undoActions.push_back(action);
+                    redoActions.clear();
+                    scene->removeItem(mouseIndicatorItem);
+                    layoutEditor->markDirty();
+                    layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                }
+                event->accept();
+                return;
+            }
+            LabelItem *labelItemCtx = dynamic_cast<LabelItem*>(item);
+            if (labelItemCtx) {
+                QMenu menu;
+                QAction *actionRename = menu.addAction(tr("Rename"));
+                QAction *actionStyle = menu.addAction(tr("Edit style..."));
+                menu.addSeparator();
+                QAction *actionDelete = menu.addAction(tr("Delete"));
+                QAction *selectedAction = menu.exec(QCursor::pos());
+                if (selectedAction == actionRename) {
+                    QString oldText = labelItemCtx->getText();
+                    DialogTextChange *dialog = new DialogTextChange(this, oldText, QString());
+                    if (dialog->exec() == QDialog::Accepted) {
+                        labelItemCtx->setText(dialog->getText());
+                        layoutEditor->markDirty();
+                    }
+                    delete dialog;
+                } else if (selectedAction == actionStyle) {
+                    KeyStyle current = labelItemCtx->keyStyle();
+                    DialogLabelStyle *dialog = new DialogLabelStyle(this, current, labelItemCtx->getText());
+                    if (dialog->exec() == QDialog::Accepted) {
+                        KeyStyle newStyle = dialog->getStyle();
+                        KeyStyle merged = current;
+                        merged.fontPointSize = newStyle.fontPointSize;
+                        merged.fontFamily = newStyle.fontFamily;
+                        merged.keyTextColor = newStyle.keyTextColor;
+                        Action *action = new Action(Actions::ChangeStyle, nullptr);
+                        action->styleNew = merged;
+                        action->styleItems.append(qMakePair(labelItemCtx, keyStyleForItem(labelItemCtx)));
+                        setKeyStyleForItem(labelItemCtx, merged);
+                        undoActions.push_back(action);
+                        redoActions.clear();
+                        layoutEditor->markDirty();
+                        layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    }
+                    delete dialog;
+                } else if (selectedAction == actionDelete) {
+                    Action *action = new Action(Actions::Remove, labelItemCtx);
+                    action->position = labelItemCtx->pos();
+                    action->size = labelItemCtx->boundingRect();
+                    undoActions.push_back(action);
+                    redoActions.clear();
+                    scene->removeItem(labelItemCtx);
+                    layoutEditor->markDirty();
+                    layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                }
+                event->accept();
+                return;
+            }
+            AngularViewerItem *angularViewerItem = dynamic_cast<AngularViewerItem*>(item);
+            if (angularViewerItem) {
+                QMenu menu;
+                QAction *actionRename = menu.addAction(tr("Rename"));
+                QAction *actionStyle = menu.addAction(tr("Edit style..."));
+                QMenu *controllerMenu = menu.addMenu(tr("Select controller"));
+                QAction *controllerActions[4];
+                for (int i = 0; i < 4; ++i) {
+                    controllerActions[i] = controllerMenu->addAction(tr("Controller %1").arg(i + 1));
+                    controllerActions[i]->setCheckable(true);
+                    controllerActions[i]->setChecked(angularViewerItem->controllerIndex() == i);
+                }
+                QAction *actionFlipX = menu.addAction(tr("Flip left/right"));
+                actionFlipX->setCheckable(true);
+                actionFlipX->setChecked(angularViewerItem->flipX());
+                QAction *actionFlipY = menu.addAction(tr("Flip up/down"));
+                actionFlipY->setCheckable(true);
+                actionFlipY->setChecked(!angularViewerItem->flipY());  // UI: unchecked = normal (internal flipY=true corrects axis)
+                menu.addSeparator();
+                QAction *actionDelete = menu.addAction(tr("Delete"));
+                QAction *selectedAction = menu.exec(QCursor::pos());
+                if (selectedAction == actionRename) {
+                    QString oldText = angularViewerItem->getText();
+                    QString oldShiftText = angularViewerItem->getShiftText();
+                    DialogTextChange *dialog = new DialogTextChange(this, oldText, oldShiftText);
+                    if (dialog->exec() == QDialog::Accepted) {
+                        angularViewerItem->setText(dialog->getText());
+                        angularViewerItem->setShiftText(dialog->getShiftText());
+                    }
+                    delete dialog;
+                    QString newText = angularViewerItem->getText();
+                    QString newShiftText = angularViewerItem->getShiftText();
+                    if (newText != oldText || newShiftText != oldShiftText) {
+                        Action *action = new Action(Actions::ChangeText, angularViewerItem, oldText, newText, oldShiftText, newShiftText);
+                        undoActions.push_back(action);
+                        redoActions.clear();
+                        layoutEditor->markDirty();
+                        layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    }
+                } else if (selectedAction == actionStyle) {
+                    KeyStyle current = angularViewerItem->keyStyle();
+                    DialogStyle *dialog = new DialogStyle(this, current, angularViewerItem->getText(), false, true);
+                    if (dialog->exec() == QDialog::Accepted) {
+                        KeyStyle newStyle = dialog->getStyle();
+                        Action *action = new Action(Actions::ChangeStyle, nullptr);
+                        action->styleNew = newStyle;
+                        action->styleItems.append(qMakePair(angularViewerItem, keyStyleForItem(angularViewerItem)));
+                        setKeyStyleForItem(angularViewerItem, newStyle);
+                        undoActions.push_back(action);
+                        redoActions.clear();
+                        layoutEditor->markDirty();
+                        layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                    }
+                    delete dialog;
+                } else if (selectedAction == actionFlipX) {
+                    angularViewerItem->setFlipX(!angularViewerItem->flipX());
+                    layoutEditor->markDirty();
+                } else if (selectedAction == actionFlipY) {
+                    angularViewerItem->setFlipY(!actionFlipY->isChecked());  // invert: user "normal" unchecked -> internal flipY true
+                    layoutEditor->markDirty();
+                } else {
+                    for (int i = 0; i < 4; ++i) {
+                        if (selectedAction == controllerActions[i]) {
+                            angularViewerItem->setControllerIndex(i);
+                            layoutEditor->markDirty();
+                            break;
+                        }
+                    }
+                }
+                if (selectedAction == actionDelete) {
+                    Action *action = new Action(Actions::Remove, angularViewerItem);
+                    action->position = angularViewerItem->pos();
+                    action->size = angularViewerItem->rect();
+                    undoActions.push_back(action);
+                    redoActions.clear();
+                    scene->removeItem(angularViewerItem);
+                    layoutEditor->markDirty();
+                    layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                }
+                event->accept();
+                return;
+            }
             ResizableRectItem *rect = dynamic_cast<ResizableRectItem*>(item);
             ResizableEllipseItem *ellipse = dynamic_cast<ResizableEllipseItem*>(item);
             ResizablePolygonItem *polygon = dynamic_cast<ResizablePolygonItem*>(item);
@@ -100,7 +276,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 QList<QGraphicsItem*> styleTargets;
                 if (item->isSelected()) {
                     for (QGraphicsItem *sel : scene->selectedItems()) {
-                        if (dynamic_cast<ResizableRectItem*>(sel) || dynamic_cast<ResizableEllipseItem*>(sel) || dynamic_cast<ResizablePolygonItem*>(sel) || dynamic_cast<ResizablePathItem*>(sel))
+                        if (dynamic_cast<ResizableRectItem*>(sel) || dynamic_cast<ResizableEllipseItem*>(sel) || dynamic_cast<ResizablePolygonItem*>(sel) || dynamic_cast<ResizablePathItem*>(sel) || dynamic_cast<MouseSpeedIndicatorItem*>(sel) || dynamic_cast<AngularViewerItem*>(sel))
                             styleTargets.append(sel);
                     }
                 }
@@ -139,7 +315,8 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                     WindowsKeyListener *appKeyListener = mainWin ? mainWin->keyListener() : nullptr;
 #ifdef Q_OS_WIN
                     WindowsMouseListener *appMouseListener = mainWin ? mainWin->mouseListener() : nullptr;
-                    DialogKeycodeChange *dialog = new DialogKeycodeChange(this, oldKeycodes, appKeyListener, appMouseListener);
+                    GamepadListener *appGamepadListener = mainWin ? mainWin->gamepadListener() : nullptr;
+                    DialogKeycodeChange *dialog = new DialogKeycodeChange(this, oldKeycodes, appKeyListener, appMouseListener, appGamepadListener);
 #else
                     DialogKeycodeChange *dialog = new DialogKeycodeChange(this, oldKeycodes, appKeyListener);
 #endif
@@ -280,7 +457,10 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 ResizableEllipseItem *ellipse = dynamic_cast<ResizableEllipseItem*>(item);
                 ResizablePolygonItem *polygon = dynamic_cast<ResizablePolygonItem*>(item);
                 ResizablePathItem *pathItem = dynamic_cast<ResizablePathItem*>(item);
-                if (rect || ellipse || polygon || pathItem) {
+                MouseSpeedIndicatorItem *mouseIndicatorItem = dynamic_cast<MouseSpeedIndicatorItem*>(item);
+                AngularViewerItem *angularViewerItem = dynamic_cast<AngularViewerItem*>(item);
+                LabelItem *labelItem = dynamic_cast<LabelItem*>(item);
+                if (rect || ellipse || polygon || pathItem || mouseIndicatorItem || angularViewerItem || labelItem) {
                     if (m_pickStyleMode) {
                         m_pickedStyle = keyStyleForItem(item);
                         m_hasPickedStyle = true;
@@ -299,7 +479,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                         QList<QGraphicsItem*> targets;
                         if (item->isSelected()) {
                             for (QGraphicsItem *sel : scene->selectedItems()) {
-                                if (dynamic_cast<ResizableRectItem*>(sel) || dynamic_cast<ResizableEllipseItem*>(sel) || dynamic_cast<ResizablePolygonItem*>(sel) || dynamic_cast<ResizablePathItem*>(sel))
+                                if (dynamic_cast<ResizableRectItem*>(sel) || dynamic_cast<ResizableEllipseItem*>(sel) || dynamic_cast<ResizablePolygonItem*>(sel) || dynamic_cast<ResizablePathItem*>(sel) || dynamic_cast<MouseSpeedIndicatorItem*>(sel) || dynamic_cast<AngularViewerItem*>(sel) || dynamic_cast<LabelItem*>(sel))
                                     targets.append(sel);
                             }
                         }
@@ -354,7 +534,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 startingPosition = item->pos();
                 startingBounds = getCorrectBoundingRect(item);
                 m_dragItems.clear();
-                if (dynamic_cast<ResizableRectItem*>(item) || dynamic_cast<ResizableEllipseItem*>(item) || dynamic_cast<ResizablePolygonItem*>(item) || dynamic_cast<ResizablePathItem*>(item)) {
+                if (dynamic_cast<ResizableRectItem*>(item) || dynamic_cast<ResizableEllipseItem*>(item) || dynamic_cast<ResizablePolygonItem*>(item) || dynamic_cast<ResizablePathItem*>(item) || dynamic_cast<MouseSpeedIndicatorItem*>(item) || dynamic_cast<AngularViewerItem*>(item) || dynamic_cast<LabelItem*>(item)) {
                     QList<QGraphicsItem*> toDrag = item->isSelected() ? selectedKeyItems() : QList<QGraphicsItem*>{item};
                     for (QGraphicsItem *dragItem : toDrag)
                         m_dragItems.append(qMakePair(dragItem, dragItem->pos()));
@@ -403,8 +583,11 @@ void LayoutEditorGraphicsView::enforceRectSize(QPointF &newPos, qreal &newWidth,
 }
 
 QRectF LayoutEditorGraphicsView::getCorrectBoundingRect(QGraphicsItem *item){
+    if (!item) return QRectF(0, 0, 1, 1);
     QRectF startingBoundsWrong = item->boundingRect();
-    return QRectF(0, 0, startingBoundsWrong.width() - 1, startingBoundsWrong.height() - 1);
+    qreal w = qMax(qreal(1), startingBoundsWrong.width() - 1);
+    qreal h = qMax(qreal(1), startingBoundsWrong.height() - 1);
+    return QRectF(0, 0, w, h);
 }
 
 void LayoutEditorGraphicsView::centerText(QGraphicsRectItem *rect){
@@ -433,16 +616,29 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
             ResizableEllipseItem *ellipse = dynamic_cast<ResizableEllipseItem*>(currentItem);
             ResizablePolygonItem *polygon = dynamic_cast<ResizablePolygonItem*>(currentItem);
             ResizablePathItem *pathItem = dynamic_cast<ResizablePathItem*>(currentItem);
-            if (rect || ellipse || polygon || pathItem){
+            MouseSpeedIndicatorItem *mouseIndicatorItem = dynamic_cast<MouseSpeedIndicatorItem*>(currentItem);
+            AngularViewerItem *angularViewerItem = dynamic_cast<AngularViewerItem*>(currentItem);
+            if (rect || ellipse || polygon || pathItem || mouseIndicatorItem || angularViewerItem){
+                auto enforceCircle = [&]() {
+                    if (mouseIndicatorItem || angularViewerItem) {
+                        qreal s = qMin(newWidth, newHeight);
+                        if (s < 20) s = 20;
+                        newWidth = newHeight = s;
+                        enforceRectSize(newPos, newWidth, newHeight);
+                    }
+                };
                 switch (edgeOrCorner) {
                     case 1: // Top-Left Corner
                         newWidth = startingBounds.width() + xOffset;
                         newHeight = startingBounds.height() + yOffset;
 
                         enforceRectSize(newPos, newWidth, newHeight);
+                        enforceCircle();
 
                         if (rect) { rect->setPos(newPos - edgeOffset); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(newPos - edgeOffset); ellipse->setRect(0, 0, newWidth, newHeight); }
+                        else if (mouseIndicatorItem) { mouseIndicatorItem->setPos(newPos - edgeOffset); mouseIndicatorItem->setRect(0, 0, newWidth, newHeight); }
+                        else if (angularViewerItem) { angularViewerItem->setPos(newPos - edgeOffset); angularViewerItem->setRect(0, 0, newWidth, newHeight); }
                         else if (polygon) { polygon->setPos(newPos - edgeOffset); polygon->setSize(newWidth, newHeight); }
                         else { pathItem->setPos(newPos - edgeOffset); pathItem->setSize(newWidth, newHeight); }
                         break;
@@ -453,9 +649,12 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                         newHeight = startingBounds.height() - yOffset - edgeOffset.y();
 
                         enforceRectSize(newPos, newWidth, newHeight);
+                        enforceCircle();
 
                         if (rect) { rect->setPos(newPos.x() - edgeOffset.x(), startingPosition.y()); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(newPos.x() - edgeOffset.x(), startingPosition.y()); ellipse->setRect(0, 0, newWidth, newHeight); }
+                        else if (mouseIndicatorItem) { mouseIndicatorItem->setPos(newPos.x() - edgeOffset.x(), startingPosition.y()); mouseIndicatorItem->setRect(0, 0, newWidth, newHeight); }
+                        else if (angularViewerItem) { angularViewerItem->setPos(newPos.x() - edgeOffset.x(), startingPosition.y()); angularViewerItem->setRect(0, 0, newWidth, newHeight); }
                         else if (polygon) { polygon->setPos(newPos.x() - edgeOffset.x(), startingPosition.y()); polygon->setSize(newWidth, newHeight); }
                         else { pathItem->setPos(newPos.x() - edgeOffset.x(), startingPosition.y()); pathItem->setSize(newWidth, newHeight); }
                         break;
@@ -465,9 +664,12 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                         newHeight = startingBounds.height() + yOffset;
 
                         enforceRectSize(newPos, newWidth, newHeight);
+                        enforceCircle();
 
                         if (rect) { rect->setPos(startingPosition.x(), newPos.y() - edgeOffset.y()); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(startingPosition.x(), newPos.y() - edgeOffset.y()); ellipse->setRect(0, 0, newWidth, newHeight); }
+                        else if (mouseIndicatorItem) { mouseIndicatorItem->setPos(startingPosition.x(), newPos.y() - edgeOffset.y()); mouseIndicatorItem->setRect(0, 0, newWidth, newHeight); }
+                        else if (angularViewerItem) { angularViewerItem->setPos(startingPosition.x(), newPos.y() - edgeOffset.y()); angularViewerItem->setRect(0, 0, newWidth, newHeight); }
                         else if (polygon) { polygon->setPos(startingPosition.x(), newPos.y() - edgeOffset.y()); polygon->setSize(newWidth, newHeight); }
                         else { pathItem->setPos(startingPosition.x(), newPos.y() - edgeOffset.y()); pathItem->setSize(newWidth, newHeight); }
                         break;
@@ -478,8 +680,9 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                         newHeight = startingBounds.height() - yOffset - edgeOffset.y();
 
                         enforceRectSize(newPos, newWidth, newHeight);
+                        enforceCircle();
 
-                        if (rect) rect->setRect(0, 0, newWidth, newHeight); else if (ellipse) ellipse->setRect(0, 0, newWidth, newHeight); else if (polygon) polygon->setSize(newWidth, newHeight); else pathItem->setSize(newWidth, newHeight);
+                        if (rect) rect->setRect(0, 0, newWidth, newHeight); else if (ellipse) ellipse->setRect(0, 0, newWidth, newHeight); else if (mouseIndicatorItem) mouseIndicatorItem->setRect(0, 0, newWidth, newHeight); else if (angularViewerItem) angularViewerItem->setRect(0, 0, newWidth, newHeight); else if (polygon) polygon->setSize(newWidth, newHeight); else pathItem->setSize(newWidth, newHeight);
                         break;
 
                     case 5: // Left Edge
@@ -487,9 +690,12 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                         newHeight = startingBounds.height();
 
                         enforceRectSize(newPos, newWidth, newHeight);
+                        enforceCircle();
 
                         if (rect) { rect->setPos(newPos.x() - edgeOffset.x(), newPos.y() - edgeOffset.y() + yOffset); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(newPos.x() - edgeOffset.x(), newPos.y() - edgeOffset.y() + yOffset); ellipse->setRect(0, 0, newWidth, newHeight); }
+                        else if (mouseIndicatorItem) { mouseIndicatorItem->setPos(newPos.x() - edgeOffset.x(), newPos.y() - edgeOffset.y() + yOffset); mouseIndicatorItem->setRect(0, 0, newWidth, newHeight); }
+                        else if (angularViewerItem) { angularViewerItem->setPos(newPos.x() - edgeOffset.x(), newPos.y() - edgeOffset.y() + yOffset); angularViewerItem->setRect(0, 0, newWidth, newHeight); }
                         else if (polygon) { polygon->setPos(newPos.x() - edgeOffset.x(), newPos.y() - edgeOffset.y() + yOffset); polygon->setSize(newWidth, newHeight); }
                         else { pathItem->setPos(newPos.x() - edgeOffset.x(), newPos.y() - edgeOffset.y() + yOffset); pathItem->setSize(newWidth, newHeight); }
                         break;
@@ -499,9 +705,12 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                         newHeight = startingBounds.height();
 
                         enforceRectSize(newPos, newWidth, newHeight);
+                        enforceCircle();
 
                         if (rect) { rect->setPos(startingPosition.x(), newPos.y() - edgeOffset.y() + yOffset); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(startingPosition.x(), newPos.y() - edgeOffset.y() + yOffset); ellipse->setRect(0, 0, newWidth, newHeight); }
+                        else if (mouseIndicatorItem) { mouseIndicatorItem->setPos(startingPosition.x(), newPos.y() - edgeOffset.y() + yOffset); mouseIndicatorItem->setRect(0, 0, newWidth, newHeight); }
+                        else if (angularViewerItem) { angularViewerItem->setPos(startingPosition.x(), newPos.y() - edgeOffset.y() + yOffset); angularViewerItem->setRect(0, 0, newWidth, newHeight); }
                         else if (polygon) { polygon->setPos(startingPosition.x(), newPos.y() - edgeOffset.y() + yOffset); polygon->setSize(newWidth, newHeight); }
                         else { pathItem->setPos(startingPosition.x(), newPos.y() - edgeOffset.y() + yOffset); pathItem->setSize(newWidth, newHeight); }
                         break;
@@ -510,9 +719,12 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                         newHeight = startingBounds.height() + yOffset;
 
                         enforceRectSize(newPos, newWidth, newHeight);
+                        enforceCircle();
 
                         if (rect) { rect->setPos(newPos.x() - edgeOffset.x() + xOffset, newPos.y() - edgeOffset.y()); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(newPos.x() - edgeOffset.x() + xOffset, newPos.y() - edgeOffset.y()); ellipse->setRect(0, 0, newWidth, newHeight); }
+                        else if (mouseIndicatorItem) { mouseIndicatorItem->setPos(newPos.x() - edgeOffset.x() + xOffset, newPos.y() - edgeOffset.y()); mouseIndicatorItem->setRect(0, 0, newWidth, newHeight); }
+                        else if (angularViewerItem) { angularViewerItem->setPos(newPos.x() - edgeOffset.x() + xOffset, newPos.y() - edgeOffset.y()); angularViewerItem->setRect(0, 0, newWidth, newHeight); }
                         else if (polygon) { polygon->setPos(newPos.x() - edgeOffset.x() + xOffset, newPos.y() - edgeOffset.y()); polygon->setSize(newWidth, newHeight); }
                         else { pathItem->setPos(newPos.x() - edgeOffset.x() + xOffset, newPos.y() - edgeOffset.y()); pathItem->setSize(newWidth, newHeight); }
                         break;
@@ -521,15 +733,20 @@ void LayoutEditorGraphicsView::mouseMoveEvent(QMouseEvent *event) {
                         newHeight = - yOffset + edgeOffset.y();
 
                         enforceRectSize(newPos, newWidth, newHeight);
+                        enforceCircle();
 
                         if (rect) { rect->setPos(newPos.x() - edgeOffset.x() + xOffset, startingPosition.y()); rect->setRect(0, 0, newWidth, newHeight); }
                         else if (ellipse) { ellipse->setPos(newPos.x() - edgeOffset.x() + xOffset, startingPosition.y()); ellipse->setRect(0, 0, newWidth, newHeight); }
+                        else if (mouseIndicatorItem) { mouseIndicatorItem->setPos(newPos.x() - edgeOffset.x() + xOffset, startingPosition.y()); mouseIndicatorItem->setRect(0, 0, newWidth, newHeight); }
+                        else if (angularViewerItem) { angularViewerItem->setPos(newPos.x() - edgeOffset.x() + xOffset, startingPosition.y()); angularViewerItem->setRect(0, 0, newWidth, newHeight); }
                         else if (polygon) { polygon->setPos(newPos.x() - edgeOffset.x() + xOffset, startingPosition.y()); polygon->setSize(newWidth, newHeight); }
                         else { pathItem->setPos(newPos.x() - edgeOffset.x() + xOffset, startingPosition.y()); pathItem->setSize(newWidth, newHeight); }
                         break;
                 }
                 if (rect) rect->setText(rect->getText());
                 else if (ellipse) ellipse->setText(ellipse->getText());
+                else if (mouseIndicatorItem) mouseIndicatorItem->setText(mouseIndicatorItem->getText());
+                else if (angularViewerItem) angularViewerItem->setText(angularViewerItem->getText());
                 else if (polygon) polygon->setText(polygon->getText());
                 else if (pathItem) pathItem->setText(pathItem->getText());
 
@@ -703,6 +920,8 @@ void LayoutEditorGraphicsView::doAction(Action *action){
     ResizableEllipseItem *ellipse = action->item ? dynamic_cast<ResizableEllipseItem*>(action->item) : nullptr;
     ResizablePolygonItem *polygon = action->item ? dynamic_cast<ResizablePolygonItem*>(action->item) : nullptr;
     ResizablePathItem *pathItem = action->item ? dynamic_cast<ResizablePathItem*>(action->item) : nullptr;
+    MouseSpeedIndicatorItem *mouseIndicatorItem = action->item ? dynamic_cast<MouseSpeedIndicatorItem*>(action->item) : nullptr;
+    AngularViewerItem *angularViewerItem = action->item ? dynamic_cast<AngularViewerItem*>(action->item) : nullptr;
     if (action->actionType == Move) {
         if (!action->moveItems.isEmpty()) {
             if (action->moveApplied) {
@@ -719,23 +938,26 @@ void LayoutEditorGraphicsView::doAction(Action *action){
             action->item->setPos(action->position);
             action->position = currentPos;
         }
-    } else if (action->actionType == Resize && (rect || ellipse || polygon || pathItem)) {
+    } else if (action->actionType == Resize && (rect || ellipse || polygon || pathItem || mouseIndicatorItem || angularViewerItem)) {
         QPointF currentPos = action->item->pos();
         QPointF newPos = QPointF(action->position.x(), action->position.y());
-        if (rect) rect->setPos(newPos); else if (ellipse) ellipse->setPos(newPos); else if (polygon) polygon->setPos(newPos); else pathItem->setPos(newPos);
+        if (rect) rect->setPos(newPos); else if (ellipse) ellipse->setPos(newPos); else if (mouseIndicatorItem) mouseIndicatorItem->setPos(newPos); else if (angularViewerItem) angularViewerItem->setPos(newPos); else if (polygon) polygon->setPos(newPos); else pathItem->setPos(newPos);
         action->position = currentPos;
         QRectF currentBounds = getCorrectBoundingRect(action->item);
         qreal w = action->size.width();
         qreal h = action->size.height();
-        if (rect) rect->setRect(0, 0, w, h); else if (ellipse) ellipse->setRect(0, 0, w, h); else if (polygon) polygon->setSize(w, h); else pathItem->setSize(w, h);
+        if (rect) rect->setRect(0, 0, w, h); else if (ellipse) ellipse->setRect(0, 0, w, h); else if (mouseIndicatorItem) mouseIndicatorItem->setRect(0, 0, w, h); else if (angularViewerItem) angularViewerItem->setRect(0, 0, w, h); else if (polygon) polygon->setSize(w, h); else pathItem->setSize(w, h);
         action->size = currentBounds;
-    } else if (action->actionType == ChangeText && (rect || ellipse || polygon || pathItem)) {
+    } else if (action->actionType == ChangeText && (rect || ellipse || polygon || pathItem || mouseIndicatorItem)) {
         if (rect) {
             rect->setText(action->oldText);
             rect->setShiftText(action->oldShiftText);
         } else if (ellipse) {
             ellipse->setText(action->oldText);
             ellipse->setShiftText(action->oldShiftText);
+        } else if (mouseIndicatorItem) {
+            mouseIndicatorItem->setText(action->oldText);
+            mouseIndicatorItem->setShiftText(action->oldShiftText);
         } else if (polygon) {
             polygon->setText(action->oldText);
             polygon->setShiftText(action->oldShiftText);
@@ -744,9 +966,9 @@ void LayoutEditorGraphicsView::doAction(Action *action){
             pathItem->setShiftText(action->oldShiftText);
         }
         action->oldText = action->newText;
-        action->newText = rect ? rect->getText() : (ellipse ? ellipse->getText() : (polygon ? polygon->getText() : pathItem->getText()));
+        action->newText = rect ? rect->getText() : (ellipse ? ellipse->getText() : (mouseIndicatorItem ? mouseIndicatorItem->getText() : (polygon ? polygon->getText() : pathItem->getText())));
         action->oldShiftText = action->newShiftText;
-        action->newShiftText = rect ? rect->getShiftText() : (ellipse ? ellipse->getShiftText() : (polygon ? polygon->getShiftText() : pathItem->getShiftText()));
+        action->newShiftText = rect ? rect->getShiftText() : (ellipse ? ellipse->getShiftText() : (mouseIndicatorItem ? mouseIndicatorItem->getShiftText() : (polygon ? polygon->getShiftText() : pathItem->getShiftText())));
     } else if (action->actionType == ChangeKeyCodes && (rect || ellipse || polygon || pathItem)) {
         if (rect) rect->setKeycodes(action->oldKeycodes); else if (ellipse) ellipse->setKeycodes(action->oldKeycodes); else if (polygon) polygon->setKeycodes(action->oldKeycodes); else pathItem->setKeycodes(action->oldKeycodes);
         action->oldKeycodes = action->newKeycodes;
@@ -819,7 +1041,7 @@ QList<QGraphicsItem*> LayoutEditorGraphicsView::selectedKeyItems() const {
     QList<QGraphicsItem*> out;
     if (!scene) return out;
     for (QGraphicsItem *item : scene->selectedItems()) {
-        if (dynamic_cast<ResizableRectItem*>(item) || dynamic_cast<ResizableEllipseItem*>(item) || dynamic_cast<ResizablePolygonItem*>(item) || dynamic_cast<ResizablePathItem*>(item))
+        if (dynamic_cast<ResizableRectItem*>(item) || dynamic_cast<ResizableEllipseItem*>(item) || dynamic_cast<ResizablePolygonItem*>(item) || dynamic_cast<ResizablePathItem*>(item) || dynamic_cast<MouseSpeedIndicatorItem*>(item) || dynamic_cast<AngularViewerItem*>(item) || dynamic_cast<LabelItem*>(item))
             out.append(item);
     }
     return out;
@@ -1195,7 +1417,10 @@ void LayoutEditorGraphicsView::updateHoverState(QGraphicsItem *itemUnderCursor, 
     bool isKeyShape = itemUnderCursor && (dynamic_cast<ResizableRectItem*>(itemUnderCursor) ||
         dynamic_cast<ResizableEllipseItem*>(itemUnderCursor) ||
         dynamic_cast<ResizablePolygonItem*>(itemUnderCursor) ||
-        dynamic_cast<ResizablePathItem*>(itemUnderCursor));
+        dynamic_cast<ResizablePathItem*>(itemUnderCursor) ||
+        dynamic_cast<MouseSpeedIndicatorItem*>(itemUnderCursor) ||
+        dynamic_cast<AngularViewerItem*>(itemUnderCursor) ||
+        dynamic_cast<LabelItem*>(itemUnderCursor));
 
     if (!isKeyShape) {
         clearHoverBoundingBox();

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(CoreBoard VERSION 0.5.2 LANGUAGES CXX)
+project(CoreBoard VERSION 0.6.0 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -27,6 +27,7 @@ set(TRANSLATABLE_SOURCES
     layouteditorgraphicsview.h layouteditorgraphicsview.cpp
     settingsdialog.cpp
     dialogstyle.cpp
+    dialoglabelstyle.cpp
     dialogtextchange.cpp
     dialogkeycodechange.cpp
     shapeeditordialog.cpp
@@ -35,17 +36,27 @@ set(TRANSLATABLE_SOURCES
     windowsmouselistener.h windowsmouselistener.cpp
 )
 
+set(GAMEPAD_SOURCES)
+if(WIN32)
+    list(APPEND GAMEPAD_SOURCES gamepadlistener.h gamepadlistener.cpp)
+endif()
+
 set(PROJECT_SOURCES
         icons/redo.png icons/undo.png
         resources.qrc
         resizableellipseitem.h resizableellipseitem.cpp
         resizablepolygonitem.h resizablepolygonitem.cpp
         resizablepathitem.h resizablepathitem.cpp
+        mousespeedindicatoritem.h mousespeedindicatoritem.cpp
+        angularvieweritem.h angularvieweritem.cpp
+        labelitem.h labelitem.cpp
+        ${GAMEPAD_SOURCES}
         layoutsettings.h layoutsettings.cpp
         settingsdialog.h settingsdialog.cpp
         labelsettingsdialog.h labelsettingsdialog.cpp
         languagesettingsdialog.h languagesettingsdialog.cpp
         dialogstyle.h dialogstyle.cpp
+        dialoglabelstyle.h dialoglabelstyle.cpp
     shapeeditordialog.h shapeeditordialog.cpp
         resizablepathitem.h resizablepathitem.cpp
         ${TRANSLATABLE_SOURCES}
@@ -92,6 +103,9 @@ endif()
 
 
 target_link_libraries(CoreBoard PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Svg)
+if(WIN32)
+    target_link_libraries(CoreBoard PRIVATE xinput)
+endif()
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an

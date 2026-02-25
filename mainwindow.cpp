@@ -16,6 +16,7 @@
 #ifdef Q_OS_WIN
 #include "windowskeylistener.h"
 #include "windowsmouselistener.h"
+#include "gamepadlistener.h"
 #endif
 
 MainWindow::MainWindow(QWidget *parent)
@@ -47,6 +48,13 @@ MainWindow::MainWindow(QWidget *parent)
     m_mouseListener->startListening();
     connect(m_mouseListener, &WindowsMouseListener::keyPressed, m_keyboardWidget, &KeyboardWidget::onKeyPressed);
     connect(m_mouseListener, &WindowsMouseListener::keyReleased, m_keyboardWidget, &KeyboardWidget::onKeyReleased);
+
+    m_gamepadListener = new GamepadListener(this);
+    m_gamepadListener->startPolling();
+    connect(m_gamepadListener, &GamepadListener::keyPressed, m_keyboardWidget, &KeyboardWidget::onKeyPressed);
+    connect(m_gamepadListener, &GamepadListener::keyReleased, m_keyboardWidget, &KeyboardWidget::onKeyReleased);
+    connect(m_gamepadListener, &GamepadListener::leftStickChanged, m_keyboardWidget, &KeyboardWidget::onLeftStickChanged);
+    connect(m_gamepadListener, &GamepadListener::rightStickChanged, m_keyboardWidget, &KeyboardWidget::onRightStickChanged);
 #endif
 
     QString lastPath = m_layoutSettings->lastLayoutPath();
@@ -56,11 +64,14 @@ MainWindow::MainWindow(QWidget *parent)
     } else {
         pathToLoad = QLatin1String(":/default.json");
     }
-    m_keyboardWidget->loadLayout(pathToLoad);
-    m_layoutEditor->loadLayout(pathToLoad);
-    QTimer::singleShot(100, this, &MainWindow::ensureWindowFitsLayoutEditor);
     int tab = m_layoutSettings->lastTabIndex();
-    m_stackedWidget->setCurrentIndex(qBound(0, tab, 1));
+    // Defer layout load to after window is fully constructed (avoids startup crash when loading from ctor)
+    QTimer::singleShot(0, this, [this, pathToLoad, tab]() {
+        m_keyboardWidget->loadLayout(pathToLoad);
+        m_layoutEditor->loadLayout(pathToLoad);
+        m_stackedWidget->setCurrentIndex(qBound(0, tab, 1));
+    });
+    QTimer::singleShot(100, this, &MainWindow::ensureWindowFitsLayoutEditor);
 
     connect(ui->actionView, &QAction::triggered, this, &MainWindow::onSwitchToView);
     connect(ui->actionEdit, &QAction::triggered, [this]() {
@@ -248,6 +259,9 @@ WindowsKeyListener* MainWindow::keyListener() const {
 #ifdef Q_OS_WIN
 WindowsMouseListener* MainWindow::mouseListener() const {
     return m_mouseListener;
+}
+GamepadListener* MainWindow::gamepadListener() const {
+    return m_gamepadListener;
 }
 #endif
 

@@ -2,9 +2,22 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="fr_FR">
 <context>
+    <name>AngularViewerItem</name>
+    <message>
+        <location filename="../angularvieweritem.cpp" line="+37"/>
+        <source>L</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>R</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>DialogKeycodeChange</name>
     <message>
-        <location filename="../dialogkeycodechange.cpp" line="+23"/>
+        <location filename="../dialogkeycodechange.cpp" line="+25"/>
         <source>Change Key Codes</source>
         <translation>Modifier les codes touches</translation>
     </message>
@@ -20,12 +33,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+35"/>
+        <location line="+37"/>
         <source>Add Key Code</source>
         <translation>Ajouter un code touche</translation>
     </message>
     <message>
-        <location line="-32"/>
+        <location line="-34"/>
         <source>Clear Key Codes</source>
         <translation>Effacer les codes touches</translation>
     </message>
@@ -63,7 +76,17 @@
         <translation>Épaisseur du contour (px) :</translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+14"/>
+        <source>Track color</source>
+        <translation>Couleur de la piste</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Track color (idle):</source>
+        <translation>Couleur de la piste (repos) :</translation>
+    </message>
+    <message>
+        <location line="+18"/>
         <source>Corner radius (px):</source>
         <translation>Rayon des coins (px) :</translation>
     </message>
@@ -98,7 +121,7 @@
         <translation>Couleurs par touche (visualisation uniquement) :</translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+15"/>
         <source>Clear</source>
         <translation>Effacer</translation>
     </message>
@@ -123,12 +146,14 @@
         <translation>Couleur texte (appuyé)</translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="-84"/>
+        <location line="+89"/>
         <source>Cancel</source>
         <translation>Annuler</translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-88"/>
+        <location line="+89"/>
         <source>Apply</source>
         <translation>Appliquer</translation>
     </message>
@@ -209,7 +234,7 @@
     <message>
         <location line="+4"/>
         <source>Interface language:</source>
-        <translation>Langue de l'interface :</translation>
+        <translation>Langue de l&apos;interface :</translation>
     </message>
     <message>
         <location line="+2"/>
@@ -220,19 +245,19 @@
 <context>
     <name>LayoutEditor</name>
     <message>
-        <location filename="../layouteditor.cpp" line="+88"/>
-        <location line="+908"/>
+        <location filename="../layouteditor.cpp" line="+90"/>
+        <location line="+1284"/>
         <source>Open Layout</source>
         <translation>Ouvrir une disposition</translation>
     </message>
     <message>
-        <location line="-905"/>
-        <location line="+906"/>
+        <location line="-1281"/>
+        <location line="+1282"/>
         <source>New Layout</source>
         <translation>Nouvelle disposition</translation>
     </message>
     <message>
-        <location line="-898"/>
+        <location line="-1274"/>
         <source>Undo (Ctrl+Z)</source>
         <translation>Annuler (Ctrl+Z)</translation>
     </message>
@@ -243,89 +268,122 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+880"/>
+        <location line="+1256"/>
         <source>Add Shape</source>
         <translation>Ajouter une forme</translation>
     </message>
     <message>
-        <location line="-871"/>
+        <location line="-1247"/>
         <source>Copy key (click, then click a key to copy)</source>
         <translation>Copier une touche (cliquez, puis cliquez sur une touche)</translation>
     </message>
     <message>
         <location line="+8"/>
-        <location line="+869"/>
+        <location line="+1245"/>
         <source>Paste key</source>
         <translation>Coller la touche</translation>
     </message>
     <message>
-        <location line="-860"/>
-        <location line="+861"/>
+        <location line="-1236"/>
+        <location line="+1237"/>
         <source>Pick style from a key</source>
-        <translation>Prendre le style d'une touche</translation>
+        <translation>Prendre le style d&apos;une touche</translation>
     </message>
     <message>
-        <location line="-853"/>
-        <location line="+854"/>
+        <location line="-1229"/>
+        <location line="+1230"/>
         <source>Apply picked style to key(s)</source>
         <translation>Appliquer le style pris aux touche(s)</translation>
     </message>
     <message>
-        <location line="-850"/>
-        <location line="+851"/>
+        <location line="-1226"/>
+        <location line="+1227"/>
         <source>Rectangle</source>
         <translation>Rectangle</translation>
     </message>
     <message>
-        <location line="-850"/>
-        <location line="+851"/>
+        <location line="-1226"/>
+        <location line="+1227"/>
         <source>Circle</source>
         <translation>Cercle</translation>
     </message>
     <message>
-        <location line="-849"/>
-        <location line="+850"/>
+        <location line="-1225"/>
+        <location line="+1226"/>
         <source>Advanced shapes</source>
         <translation>Formes avancées</translation>
     </message>
     <message>
-        <location line="-849"/>
-        <location line="+850"/>
+        <location line="-1225"/>
+        <location line="+1226"/>
         <source>Star</source>
         <translation>Étoile</translation>
     </message>
     <message>
-        <location line="-849"/>
-        <location line="+850"/>
+        <location line="-1225"/>
+        <location line="+1226"/>
         <source>Diamond</source>
         <translation>Losange</translation>
     </message>
     <message>
-        <location line="-849"/>
-        <location line="+850"/>
+        <location line="-1225"/>
+        <location line="+1226"/>
         <source>Hexagon</source>
         <translation>Hexagone</translation>
     </message>
     <message>
-        <location line="-849"/>
-        <location line="+850"/>
+        <location line="-1225"/>
+        <location line="+1226"/>
         <source>Triangle</source>
         <translation>Triangle</translation>
     </message>
     <message>
-        <location line="-847"/>
-        <location line="+835"/>
+        <location line="-1224"/>
+        <location line="+1225"/>
+        <source>Mouse speed indicator</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1224"/>
+        <location line="+1225"/>
+        <source>Angular viewer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1224"/>
+        <location line="+1225"/>
+        <source>Left joystick</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1224"/>
+        <location line="+1225"/>
+        <source>Right joystick</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1224"/>
+        <location line="+48"/>
+        <location line="+508"/>
+        <location line="+9"/>
+        <location line="+660"/>
+        <source>Label</source>
+        <translation>Étiquette</translation>
+    </message>
+    <message>
+        <location line="-1222"/>
+        <location line="+1205"/>
         <source>Save</source>
         <translation>Enregistrer</translation>
     </message>
     <message>
-        <location line="-832"/>
-        <location line="+833"/>
+        <location line="-1202"/>
+        <location line="+1203"/>
         <source>Save As</source>
         <translation>Enregistrer sous</translation>
     </message>
     <message>
-        <location line="-722"/>
+        <location line="-1076"/>
         <source>Open...</source>
         <translation>Ouvrir...</translation>
     </message>
@@ -341,12 +399,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+341"/>
+        <location line="+482"/>
         <source>Layout Files (*.json);;All Files (*)</source>
         <translation>Fichiers de disposition (*.json);;Tous les fichiers (*)</translation>
     </message>
     <message>
-        <location line="-329"/>
+        <location line="-470"/>
         <source>Layout not found</source>
         <translation>Disposition introuvable</translation>
     </message>
@@ -357,17 +415,17 @@
 &quot;%1&quot;
 
 It has been removed from the recent list.</source>
-        <translation>Le fichier de disposition n'a pas pu être ouvert. Il a peut-être été déplacé ou supprimé.
+        <translation>Le fichier de disposition n&apos;a pas pu être ouvert. Il a peut-être été déplacé ou supprimé.
 
 « %1 »
 
 Il a été retiré de la liste des fichiers récents.</translation>
     </message>
     <message>
-        <location line="+317"/>
+        <location line="+458"/>
         <location line="+21"/>
         <source>Save failed</source>
-        <translation>Échec de l'enregistrement</translation>
+        <translation>Échec de l&apos;enregistrement</translation>
     </message>
     <message>
         <location line="-20"/>
@@ -381,14 +439,14 @@ Possible causes:
 • You don&apos;t have permission to write to this location
 
 Try &quot;Save As&quot; to save to a different location.</source>
-        <translation>Impossible d'enregistrer la disposition dans :
+        <translation>Impossible d&apos;enregistrer la disposition dans :
 
 %1
 
 Causes possibles :
 • Le fichier ou le dossier est en lecture seule
 • Un autre programme utilise le fichier
-• Vous n'avez pas les droits d'écriture à cet emplacement
+• Vous n&apos;avez pas les droits d&apos;écriture à cet emplacement
 
 Essayez « Enregistrer sous » pour enregistrer ailleurs.</translation>
     </message>
@@ -407,17 +465,17 @@ Possible causes:
 • The file or folder is read-only
 • Another program has the file open
 • You don&apos;t have permission to write to this location</source>
-        <translation>Impossible d'enregistrer la disposition dans :
+        <translation>Impossible d&apos;enregistrer la disposition dans :
 
 %1
 
 Causes possibles :
 • Le fichier ou le dossier est en lecture seule
 • Un autre programme utilise le fichier
-• Vous n'avez pas les droits d'écriture à cet emplacement</translation>
+• Vous n&apos;avez pas les droits d&apos;écriture à cet emplacement</translation>
     </message>
     <message>
-        <location line="+354"/>
+        <location line="+567"/>
         <source>Copy key</source>
         <translation>Copier la touche</translation>
     </message>
@@ -425,7 +483,9 @@ Causes possibles :
 <context>
     <name>LayoutEditorGraphicsView</name>
     <message>
-        <location filename="../layouteditorgraphicsview.cpp" line="+91"/>
+        <location filename="../layouteditorgraphicsview.cpp" line="+133"/>
+        <location line="+44"/>
+        <location line="+85"/>
         <source>Rename</source>
         <translation>Renommer</translation>
     </message>
@@ -435,7 +495,10 @@ Causes possibles :
         <translation>Réassigner</translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-165"/>
+        <location line="+36"/>
+        <location line="+44"/>
+        <location line="+86"/>
         <source>Edit style...</source>
         <translation>Modifier le style...</translation>
     </message>
@@ -445,9 +508,32 @@ Causes possibles :
         <translation>Modifier la forme...</translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-165"/>
+        <location line="+36"/>
+        <location line="+57"/>
+        <location line="+74"/>
         <source>Delete</source>
         <translation>Supprimer</translation>
+    </message>
+    <message>
+        <location line="-88"/>
+        <source>Select controller</source>
+        <translation>Sélectionner la manette</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Controller %1</source>
+        <translation>Manette %1</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Flip left/right</source>
+        <translation>Inverser gauche/droite</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Flip up/down</source>
+        <translation>Inverser haut/bas</translation>
     </message>
 </context>
 <context>
@@ -534,7 +620,7 @@ Causes possibles :
         <translation>Assignation</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="+108"/>
+        <location filename="../mainwindow.cpp" line="+116"/>
         <source>About coreBoard</source>
         <translation>À propos de coreBoard</translation>
     </message>
@@ -589,7 +675,7 @@ Causes possibles :
     <message>
         <location line="+2"/>
         <source>Background color:</source>
-        <translation>Couleur d'arrière-plan :</translation>
+        <translation>Couleur d&apos;arrière-plan :</translation>
     </message>
     <message>
         <location line="+2"/>
@@ -614,7 +700,7 @@ Causes possibles :
     <message>
         <location line="+9"/>
         <source>Background color</source>
-        <translation>Couleur d'arrière-plan</translation>
+        <translation>Couleur d&apos;arrière-plan</translation>
     </message>
     <message>
         <location line="+9"/>
@@ -633,22 +719,6 @@ Causes possibles :
         <location filename="../shapeeditordialog.cpp" line="+132"/>
         <source>Edit shape</source>
         <translation>Modifier la forme</translation>
-    </message>
-    <message>
-        <location filename="../shapeeditordialog.cpp" line="71"/>
-        <source>Add point after this</source>
-        <translation>Ajouter un point après celui-ci</translation>
-    </message>
-    <message>
-        <location filename="../shapeeditordialog.cpp" line="72"/>
-        <source>Delete point</source>
-        <translation>Supprimer le point</translation>
-    </message>
-    <message>
-        <location filename="../shapeeditordialog.cpp" line="75"/>
-        <location filename="../shapeeditordialog.cpp" line="121"/>
-        <source>Delete hole</source>
-        <translation>Supprimer le trou</translation>
     </message>
     <message>
         <location line="+91"/>
@@ -674,7 +744,12 @@ Causes possibles :
 <context>
     <name>keycode_nameutil</name>
     <message>
-        <location filename="../keycode_nameutil.cpp" line="+14"/>
+        <location filename="../keycode_nameutil.cpp" line="+41"/>
+        <source>%1 (Controller %2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Left Click (%1)</source>
         <translation>Clic gauche (%1)</translation>
     </message>

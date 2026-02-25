@@ -2,9 +2,22 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="de_DE">
 <context>
+    <name>AngularViewerItem</name>
+    <message>
+        <location filename="../angularvieweritem.cpp" line="+37"/>
+        <source>L</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>R</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>DialogKeycodeChange</name>
     <message>
-        <location filename="../dialogkeycodechange.cpp" line="+23"/>
+        <location filename="../dialogkeycodechange.cpp" line="+25"/>
         <source>Change Key Codes</source>
         <translation>Tastencodes ändern</translation>
     </message>
@@ -20,12 +33,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+35"/>
+        <location line="+37"/>
         <source>Add Key Code</source>
         <translation>Tastencode hinzufügen</translation>
     </message>
     <message>
-        <location line="-16"/>
+        <location line="-18"/>
         <source>Press a key or mouse button...</source>
         <translation>Taste oder Maustaste drücken...</translation>
     </message>
@@ -63,7 +76,17 @@
         <translation>Konturbreite (px):</translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+14"/>
+        <source>Track color</source>
+        <translation>Spurfarbe</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Track color (idle):</source>
+        <translation>Spurfarbe (Leerlauf):</translation>
+    </message>
+    <message>
+        <location line="+18"/>
         <source>Corner radius (px):</source>
         <translation type="unfinished"></translation>
     </message>
@@ -98,7 +121,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+15"/>
         <source>Clear</source>
         <translation type="unfinished"></translation>
     </message>
@@ -123,12 +146,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="-84"/>
+        <location line="+89"/>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-88"/>
+        <location line="+89"/>
         <source>Apply</source>
         <translation>Anwenden</translation>
     </message>
@@ -220,19 +245,19 @@
 <context>
     <name>LayoutEditor</name>
     <message>
-        <location filename="../layouteditor.cpp" line="+88"/>
-        <location line="+908"/>
+        <location filename="../layouteditor.cpp" line="+90"/>
+        <location line="+1284"/>
         <source>Open Layout</source>
         <translation>Layout öffnen</translation>
     </message>
     <message>
-        <location line="-905"/>
-        <location line="+906"/>
+        <location line="-1281"/>
+        <location line="+1282"/>
         <source>New Layout</source>
         <translation>Neues Layout</translation>
     </message>
     <message>
-        <location line="-898"/>
+        <location line="-1274"/>
         <source>Undo (Ctrl+Z)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -243,89 +268,122 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+880"/>
+        <location line="+1256"/>
         <source>Add Shape</source>
         <translation>Form hinzufügen</translation>
     </message>
     <message>
-        <location line="-871"/>
+        <location line="-1247"/>
         <source>Copy key (click, then click a key to copy)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+8"/>
-        <location line="+869"/>
+        <location line="+1245"/>
         <source>Paste key</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-860"/>
-        <location line="+861"/>
+        <location line="-1236"/>
+        <location line="+1237"/>
         <source>Pick style from a key</source>
         <translation>Stil von einer Taste übernehmen</translation>
     </message>
     <message>
-        <location line="-853"/>
-        <location line="+854"/>
+        <location line="-1229"/>
+        <location line="+1230"/>
         <source>Apply picked style to key(s)</source>
         <translation>Übernommenen Stil auf Taste(n) anwenden</translation>
     </message>
     <message>
-        <location line="-850"/>
-        <location line="+851"/>
+        <location line="-1226"/>
+        <location line="+1227"/>
         <source>Rectangle</source>
         <translation>Rechteck</translation>
     </message>
     <message>
-        <location line="-850"/>
-        <location line="+851"/>
+        <location line="-1226"/>
+        <location line="+1227"/>
         <source>Circle</source>
         <translation>Kreis</translation>
     </message>
     <message>
-        <location line="-849"/>
-        <location line="+850"/>
+        <location line="-1225"/>
+        <location line="+1226"/>
         <source>Advanced shapes</source>
         <translation>Erweiterte Formen</translation>
     </message>
     <message>
-        <location line="-849"/>
-        <location line="+850"/>
+        <location line="-1225"/>
+        <location line="+1226"/>
         <source>Star</source>
         <translation>Stern</translation>
     </message>
     <message>
-        <location line="-849"/>
-        <location line="+850"/>
+        <location line="-1225"/>
+        <location line="+1226"/>
         <source>Diamond</source>
         <translation>Raute</translation>
     </message>
     <message>
-        <location line="-849"/>
-        <location line="+850"/>
+        <location line="-1225"/>
+        <location line="+1226"/>
         <source>Hexagon</source>
         <translation>Sechseck</translation>
     </message>
     <message>
-        <location line="-849"/>
-        <location line="+850"/>
+        <location line="-1225"/>
+        <location line="+1226"/>
         <source>Triangle</source>
         <translation>Dreieck</translation>
     </message>
     <message>
-        <location line="-847"/>
-        <location line="+835"/>
+        <location line="-1224"/>
+        <location line="+1225"/>
+        <source>Mouse speed indicator</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1224"/>
+        <location line="+1225"/>
+        <source>Angular viewer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1224"/>
+        <location line="+1225"/>
+        <source>Left joystick</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1224"/>
+        <location line="+1225"/>
+        <source>Right joystick</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1224"/>
+        <location line="+48"/>
+        <location line="+508"/>
+        <location line="+9"/>
+        <location line="+660"/>
+        <source>Label</source>
+        <translation>Beschriftung</translation>
+    </message>
+    <message>
+        <location line="-1222"/>
+        <location line="+1205"/>
         <source>Save</source>
         <translation>Speichern</translation>
     </message>
     <message>
-        <location line="-832"/>
-        <location line="+833"/>
+        <location line="-1202"/>
+        <location line="+1203"/>
         <source>Save As</source>
         <translation>Speichern unter</translation>
     </message>
     <message>
-        <location line="-722"/>
+        <location line="-1076"/>
         <source>Open...</source>
         <translation>Öffnen...</translation>
     </message>
@@ -341,7 +399,7 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+341"/>
+        <location line="+482"/>
         <source>Layout Files (*.json);;All Files (*)</source>
         <translation>Layout-Dateien (*.json);;Alle Dateien (*)</translation>
     </message>
@@ -383,12 +441,12 @@ Possible causes:
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+354"/>
+        <location line="+567"/>
         <source>Copy key</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-694"/>
+        <location line="-1048"/>
         <source>Layout not found</source>
         <translation>Layout nicht gefunden</translation>
     </message>
@@ -409,7 +467,9 @@ Sie wurde aus der Liste der zuletzt verwendeten Dateien entfernt.</translation>
 <context>
     <name>LayoutEditorGraphicsView</name>
     <message>
-        <location filename="../layouteditorgraphicsview.cpp" line="+91"/>
+        <location filename="../layouteditorgraphicsview.cpp" line="+133"/>
+        <location line="+44"/>
+        <location line="+85"/>
         <source>Rename</source>
         <translation>Umbenennen</translation>
     </message>
@@ -419,7 +479,10 @@ Sie wurde aus der Liste der zuletzt verwendeten Dateien entfernt.</translation>
         <translation>Neu zuordnen</translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-165"/>
+        <location line="+36"/>
+        <location line="+44"/>
+        <location line="+86"/>
         <source>Edit style...</source>
         <translation>Stil bearbeiten...</translation>
     </message>
@@ -429,9 +492,32 @@ Sie wurde aus der Liste der zuletzt verwendeten Dateien entfernt.</translation>
         <translation>Form bearbeiten...</translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-165"/>
+        <location line="+36"/>
+        <location line="+57"/>
+        <location line="+74"/>
         <source>Delete</source>
         <translation>Löschen</translation>
+    </message>
+    <message>
+        <location line="-88"/>
+        <source>Select controller</source>
+        <translation>Controller wählen</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Controller %1</source>
+        <translation>Controller %1</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Flip left/right</source>
+        <translation>Links/Rechts umkehren</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Flip up/down</source>
+        <translation>Oben/Unten umkehren</translation>
     </message>
 </context>
 <context>
@@ -492,7 +578,7 @@ Sie wurde aus der Liste der zuletzt verwendeten Dateien entfernt.</translation>
         <translation>Info</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="+108"/>
+        <location filename="../mainwindow.cpp" line="+116"/>
         <source>About coreBoard</source>
         <translation>Über coreBoard</translation>
     </message>
@@ -619,22 +705,6 @@ Sie wurde aus der Liste der zuletzt verwendeten Dateien entfernt.</translation>
         <translation>Form bearbeiten</translation>
     </message>
     <message>
-        <location filename="../shapeeditordialog.cpp" line="71"/>
-        <source>Add point after this</source>
-        <translation>Punkt danach einfügen</translation>
-    </message>
-    <message>
-        <location filename="../shapeeditordialog.cpp" line="72"/>
-        <source>Delete point</source>
-        <translation>Punkt löschen</translation>
-    </message>
-    <message>
-        <location filename="../shapeeditordialog.cpp" line="75"/>
-        <location filename="../shapeeditordialog.cpp" line="121"/>
-        <source>Delete hole</source>
-        <translation>Loch löschen</translation>
-    </message>
-    <message>
         <location line="+91"/>
         <source>Add polygon hole</source>
         <translation>Polygon-Loch hinzufügen</translation>
@@ -658,7 +728,12 @@ Sie wurde aus der Liste der zuletzt verwendeten Dateien entfernt.</translation>
 <context>
     <name>keycode_nameutil</name>
     <message>
-        <location filename="../keycode_nameutil.cpp" line="+14"/>
+        <location filename="../keycode_nameutil.cpp" line="+41"/>
+        <source>%1 (Controller %2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Left Click (%1)</source>
         <translation>Linksklick (%1)</translation>
     </message>

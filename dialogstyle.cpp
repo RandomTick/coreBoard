@@ -62,7 +62,7 @@ private:
     QString m_previewLabel;
 };
 
-DialogStyle::DialogStyle(QWidget *parent, const KeyStyle &currentStyle, const QString &previewLabel, bool isRectangle)
+DialogStyle::DialogStyle(QWidget *parent, const KeyStyle &currentStyle, const QString &previewLabel, bool isRectangle, bool indicatorStyle)
     : QDialog(parent)
     , m_outlineColor(currentStyle.outlineColor)
     , m_previewLabel(previewLabel)
@@ -82,6 +82,35 @@ DialogStyle::DialogStyle(QWidget *parent, const KeyStyle &currentStyle, const QS
     m_outlineWidthSpin->setSingleStep(0.5);
     m_outlineWidthSpin->setValue(currentStyle.outlineWidth);
     form->addRow(tr("Outline width (px):"), m_outlineWidthSpin);
+
+    m_keyColor = currentStyle.keyColor;
+    m_keyColorPressed = currentStyle.keyColorPressed;
+    m_keyTextColor = currentStyle.keyTextColor;
+    m_keyTextColorPressed = currentStyle.keyTextColorPressed;
+
+    if (indicatorStyle) {
+        QWidget *keyColorRow = new QWidget(this);
+        QHBoxLayout *h = new QHBoxLayout(keyColorRow);
+        h->setContentsMargins(0, 0, 0, 0);
+        m_keyColorButton = new QPushButton(keyColorRow);
+        updateKeyColorButton(m_keyColorButton, m_keyColor);
+        connect(m_keyColorButton, &QPushButton::clicked, this, [this]() {
+            QColor c = QColorDialog::getColor(m_keyColor.isValid() ? m_keyColor : Qt::blue, this, tr("Track color"));
+            if (c.isValid()) { m_keyColor = c; updateKeyColorButton(m_keyColorButton, m_keyColor); }
+        });
+        h->addWidget(m_keyColorButton);
+        form->addRow(tr("Track color (idle):"), keyColorRow);
+        mainLayout->addLayout(form);
+        QHBoxLayout *buttons = new QHBoxLayout();
+        QPushButton *cancelBtn = new QPushButton(tr("Cancel"), this);
+        QPushButton *applyBtn = new QPushButton(tr("Apply"), this);
+        connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
+        connect(applyBtn, &QPushButton::clicked, this, &QDialog::accept);
+        buttons->addWidget(cancelBtn);
+        buttons->addWidget(applyBtn);
+        mainLayout->addLayout(buttons);
+        return;
+    }
 
     if (isRectangle) {
         m_cornerRadiusSpin = new QDoubleSpinBox(this);
@@ -133,11 +162,6 @@ DialogStyle::DialogStyle(QWidget *parent, const KeyStyle &currentStyle, const QS
     QLabel *keyColorsLabel = new QLabel(tr("Per-key colors (visualization only):"), this);
     keyColorsLabel->setStyleSheet("font-weight: bold; margin-top: 8px;");
     form->addRow(keyColorsLabel);
-
-    m_keyColor = currentStyle.keyColor;
-    m_keyColorPressed = currentStyle.keyColorPressed;
-    m_keyTextColor = currentStyle.keyTextColor;
-    m_keyTextColorPressed = currentStyle.keyTextColorPressed;
 
     auto addColorRow = [this, form](const QString &label, QColor &color, QPushButton *&btn, const QColor &fallback) {
         QWidget *row = new QWidget(this);
@@ -203,11 +227,11 @@ KeyStyle DialogStyle::getStyle() const {
     KeyStyle s;
     s.outlineColor = m_outlineColor;
     s.outlineWidth = m_outlineWidthSpin->value();
-    s.cornerRadius = m_cornerRadiusSpin ? m_cornerRadiusSpin->value() : 0;
-    s.fontPointSize = m_fontSizeSpin->value();
-    s.fontBold = m_fontBoldCheck->isChecked();
-    s.fontItalic = m_fontItalicCheck->isChecked();
-    s.fontFamily = m_fontCombo->currentData().toString().trimmed();
+    s.cornerRadius = (m_cornerRadiusSpin ? m_cornerRadiusSpin->value() : 0);
+    if (m_fontSizeSpin) s.fontPointSize = m_fontSizeSpin->value();
+    if (m_fontBoldCheck) s.fontBold = m_fontBoldCheck->isChecked();
+    if (m_fontItalicCheck) s.fontItalic = m_fontItalicCheck->isChecked();
+    if (m_fontCombo) s.fontFamily = m_fontCombo->currentData().toString().trimmed();
     s.keyColor = m_keyColor;
     s.keyColorPressed = m_keyColorPressed;
     s.keyTextColor = m_keyTextColor;
