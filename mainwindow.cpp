@@ -12,7 +12,10 @@
 #include "labelsettingsdialog.h"
 #include "languagesettingsdialog.h"
 #include "versioninfo.h"
+#include "welcomedialog.h"
 #include <QApplication>
+#include <QDesktopServices>
+#include <QUrl>
 #ifdef Q_OS_WIN
 #include "windowskeylistener.h"
 #include "windowsmouselistener.h"
@@ -83,6 +86,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionLabelDisplay, &QAction::triggered, this, &MainWindow::onLabelDisplay);
     connect(ui->actionLanguage, &QAction::triggered, this, &MainWindow::onLanguage);
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::onAbout);
+    connect(ui->actionGettingStarted, &QAction::triggered, this, &MainWindow::onGettingStarted);
+    connect(ui->actionNohBoardLayouts, &QAction::triggered, this, &MainWindow::onNohBoardLayouts);
+    connect(ui->actionReportProblem, &QAction::triggered, this, &MainWindow::onReportProblem);
     applyVisualizationColors();
     connect(m_layoutEditor, &LayoutEditor::layoutLoaded, this, &MainWindow::reloadVisualizationLayout);
     connect(m_layoutEditor, &LayoutEditor::layoutLoaded, this, [this]() {
@@ -118,10 +124,23 @@ void MainWindow::onAbout()
 {
     QMessageBox::about(this, tr("About coreBoard"),
         tr("<h3>coreBoard</h3>"
-           "<p>coreBoard is a keyboard visualization tool for streaming and video. "
-           "It displays key presses on screen in real time and is designed to be fast and easy to capture with OBS or similar software.</p>"
-           "<p>Built with C++ and Qt.</p>"
-           "<p>All source code is publicly available under the GPL-3.0 license:<br>"
+           "<p>coreBoard is a keyboard, mouse, and controller visualization tool for streaming and video. "
+           "It displays key presses and input on screen in real time and is designed to be fast and easy to capture with OBS or similar software.</p>"
+           "<h4>Features</h4>"
+           "<p><b>Layout editor (Edit Layout):</b> Add and edit shapes — rectangles, circles, polygons (star, diamond, hexagon, triangle), "
+           "free-form paths, mouse speed indicator, and left/right joystick viewers. "
+           "Per key shape: rebind (keyboard, mouse, or controller), rename, edit style, edit shape. "
+           "Mouse/joystick elements: rename, edit style. "
+           "Edit style: outline color and width, corner radius, font family/size/bold/italic, per-key colors. "
+           "Open, new, save, recent files, undo/redo, copy/paste, move and resize.</p>"
+           "<p><b>Visualization (View):</b> Real-time key, mouse, and controller display; global colors and label display.</p>"
+           "<p><b>Settings:</b> Colors, label display (follow caps/shift, uppercase, lowercase), language.</p>"
+           "<h4>Compatibility</h4>"
+           "<p><b>NohBoard → coreBoard:</b> You can open NohBoard .json layouts in coreBoard (Edit Layout → Open Layout). "
+           "Very custom NohBoard layouts might not be fully supported; please report issues (Help → Report a problem).</p>"
+           "<p><b>coreBoard → NohBoard:</b> Layouts saved from coreBoard may not be fully functional in NohBoard, "
+           "since coreBoard adds features such as joystick (angular) viewers and controller button bindings that NohBoard does not support.</p>"
+           "<p>Built with C++ and Qt. All source code is publicly available under the GPL-3.0 license:<br>"
            "<a href=\"https://github.com/RandomTick/coreBoard\">https://github.com/RandomTick/coreBoard</a></p>"
            "<p>Version %1</p>").arg(QLatin1String(APP_VERSION)));
 }
@@ -151,6 +170,24 @@ void MainWindow::onLanguage()
             code = QStringLiteral("en_US");
         changeLanguage(qApp, code);
     }
+}
+
+void MainWindow::onGettingStarted()
+{
+    WelcomeDialog dlg(m_layoutSettings, this);
+    dlg.exec();
+}
+
+void MainWindow::onNohBoardLayouts()
+{
+    QMessageBox::information(this, tr("NohBoard layouts"),
+        tr("To use a NohBoard layout: switch to <b>Edit Layout</b>, click <b>Open Layout</b>, then choose your .json file. No conversion needed.\n\n"
+           "Very custom NohBoard layouts might not be fully supported; if something doesn't look right, report it (Help → Report a problem)."));
+}
+
+void MainWindow::onReportProblem()
+{
+    QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/RandomTick/coreBoard/issues")));
 }
 
 void MainWindow::applyVisualizationColors()
@@ -236,6 +273,8 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::showEvent(QShowEvent *event)
 {
     QMainWindow::showEvent(event);
+    if (!m_layoutSettings->welcomeDialogShown())
+        QTimer::singleShot(200, this, [this]() { WelcomeDialog::showIfNeeded(m_layoutSettings, this); });
     if (m_stackedWidget->currentIndex() == 1)
         QTimer::singleShot(100, this, &MainWindow::ensureWindowFitsLayoutEditor);
 }

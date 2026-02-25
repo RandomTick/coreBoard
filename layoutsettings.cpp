@@ -14,6 +14,7 @@ static const char kTextColorKey[] = "textColor";
 static const char kHighlightedTextColorKey[] = "highlightedTextColor";
 static const char kLabelModeKey[] = "labelMode";
 static const char kLanguageCodeKey[] = "languageCode";
+static const char kWelcomeDialogShownKey[] = "welcomeDialogShown";
 
 LayoutSettings::LayoutSettings()
 {
@@ -146,6 +147,16 @@ void LayoutSettings::setLanguageCode(const QString &code)
     m_languageCode = code;
 }
 
+bool LayoutSettings::welcomeDialogShown() const
+{
+    return m_welcomeDialogShown;
+}
+
+void LayoutSettings::setWelcomeDialogShown(bool shown)
+{
+    m_welcomeDialogShown = shown;
+}
+
 void LayoutSettings::save()
 {
     QSettings s(kOrg, kApp);
@@ -158,6 +169,7 @@ void LayoutSettings::save()
     s.setValue(kHighlightedTextColorKey, m_highlightedTextColor.name(QColor::HexArgb));
     s.setValue(kLabelModeKey, static_cast<int>(m_labelMode));
     s.setValue(kLanguageCodeKey, m_languageCode);
+    s.setValue(kWelcomeDialogShownKey, m_welcomeDialogShown);
     s.beginWriteArray(kRecentGroup);
     for (int i = 0; i < m_recentLayouts.size(); ++i) {
         s.setArrayIndex(i);
@@ -197,6 +209,7 @@ void LayoutSettings::load()
         m_labelMode = oldShow ? LabelMode::FollowCapsAndShift : LabelMode::AllLowercase;
     }
     m_languageCode = s.value(kLanguageCodeKey).toString();
+    m_welcomeDialogShown = s.value(kWelcomeDialogShownKey, false).toBool();
     m_recentLayouts.clear();
     int n = s.beginReadArray(kRecentGroup);
     for (int i = 0; i < n; ++i) {

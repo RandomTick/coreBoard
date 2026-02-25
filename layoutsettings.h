@@ -47,6 +47,9 @@ public:
     QString languageCode() const;
     void setLanguageCode(const QString &code);
 
+    bool welcomeDialogShown() const;
+    void setWelcomeDialogShown(bool shown);
+
 private:
     void load();
 
@@ -62,6 +65,7 @@ private:
     QColor m_highlightedTextColor;
     LabelMode m_labelMode = LabelMode::FollowCapsAndShift;
     QString m_languageCode;
+    bool m_welcomeDialogShown = false;
 };
 
 #endif // LAYOUTSETTINGS_H

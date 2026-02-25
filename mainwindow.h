@@ -50,6 +50,9 @@ private slots:
     void onColors();
     void onLabelDisplay();
     void onLanguage();
+    void onGettingStarted();
+    void onNohBoardLayouts();
+    void onReportProblem();
     void reloadVisualizationLayout(const QString &path);
     void ensureWindowFitsLayoutEditor();
 

@@ -23,20 +23,24 @@ ResizableEllipseItem::ResizableEllipseItem(const QRectF &rect, const QString &te
     textItem = new QGraphicsTextItem(this);
     textItem->document()->setDocumentMargin(0);
     QTextOption opt;
-    opt.setAlignment(Qt::AlignHCenter);
+    opt.setAlignment(KeyStyle().textAlignment == 0 ? Qt::AlignLeft : (KeyStyle().textAlignment == 2 ? Qt::AlignRight : Qt::AlignHCenter));
     textItem->document()->setDefaultTextOption(opt);
     textItem->setPlainText(text);
     textItem->setFont(KeyStyle().font());
     keyCodes = keycodes;
     const qreal margin = 8;
-    textItem->setTextWidth(qMax(0.0, rect.width() - margin));
+    qreal w = rect.width() - margin;
+    if (textItem->font().italic()) w += 10;
+    textItem->setTextWidth(qMax(0.0, w));
     centerText();
 }
 
 void ResizableEllipseItem::setText(const QString &text) {
     textItem->setPlainText(text);
     const qreal margin = 8;
-    textItem->setTextWidth(qMax(0.0, rect().width() - margin));
+    qreal w = rect().width() - margin;
+    if (textItem->font().italic()) w += 10;
+    textItem->setTextWidth(qMax(0.0, w));
     centerText();
 }
 
@@ -55,7 +59,9 @@ QString ResizableEllipseItem::getShiftText() const {
 void ResizableEllipseItem::setRect(const QRectF &rect) {
     QGraphicsEllipseItem::setRect(rect);
     const qreal margin = 8;
-    textItem->setTextWidth(qMax(0.0, rect.width() - margin));
+    qreal w = rect.width() - margin;
+    if (textItem->font().italic()) w += 10;
+    textItem->setTextWidth(qMax(0.0, w));
     centerText();
 }
 
@@ -73,9 +79,14 @@ std::list<int> ResizableEllipseItem::getKeycodes() {
 
 void ResizableEllipseItem::centerText() {
     QRectF textRect = textItem->boundingRect();
-    QPointF target = m_hasCustomTextPosition ? m_textPosition : rect().center();
-    target -= QPointF(textRect.width() / 2, textRect.height() / 2);
-    textItem->setPos(target);
+    QRectF r = rect();
+    QPointF anchor = m_hasCustomTextPosition ? m_textPosition : r.center();
+    Qt::Alignment align = textItem->document()->defaultTextOption().alignment();
+    qreal x = (align & Qt::AlignLeft) ? anchor.x()
+          : (align & Qt::AlignRight) ? (anchor.x() - textRect.width())
+          : (anchor.x() - textRect.width() / 2);
+    qreal y = anchor.y() - textRect.height() / 2;
+    textItem->setPos(x, y);
 }
 
 QPointF ResizableEllipseItem::textPosition() const {
@@ -100,6 +111,8 @@ KeyStyle ResizableEllipseItem::keyStyle() const {
     s.keyColorPressed = m_keyColorPressed;
     s.keyTextColor = m_keyTextColor;
     s.keyTextColorPressed = m_keyTextColorPressed;
+    Qt::Alignment align = textItem->document()->defaultTextOption().alignment();
+    s.textAlignment = (align & Qt::AlignRight) ? 2 : ((align & Qt::AlignLeft) ? 0 : 1);
     return s;
 }
 
@@ -110,5 +123,12 @@ void ResizableEllipseItem::setKeyStyle(const KeyStyle &style) {
     m_keyColorPressed = style.keyColorPressed;
     m_keyTextColor = style.keyTextColor;
     m_keyTextColorPressed = style.keyTextColorPressed;
+    QTextOption opt = textItem->document()->defaultTextOption();
+    opt.setAlignment(style.textAlignment == 0 ? Qt::AlignLeft : (style.textAlignment == 2 ? Qt::AlignRight : Qt::AlignHCenter));
+    textItem->document()->setDefaultTextOption(opt);
+    const qreal margin = 8;
+    qreal w = rect().width() - margin;
+    if (textItem->font().italic()) w += 10;
+    textItem->setTextWidth(qMax(0.0, w));
     centerText();
 }

@@ -23,9 +23,14 @@ const int BaseTextRole = Qt::UserRole;
 const int ShiftTextRole = Qt::UserRole + 1;
 const int KeyColorRole = Qt::UserRole + 2;
 const int TextPositionLocalRole = Qt::UserRole + 6;  // QPointF in shape local coords, or invalid if use center
+const int TextAlignmentRole = Qt::UserRole + 7;     // int: 0=left, 1=center, 2=right
 const int KeyColorPressedRole = Qt::UserRole + 3;
 const int KeyTextColorRole = Qt::UserRole + 4;
 const int KeyTextColorPressedRole = Qt::UserRole + 5;
+
+static Qt::Alignment alignmentFromInt(int a) {
+    return (a == 0) ? Qt::AlignLeft : ((a == 2) ? Qt::AlignRight : Qt::AlignHCenter);
+}
 }
 
 KeyboardWidget::KeyboardWidget(QWidget *parent) : QWidget(parent)
@@ -149,6 +154,7 @@ void KeyboardWidget::loadLayoutFromData(const QByteArray &jsonData)
         keyCounter.clear();
         m_mouseSpeedIndicators.clear();
         m_angularViewers.clear();
+        m_labelOverlays.clear();
         if (m_mouseIndicatorTimer) m_mouseIndicatorTimer->stop();
         update();
         return;
@@ -171,6 +177,7 @@ void KeyboardWidget::applyLayoutData(const QByteArray &jsonData)
     keyCounter.clear();
     m_mouseSpeedIndicators.clear();
     m_angularViewers.clear();
+    m_labelOverlays.clear();
     if (m_mouseIndicatorTimer)
         m_mouseIndicatorTimer->stop();
 
@@ -405,26 +412,36 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
 
     shapeItem->setBrush(brushColor);
 
+    const int textAlign = keyStyle.textAlignment;
+    shapeItem->setData(TextAlignmentRole, textAlign);
+
     QGraphicsTextItem *textItem = new QGraphicsTextItem(shapeItem);
     textItem->document()->setDocumentMargin(0);
     QTextOption opt;
-    opt.setAlignment(Qt::AlignHCenter);
+    opt.setAlignment(alignmentFromInt(textAlign));
     textItem->document()->setDefaultTextOption(opt);
     textItem->setPlainText(label);
     textItem->setDefaultTextColor(textCol);
     textItem->setFont(keyStyle.font());
     QRectF shapeBr = shapeItem->boundingRect();
-    textItem->setTextWidth(qMax(0.0, shapeBr.width() - 8));
+    qreal docWidth = qMax(0.0, shapeBr.width() - 8);
+    if (keyStyle.fontItalic)
+        docWidth += 10;  // extra so italic slant isn't clipped when right-aligned
+    textItem->setTextWidth(docWidth);
     QRectF textBr = textItem->boundingRect();
-    QPointF textCenterLocal = shapeBr.center();
+    QPointF anchorLocal = shapeBr.center();
     if (keyData.contains("TextPosition")) {
         QJsonObject tp = keyData["TextPosition"].toObject();
         qreal tpX = tp["X"].toDouble();
         qreal tpY = tp["Y"].toDouble();
-        textCenterLocal = shapeItem->mapFromScene(QPointF(tpX, tpY));
-        shapeItem->setData(TextPositionLocalRole, textCenterLocal);
+        anchorLocal = shapeItem->mapFromScene(QPointF(tpX, tpY));
+        shapeItem->setData(TextPositionLocalRole, anchorLocal);
     }
-    textItem->setPos(textCenterLocal.x() - textBr.width() / 2, textCenterLocal.y() - textBr.height() / 2);
+    // Anchor is the edit-shape truth: center=center, left=left edge, right=right edge
+    qreal textX = (textAlign == 0) ? anchorLocal.x()
+                 : (textAlign == 2) ? (anchorLocal.x() - textBr.width())
+                 : (anchorLocal.x() - textBr.width() / 2);
+    textItem->setPos(textX, anchorLocal.y() - textBr.height() / 2);
     textItem->setZValue(1);
 
     for (int i = 0; i < kc.size(); ++i) {
@@ -523,15 +540,48 @@ void KeyboardWidget::createLabelOverlay(const QJsonObject &keyData)
     qreal x = keyData.value("X").toDouble();
     qreal y = keyData.value("Y").toDouble();
     QString text = keyData.value("Text").toString();
+    QString shiftText = keyData.value("ShiftText").toString();
+    if (shiftText.isEmpty())
+        shiftText = text;
     KeyStyle keyStyle = KeyStyle::fromJson(keyData);
     QColor textColor = keyStyle.keyTextColor.isValid() ? keyStyle.keyTextColor : m_textColor;
     QGraphicsTextItem *label = new QGraphicsTextItem(text);
-    label->setPos(x, y);
+    QTextOption labelOpt;
+    labelOpt.setAlignment(alignmentFromInt(keyStyle.textAlignment));
+    label->document()->setDefaultTextOption(labelOpt);
+    label->document()->setDocumentMargin(2);  // match LabelItem
     if (keyStyle.fontPointSize > 0 || !keyStyle.fontFamily.isEmpty())
         label->setFont(keyStyle.font());
     label->setDefaultTextColor(textColor);
     label->setZValue(0);
     m_scene->addItem(label);
+    QRectF br = label->boundingRect();
+    qreal wBase = br.width();
+    qreal w = wBase;
+    if (!shiftText.isEmpty() && shiftText != text) {
+        label->setPlainText(shiftText);
+        qreal wShift = label->boundingRect().width();
+        label->setPlainText(text);
+        w = qMax(wBase, wShift);
+    }
+    if (w > 0) {
+        label->document()->setTextWidth(2 * w);  // fixed width so shift toggle doesn't jump
+    }
+    br = label->boundingRect();
+    qreal docW = br.width();
+    qreal docH = br.height();
+    qreal px = (keyStyle.textAlignment == 0) ? x : (keyStyle.textAlignment == 2) ? (x - docW) : (x - docW / 2);
+    qreal py = y - docH / 2;
+    label->setPos(px, py);  // (X,Y) = anchor (left/center/right by alignment), match editor
+    LabelOverlay entry;
+    entry.textItem = label;
+    entry.baseText = text;
+    entry.shiftText = shiftText;
+    entry.anchorX = x;
+    entry.anchorY = y;
+    entry.labelWidth = w;
+    entry.textAlignment = keyStyle.textAlignment;
+    m_labelOverlays.append(entry);
 }
 
 void KeyboardWidget::updateMouseIndicatorsFromCursor()
@@ -703,33 +753,64 @@ void KeyboardWidget::updateLabelsForShiftState()
         if (item->parentItem() != nullptr)
             continue;
         QAbstractGraphicsShapeItem *shape = qgraphicsitem_cast<QAbstractGraphicsShapeItem*>(item);
-        if (!shape)
-            continue;
-        QString baseText = shape->data(BaseTextRole).toString();
-        QString shiftText = shape->data(ShiftTextRole).toString();
-        if (baseText.isNull() && shiftText.isNull())
-            continue;
-        if (shiftText.isEmpty())
-            shiftText = baseText;
-        if (baseText.isEmpty())
-            baseText = shiftText;
-        QString displayText = useShiftLabel ? shiftText : baseText;
-        for (QGraphicsItem *child : shape->childItems()) {
-            QGraphicsTextItem *textItem = qgraphicsitem_cast<QGraphicsTextItem*>(child);
-            if (textItem) {
-                textItem->setPlainText(displayText);
-                QRectF textBr = textItem->boundingRect();
-                QRectF shapeBr = shape->boundingRect();
-                QPointF anchor = shapeBr.center();
-                QVariant v = shape->data(TextPositionLocalRole);
-                if (v.isValid() && v.canConvert<QPointF>()) {
-                    QPointF customPos = v.toPointF();
-                    if (QPointF(customPos - shapeBr.center()).manhattanLength() > 0.5)
-                        anchor = customPos;
+        if (shape) {
+            QString baseText = shape->data(BaseTextRole).toString();
+            QString shiftText = shape->data(ShiftTextRole).toString();
+            if (baseText.isNull() && shiftText.isNull())
+                continue;
+            if (shiftText.isEmpty())
+                shiftText = baseText;
+            if (baseText.isEmpty())
+                baseText = shiftText;
+            QString displayText = useShiftLabel ? shiftText : baseText;
+            for (QGraphicsItem *child : shape->childItems()) {
+                QGraphicsTextItem *textItem = qgraphicsitem_cast<QGraphicsTextItem*>(child);
+                if (textItem) {
+                    textItem->setPlainText(displayText);
+                    QVariant alignV = shape->data(TextAlignmentRole);
+                    int align = alignV.isValid() ? qBound(0, alignV.toInt(), 2) : 1;
+                    QTextOption opt = textItem->document()->defaultTextOption();
+                    opt.setAlignment(alignmentFromInt(align));
+                    textItem->document()->setDefaultTextOption(opt);
+                    QRectF textBr = textItem->boundingRect();
+                    QRectF shapeBr = shape->boundingRect();
+                    QPointF anchor = shapeBr.center();
+                    QVariant v = shape->data(TextPositionLocalRole);
+                    if (v.isValid() && v.canConvert<QPointF>()) {
+                        QPointF customPos = v.toPointF();
+                        if (QPointF(customPos - shapeBr.center()).manhattanLength() > 0.5)
+                            anchor = customPos;
+                    }
+                    // Anchor = edit-shape truth: center=center, left=left edge, right=right edge
+                    qreal textX = (align == 0) ? anchor.x()
+                                 : (align == 2) ? (anchor.x() - textBr.width())
+                                 : (anchor.x() - textBr.width() / 2);
+                    textItem->setPos(textX, anchor.y() - textBr.height() / 2);
+                    break;
                 }
-                textItem->setPos(anchor.x() - textBr.width() / 2, anchor.y() - textBr.height() / 2);
-                break;
             }
+            continue;
         }
+    }
+    for (const LabelOverlay &overlay : m_labelOverlays) {
+        if (!overlay.textItem)
+            continue;
+        QString baseText = overlay.baseText;
+        QString shiftText = overlay.shiftText.isEmpty() ? overlay.baseText : overlay.shiftText;
+        QString displayText = useShiftLabel ? shiftText : baseText;
+        overlay.textItem->setPlainText(displayText);
+        QTextOption labelOpt = overlay.textItem->document()->defaultTextOption();
+        labelOpt.setAlignment(alignmentFromInt(overlay.textAlignment));
+        overlay.textItem->document()->setDefaultTextOption(labelOpt);
+        qreal w = overlay.labelWidth;
+        if (w > 0) {
+            overlay.textItem->document()->setTextWidth(2 * w);
+        }
+        QRectF br = overlay.textItem->boundingRect();
+        qreal docW = br.width();
+        qreal docH = br.height();
+        qreal px = (overlay.textAlignment == 0) ? overlay.anchorX : (overlay.textAlignment == 2) ? (overlay.anchorX - docW) : (overlay.anchorX - docW / 2);
+        qreal py = overlay.anchorY - docH / 2;
+        overlay.textItem->setPos(px, py);  // anchor = single point of truth
     }
 }

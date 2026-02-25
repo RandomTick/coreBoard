@@ -8,6 +8,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsItem>
 #include <QGraphicsEllipseItem>
+#include <QGraphicsTextItem>
 #include <map>
 #include <vector>
 #include <QList>
@@ -34,6 +35,16 @@ struct AngularViewerOverlay {
     QRectF rect;
     QGraphicsEllipseItem *trackItem = nullptr;
     QGraphicsEllipseItem *indicatorItem = nullptr;
+};
+
+struct LabelOverlay {
+    QGraphicsTextItem *textItem = nullptr;
+    QString baseText;
+    QString shiftText;
+    qreal anchorX = 0;  // top-left from layout
+    qreal anchorY = 0;
+    qreal labelWidth = 0;  // fixed width (max of base/shift) so position doesn't jump
+    int textAlignment = 1;  // 0=left, 1=center, 2=right
 };
 
 class KeyboardWidget : public QWidget
@@ -84,6 +95,7 @@ private:
 
     QList<MouseSpeedIndicatorOverlay> m_mouseSpeedIndicators;
     QList<AngularViewerOverlay> m_angularViewers;
+    QList<LabelOverlay> m_labelOverlays;
     QTimer *m_mouseIndicatorTimer = nullptr;
 
 public slots:

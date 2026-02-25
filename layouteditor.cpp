@@ -165,6 +165,7 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     m_angularViewerMenu = m_addShapeMenu->addMenu(tr("Angular viewer"));
     m_actLeftStick = m_angularViewerMenu->addAction(tr("Left joystick"));
     m_actRightStick = m_angularViewerMenu->addAction(tr("Right joystick"));
+    m_addShapeMenu->addSeparator();
     m_actLabel = m_addShapeMenu->addAction(tr("Label"));
     addButton->setMenu(m_addShapeMenu);
 
@@ -724,6 +725,8 @@ LabelItem* LayoutEditor::createLabel(const QJsonObject &keyData) {
     if (text.isEmpty()) text = tr("Label");
     KeyStyle keyStyle = KeyStyle::fromJson(keyData);
     LabelItem *item = new LabelItem(text, x, y);
+    if (keyData.contains("ShiftText"))
+        item->setShiftText(keyData.value("ShiftText").toString());
     item->setKeyStyle(keyStyle);
     scene->addItem(item);
     return item;
@@ -842,9 +845,11 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
             QJsonObject elemObj;
             elemObj.insert("__type", "Label");
             elemObj.insert("Id", id++);
-            elemObj.insert("X", static_cast<int>(labelItem->pos().x()));
-            elemObj.insert("Y", static_cast<int>(labelItem->pos().y()));
+            QPointF anchor = labelItem->anchorScenePos();
+            elemObj.insert("X", static_cast<int>(anchor.x()));
+            elemObj.insert("Y", static_cast<int>(anchor.y()));
             elemObj.insert("Text", labelItem->getText());
+            elemObj.insert("ShiftText", labelItem->getShiftText().isEmpty() ? labelItem->getText() : labelItem->getShiftText());
             QJsonObject styleObj = labelItem->keyStyle().toJson();
             for (auto it = styleObj.begin(); it != styleObj.end(); ++it)
                 elemObj.insert(it.key(), it.value());
@@ -1257,9 +1262,11 @@ void LayoutEditor::copyKeyFromItem(QGraphicsItem *item) {
             keyObj.insert(it.key(), it.value());
     } else if (labelItemCopy) {
         keyObj.insert("__type", "Label");
-        keyObj.insert("X", static_cast<int>(labelItemCopy->pos().x()));
-        keyObj.insert("Y", static_cast<int>(labelItemCopy->pos().y()));
+        QPointF anchor = labelItemCopy->anchorScenePos();
+        keyObj.insert("X", static_cast<int>(anchor.x()));
+        keyObj.insert("Y", static_cast<int>(anchor.y()));
         keyObj.insert("Text", labelItemCopy->getText());
+        keyObj.insert("ShiftText", labelItemCopy->getShiftText().isEmpty() ? labelItemCopy->getText() : labelItemCopy->getShiftText());
         QJsonObject styleObj = labelItemCopy->keyStyle().toJson();
         for (auto it = styleObj.begin(); it != styleObj.end(); ++it)
             keyObj.insert(it.key(), it.value());

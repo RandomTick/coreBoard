@@ -20,6 +20,8 @@ struct KeyStyle {
     QColor keyColorPressed;
     QColor keyTextColor;
     QColor keyTextColorPressed;
+    // Text alignment for key labels and standalone labels: 0=left, 1=center, 2=right
+    int textAlignment{1};
 
     QPen pen() const {
         return QPen(outlineColor, outlineWidth);
@@ -71,6 +73,12 @@ struct KeyStyle {
             QColor c(keyData.value("KeyTextColorPressed").toString());
             if (c.isValid()) s.keyTextColorPressed = c;
         }
+        if (keyData.contains("TextAlignment")) {
+            QString a = keyData.value("TextAlignment").toString();
+            if (a == QLatin1String("left")) s.textAlignment = 0;
+            else if (a == QLatin1String("right")) s.textAlignment = 2;
+            else s.textAlignment = 1;  // center or any other
+        }
         return s;
     }
 
@@ -93,6 +101,8 @@ struct KeyStyle {
             o.insert("KeyTextColor", keyTextColor.name());
         if (keyTextColorPressed.isValid())
             o.insert("KeyTextColorPressed", keyTextColorPressed.name());
+        if (textAlignment != 1)
+            o.insert("TextAlignment", textAlignment == 0 ? QStringLiteral("left") : (textAlignment == 2 ? QStringLiteral("right") : QStringLiteral("center")));
         return o;
     }
 };

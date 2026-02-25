@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(CoreBoard VERSION 0.6.0 LANGUAGES CXX)
+project(CoreBoard VERSION 0.6.1 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -32,6 +32,7 @@ set(TRANSLATABLE_SOURCES
     dialogkeycodechange.cpp
     shapeeditordialog.cpp
     languagesettingsdialog.cpp
+    welcomedialog.cpp
     keycode_nameutil.h keycode_nameutil.cpp
     windowsmouselistener.h windowsmouselistener.cpp
 )
@@ -55,6 +56,7 @@ set(PROJECT_SOURCES
         settingsdialog.h settingsdialog.cpp
         labelsettingsdialog.h labelsettingsdialog.cpp
         languagesettingsdialog.h languagesettingsdialog.cpp
+        welcomedialog.h welcomedialog.cpp
         dialogstyle.h dialogstyle.cpp
         dialoglabelstyle.h dialoglabelstyle.cpp
     shapeeditordialog.h shapeeditordialog.cpp

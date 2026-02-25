@@ -17,12 +17,14 @@ ResizablePathItem::ResizablePathItem(const QPolygonF &outer, const QList<QPolygo
     textItem = new QGraphicsTextItem(this);
     textItem->document()->setDocumentMargin(0);
     QTextOption opt;
-    opt.setAlignment(Qt::AlignHCenter);
+    opt.setAlignment(KeyStyle().textAlignment == 0 ? Qt::AlignLeft : (KeyStyle().textAlignment == 2 ? Qt::AlignRight : Qt::AlignHCenter));
     textItem->document()->setDefaultTextOption(opt);
     textItem->setPlainText(text);
     textItem->setFont(KeyStyle().font());
     const qreal margin = 8;
-    textItem->setTextWidth(qMax(0.0, boundingRect().width() - margin));
+    qreal w = boundingRect().width() - margin;
+    if (textItem->font().italic()) w += 10;
+    textItem->setTextWidth(qMax(0.0, w));
     rebuildPath();
     centerText();
 }
@@ -38,8 +40,11 @@ void ResizablePathItem::rebuildPath()
     }
     setPath(path);
     const qreal margin = 8;
-    if (textItem)
-        textItem->setTextWidth(qMax(0.0, boundingRect().width() - margin));
+    if (textItem) {
+        qreal w = boundingRect().width() - margin;
+        if (textItem->font().italic()) w += 10;
+        textItem->setTextWidth(qMax(0.0, w));
+    }
 }
 
 void ResizablePathItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
@@ -58,7 +63,9 @@ void ResizablePathItem::setText(const QString &text)
 {
     textItem->setPlainText(text);
     const qreal margin = 8;
-    textItem->setTextWidth(qMax(0.0, boundingRect().width() - margin));
+    qreal w = boundingRect().width() - margin;
+    if (textItem->font().italic()) w += 10;
+    textItem->setTextWidth(qMax(0.0, w));
     centerText();
 }
 
@@ -127,9 +134,13 @@ void ResizablePathItem::centerText()
 {
     QRectF br = boundingRect();
     QRectF textRect = textItem->boundingRect();
-    QPointF target = m_hasCustomTextPosition ? m_textPosition : br.center();
-    target -= QPointF(textRect.width() / 2, textRect.height() / 2);
-    textItem->setPos(target);
+    QPointF anchor = m_hasCustomTextPosition ? m_textPosition : br.center();
+    Qt::Alignment align = textItem->document()->defaultTextOption().alignment();
+    qreal x = (align & Qt::AlignLeft) ? anchor.x()
+          : (align & Qt::AlignRight) ? (anchor.x() - textRect.width())
+          : (anchor.x() - textRect.width() / 2);
+    qreal y = anchor.y() - textRect.height() / 2;
+    textItem->setPos(x, y);
 }
 
 QPointF ResizablePathItem::textPosition() const
@@ -175,6 +186,8 @@ KeyStyle ResizablePathItem::keyStyle() const
     s.keyColorPressed = m_keyColorPressed;
     s.keyTextColor = m_keyTextColor;
     s.keyTextColorPressed = m_keyTextColorPressed;
+    Qt::Alignment align = textItem->document()->defaultTextOption().alignment();
+    s.textAlignment = (align & Qt::AlignRight) ? 2 : ((align & Qt::AlignLeft) ? 0 : 1);
     return s;
 }
 
@@ -186,5 +199,12 @@ void ResizablePathItem::setKeyStyle(const KeyStyle &style)
     m_keyColorPressed = style.keyColorPressed;
     m_keyTextColor = style.keyTextColor;
     m_keyTextColorPressed = style.keyTextColorPressed;
+    QTextOption opt = textItem->document()->defaultTextOption();
+    opt.setAlignment(style.textAlignment == 0 ? Qt::AlignLeft : (style.textAlignment == 2 ? Qt::AlignRight : Qt::AlignHCenter));
+    textItem->document()->setDefaultTextOption(opt);
+    const qreal margin = 8;
+    qreal w = boundingRect().width() - margin;
+    if (textItem->font().italic()) w += 10;
+    textItem->setTextWidth(qMax(0.0, w));
     centerText();
 }

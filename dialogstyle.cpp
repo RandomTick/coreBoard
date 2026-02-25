@@ -159,6 +159,13 @@ DialogStyle::DialogStyle(QWidget *parent, const KeyStyle &currentStyle, const QS
     }
     form->addRow(tr("Font family:"), m_fontCombo);
 
+    m_textAlignmentCombo = new QComboBox(this);
+    m_textAlignmentCombo->addItem(tr("Left"), 0);
+    m_textAlignmentCombo->addItem(tr("Center"), 1);
+    m_textAlignmentCombo->addItem(tr("Right"), 2);
+    m_textAlignmentCombo->setCurrentIndex(qBound(0, currentStyle.textAlignment, 2));
+    form->addRow(tr("Text alignment:"), m_textAlignmentCombo);
+
     QLabel *keyColorsLabel = new QLabel(tr("Per-key colors (visualization only):"), this);
     keyColorsLabel->setStyleSheet("font-weight: bold; margin-top: 8px;");
     form->addRow(keyColorsLabel);
@@ -232,6 +239,7 @@ KeyStyle DialogStyle::getStyle() const {
     if (m_fontBoldCheck) s.fontBold = m_fontBoldCheck->isChecked();
     if (m_fontItalicCheck) s.fontItalic = m_fontItalicCheck->isChecked();
     if (m_fontCombo) s.fontFamily = m_fontCombo->currentData().toString().trimmed();
+    if (m_textAlignmentCombo) s.textAlignment = m_textAlignmentCombo->currentData().toInt();
     s.keyColor = m_keyColor;
     s.keyColorPressed = m_keyColorPressed;
     s.keyTextColor = m_keyTextColor;

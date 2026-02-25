@@ -40,6 +40,15 @@
    </widget>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionGettingStarted"/>
+    <addaction name="actionNohBoardLayouts"/>
+    <addaction name="actionReportProblem"/>
+   </widget>
+   <addaction name="menuHelp"/>
    <addaction name="actionAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -66,6 +75,21 @@
   <action name="actionLanguage">
    <property name="text">
     <string>Language...</string>
+   </property>
+  </action>
+  <action name="actionGettingStarted">
+   <property name="text">
+    <string>Getting started</string>
+   </property>
+  </action>
+  <action name="actionNohBoardLayouts">
+   <property name="text">
+    <string>NohBoard layouts</string>
+   </property>
+  </action>
+  <action name="actionReportProblem">
+   <property name="text">
+    <string>Report a problem</string>
    </property>
   </action>
   <action name="actionAbout">

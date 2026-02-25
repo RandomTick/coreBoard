@@ -18,6 +18,7 @@ public:
 
 private:
     QComboBox *m_fontCombo = nullptr;
+    QComboBox *m_textAlignmentCombo = nullptr;
     QSpinBox *m_fontSizeSpin = nullptr;
     QPushButton *m_textColorButton = nullptr;
     QColor m_textColor;

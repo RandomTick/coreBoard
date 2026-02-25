@@ -33,6 +33,7 @@ private:
     QPushButton *m_keyColorPressedButton = nullptr;
     QPushButton *m_keyTextColorButton = nullptr;
     QPushButton *m_keyTextColorPressedButton = nullptr;
+    QComboBox *m_textAlignmentCombo = nullptr;
     QString m_previewLabel;
     QColor m_outlineColor;
     QColor m_keyColor;

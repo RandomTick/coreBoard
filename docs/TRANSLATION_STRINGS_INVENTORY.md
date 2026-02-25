@@ -11,10 +11,15 @@ This document lists **all** user-facing strings in the application for translati
 | window title | windowTitle | CoreBoard |
 | menuView | menu title | View |
 | menuSettings | menu title | Settings |
+| menuHelp | menu title | Help |
 | actionView | action | Visualization |
 | actionEdit | action | Edit Layout |
 | actionColors | action | Colors... |
 | actionLabelDisplay | action | Label display... |
+| actionLanguage | action | Language... |
+| actionGettingStarted | action | Getting started |
+| actionNohBoardLayouts | action | NohBoard layouts |
+| actionReportProblem | action | Report a problem |
 | actionAbout | action | Info |
 
 ---
@@ -24,13 +29,26 @@ This document lists **all** user-facing strings in the application for translati
 | Location | Type | English (Source) |
 |----------|------|------------------|
 | onAbout | QMessageBox title | About coreBoard |
-| onAbout | body | coreBoard description, GPL-3.0, GitHub URL, Version %1 |
+| onAbout | body | coreBoard description, Features, Compatibility (two-way NohBoard), GPL-3.0, GitHub URL, Version %1 |
+| onNohBoardLayouts | QMessageBox title | NohBoard layouts |
+| onNohBoardLayouts | body | To use a NohBoard layout: switch to Edit Layout, click Open Layout, then choose your .json file. No conversion needed. Very custom NohBoard layouts disclaimer. |
 | confirmLeaveEditor | QMessageBox title | Unsaved changes |
 | confirmLeaveEditor | body | Save changes to the layout before switching? |
 | closeEvent | QMessageBox title | Unsaved changes |
 | closeEvent | body | Save changes to the layout before closing? |
 
 Note: QMessageBox buttons (Save, Discard, Cancel) are Qt standard and translated via Qt's own translations if available.
+
+---
+
+## 2b. Welcome Dialog (welcomedialog.cpp)
+
+| Location | Type | English (Source) |
+|----------|------|------------------|
+| setWindowTitle | title | Welcome to coreBoard |
+| body label | rich text | coreBoard intro, Quick start (View, Edit Layout, NohBoard layout), compatibility disclaimer |
+| m_dontShowAgainCheckBox | checkbox | Don't show this again. |
+| button | button | Get started |
 
 ---
 

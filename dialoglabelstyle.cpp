@@ -97,6 +97,13 @@ DialogLabelStyle::DialogLabelStyle(QWidget *parent, const KeyStyle &currentStyle
     }
     form->addRow(tr("Font family:"), m_fontCombo);
 
+    m_textAlignmentCombo = new QComboBox(this);
+    m_textAlignmentCombo->addItem(tr("Left"), 0);
+    m_textAlignmentCombo->addItem(tr("Center"), 1);
+    m_textAlignmentCombo->addItem(tr("Right"), 2);
+    m_textAlignmentCombo->setCurrentIndex(qBound(0, currentStyle.textAlignment, 2));
+    form->addRow(tr("Text alignment:"), m_textAlignmentCombo);
+
     mainLayout->addLayout(form);
     QHBoxLayout *buttons = new QHBoxLayout();
     QPushButton *cancelBtn = new QPushButton(tr("Cancel"), this);
@@ -125,5 +132,6 @@ KeyStyle DialogLabelStyle::getStyle() const {
     s.fontPointSize = m_fontSizeSpin->value();
     s.fontFamily = m_fontCombo->currentData().toString().trimmed();
     s.keyTextColor = m_textColor;
+    s.textAlignment = m_textAlignmentCombo->currentData().toInt();
     return s;
 }

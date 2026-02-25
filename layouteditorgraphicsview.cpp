@@ -138,9 +138,19 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 QAction *selectedAction = menu.exec(QCursor::pos());
                 if (selectedAction == actionRename) {
                     QString oldText = labelItemCtx->getText();
-                    DialogTextChange *dialog = new DialogTextChange(this, oldText, QString());
+                    QString oldShiftText = labelItemCtx->getShiftText();
+                    DialogTextChange *dialog = new DialogTextChange(this, oldText, oldShiftText);
                     if (dialog->exec() == QDialog::Accepted) {
                         labelItemCtx->setText(dialog->getText());
+                        labelItemCtx->setShiftText(dialog->getShiftText());
+                        QString newText = labelItemCtx->getText();
+                        QString newShiftText = labelItemCtx->getShiftText();
+                        if (newText != oldText || newShiftText != oldShiftText) {
+                            Action *action = new Action(Actions::ChangeText, labelItemCtx, oldText, newText, oldShiftText, newShiftText);
+                            undoActions.push_back(action);
+                            redoActions.clear();
+                            layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
+                        }
                         layoutEditor->markDirty();
                     }
                     delete dialog;
@@ -153,6 +163,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                         merged.fontPointSize = newStyle.fontPointSize;
                         merged.fontFamily = newStyle.fontFamily;
                         merged.keyTextColor = newStyle.keyTextColor;
+                        merged.textAlignment = newStyle.textAlignment;
                         Action *action = new Action(Actions::ChangeStyle, nullptr);
                         action->styleNew = merged;
                         action->styleItems.append(qMakePair(labelItemCtx, keyStyleForItem(labelItemCtx)));
@@ -922,6 +933,7 @@ void LayoutEditorGraphicsView::doAction(Action *action){
     ResizablePathItem *pathItem = action->item ? dynamic_cast<ResizablePathItem*>(action->item) : nullptr;
     MouseSpeedIndicatorItem *mouseIndicatorItem = action->item ? dynamic_cast<MouseSpeedIndicatorItem*>(action->item) : nullptr;
     AngularViewerItem *angularViewerItem = action->item ? dynamic_cast<AngularViewerItem*>(action->item) : nullptr;
+    LabelItem *labelItem = action->item ? dynamic_cast<LabelItem*>(action->item) : nullptr;
     if (action->actionType == Move) {
         if (!action->moveItems.isEmpty()) {
             if (action->moveApplied) {
@@ -948,7 +960,7 @@ void LayoutEditorGraphicsView::doAction(Action *action){
         qreal h = action->size.height();
         if (rect) rect->setRect(0, 0, w, h); else if (ellipse) ellipse->setRect(0, 0, w, h); else if (mouseIndicatorItem) mouseIndicatorItem->setRect(0, 0, w, h); else if (angularViewerItem) angularViewerItem->setRect(0, 0, w, h); else if (polygon) polygon->setSize(w, h); else pathItem->setSize(w, h);
         action->size = currentBounds;
-    } else if (action->actionType == ChangeText && (rect || ellipse || polygon || pathItem || mouseIndicatorItem)) {
+    } else if (action->actionType == ChangeText && (rect || ellipse || polygon || pathItem || mouseIndicatorItem || labelItem)) {
         if (rect) {
             rect->setText(action->oldText);
             rect->setShiftText(action->oldShiftText);
@@ -958,6 +970,9 @@ void LayoutEditorGraphicsView::doAction(Action *action){
         } else if (mouseIndicatorItem) {
             mouseIndicatorItem->setText(action->oldText);
             mouseIndicatorItem->setShiftText(action->oldShiftText);
+        } else if (labelItem) {
+            labelItem->setText(action->oldText);
+            labelItem->setShiftText(action->oldShiftText);
         } else if (polygon) {
             polygon->setText(action->oldText);
             polygon->setShiftText(action->oldShiftText);
@@ -966,9 +981,9 @@ void LayoutEditorGraphicsView::doAction(Action *action){
             pathItem->setShiftText(action->oldShiftText);
         }
         action->oldText = action->newText;
-        action->newText = rect ? rect->getText() : (ellipse ? ellipse->getText() : (mouseIndicatorItem ? mouseIndicatorItem->getText() : (polygon ? polygon->getText() : pathItem->getText())));
+        action->newText = rect ? rect->getText() : (ellipse ? ellipse->getText() : (mouseIndicatorItem ? mouseIndicatorItem->getText() : (labelItem ? labelItem->getText() : (polygon ? polygon->getText() : pathItem->getText()))));
         action->oldShiftText = action->newShiftText;
-        action->newShiftText = rect ? rect->getShiftText() : (ellipse ? ellipse->getShiftText() : (mouseIndicatorItem ? mouseIndicatorItem->getShiftText() : (polygon ? polygon->getShiftText() : pathItem->getShiftText())));
+        action->newShiftText = rect ? rect->getShiftText() : (ellipse ? ellipse->getShiftText() : (mouseIndicatorItem ? mouseIndicatorItem->getShiftText() : (labelItem ? labelItem->getShiftText() : (polygon ? polygon->getShiftText() : pathItem->getShiftText()))));
     } else if (action->actionType == ChangeKeyCodes && (rect || ellipse || polygon || pathItem)) {
         if (rect) rect->setKeycodes(action->oldKeycodes); else if (ellipse) ellipse->setKeycodes(action->oldKeycodes); else if (polygon) polygon->setKeycodes(action->oldKeycodes); else pathItem->setKeycodes(action->oldKeycodes);
         action->oldKeycodes = action->newKeycodes;

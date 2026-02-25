@@ -43,6 +43,13 @@ Layouts can be edited in either app and used in both.
 
 ---
 
+## Compatibility disclaimers
+
+- **NohBoard → coreBoard:** You can open NohBoard `.json` layouts in coreBoard (Edit Layout → Open Layout). Very custom NohBoard layouts might not be fully supported; if something doesn't look or behave right, please report it (Help → Report a problem in coreBoard).
+- **coreBoard → NohBoard:** Layouts created or edited in coreBoard may not be fully functional in NohBoard. coreBoard adds features (such as joystick angular viewers and controller button bindings) that NohBoard does not support, so saving and opening the same file in NohBoard can lose or mishandle those parts.
+
+---
+
 ## Differences to expect
 
 | NohBoard | coreBoard |
