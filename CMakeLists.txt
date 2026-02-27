@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(CoreBoard VERSION 0.6.1 LANGUAGES CXX)
+project(CoreBoard VERSION 0.6.3 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -35,6 +35,7 @@ set(TRANSLATABLE_SOURCES
     welcomedialog.cpp
     keycode_nameutil.h keycode_nameutil.cpp
     windowsmouselistener.h windowsmouselistener.cpp
+    controllerregionsdialog.cpp
 )
 
 set(GAMEPAD_SOURCES)
@@ -50,6 +51,7 @@ set(PROJECT_SOURCES
         resizablepathitem.h resizablepathitem.cpp
         mousespeedindicatoritem.h mousespeedindicatoritem.cpp
         angularvieweritem.h angularvieweritem.cpp
+        controlleritem.h controlleritem.cpp
         labelitem.h labelitem.cpp
         ${GAMEPAD_SOURCES}
         layoutsettings.h layoutsettings.cpp
@@ -59,6 +61,7 @@ set(PROJECT_SOURCES
         welcomedialog.h welcomedialog.cpp
         dialogstyle.h dialogstyle.cpp
         dialoglabelstyle.h dialoglabelstyle.cpp
+        controllerregionsdialog.h controllerregionsdialog.cpp
     shapeeditordialog.h shapeeditordialog.cpp
         resizablepathitem.h resizablepathitem.cpp
         ${TRANSLATABLE_SOURCES}

@@ -41,6 +41,11 @@ struct AngularViewerOverlay {
     QGraphicsEllipseItem *indicatorItem = nullptr;
 };
 
+struct ControllerOverlay {
+    QGraphicsRectItem *item = nullptr;  // ControllerViewItem
+    int controllerIndex = 0;
+};
+
 struct LabelOverlay {
     QGraphicsTextItem *textItem = nullptr;
     QString baseText;
@@ -79,6 +84,8 @@ private:
     void createMouseSpeedIndicatorOverlay(const QJsonObject &keyData);
     void createAngularViewerOverlay(const QJsonObject &keyData);
     void createLabelOverlay(const QJsonObject &keyData);
+    void createControllerOverlay(const QJsonObject &keyData);
+    void updateControllerOverlays();
     void applyLayoutData(const QByteArray &jsonData);
     void changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor, bool isPressed);
     static void setShapeTextColor(QGraphicsItem *shapeItem, const QColor &color);
@@ -111,6 +118,7 @@ private:
 
     QList<MouseSpeedIndicatorOverlay> m_mouseSpeedIndicators;
     QList<AngularViewerOverlay> m_angularViewers;
+    QList<ControllerOverlay> m_controllerOverlays;
     QList<LabelOverlay> m_labelOverlays;
     QTimer *m_mouseIndicatorTimer = nullptr;
 

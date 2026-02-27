@@ -1,8 +1,15 @@
 #include "KeyboardWidget.h"
 #include "keystyle.h"
+#include "controlleritem.h"
 #ifdef Q_OS_WIN
 #include "gamepadlistener.h"
 #endif
+#include <QSvgRenderer>
+#include <QJsonDocument>
+#include <QFile>
+#include <QFileInfo>
+#include <QDateTime>
+#include <QCoreApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QFile>
@@ -136,6 +143,192 @@ static QPainterPath shapePathFromItem(QGraphicsItem *item)
     path.setFillRule(Qt::WindingFill);
     return path;
 }
+
+// Controller overlay: draws SVG and highlights for gamepad buttons (indices 0..15; 14=LT, 15=RT).
+// Region data in SVG space (viewBox 0 0 580.032 580.032). Circle: (x,y)=center, r=radius. Rect: r<0 then (x,y,w,h).
+// Region positions and D-pad shape are hardcoded; ControllerRegionsDialog can be re-enabled to edit/save for other layouts.
+struct ControllerRegion { qreal x, y, w, h, r; };
+static const ControllerRegion s_controllerRegionsBuiltin[16] = {
+    { 365.3, 299, 0, 0, 19 },      // 0 A
+    { 438.047, 251.421, 0, 0, 18.77 },  // 1 B
+    { 399.932, 211.323, 0, 0, 18.77 },  // 2 X
+    { 438.047, 173.226, 0, 0, 18.77 },  // 3 Y
+    { 88, 106, 65, 18, -1 },       // 4 LB
+    { 427, 106, 65, 18, -1 },      // 5 RB
+    { 236, 278, 32, 28, -1 },      // 6 Back
+    { 312, 278, 32, 28, -1 },      // 7 Start
+    { 155.7, 196.78, 0, 0, 14 },  // 8 LStick
+    { 386.78, 278.42, 0, 0, 21 }, // 9 RStick
+    { 256, 270, 0, 0, 11 },       // 10 D-pad up
+    { 256, 314, 0, 0, 11 },       // 11 D-pad down
+    { 234, 292, 0, 0, 11 },       // 12 D-pad left
+    { 278, 292, 0, 0, 11 },       // 13 D-pad right
+    { 88, 70, 65, 28, -1 },       // 14 LT
+    { 427, 70, 65, 28, -1 },      // 15 RT
+};
+static QVector<ControllerRegion> s_controllerRegions;
+static QDateTime s_controllerRegionsLastModified;
+// Hardcoded D-pad shape (20x26, tip 10). Region positions loaded from controller_regions.json when present.
+static const qreal s_dpadBaseWidth = 20.0;
+static const qreal s_dpadBaseHeight = 26.0;
+static const qreal s_dpadTipLength = 10.0;
+static void ensureControllerRegionsLoaded() {
+    QString path = QCoreApplication::applicationDirPath() + QLatin1String("/controller_regions.json");
+    QFileInfo fi(path);
+    if (fi.exists() && fi.lastModified() > s_controllerRegionsLastModified)
+        s_controllerRegions.clear();
+    if (!s_controllerRegions.isEmpty()) return;
+    QFile f(path);
+    if (f.open(QIODevice::ReadOnly)) {
+        s_controllerRegionsLastModified = QFileInfo(path).lastModified();
+        QJsonParseError err;
+        QJsonDocument doc = QJsonDocument::fromJson(f.readAll(), &err);
+        QJsonObject root = doc.isObject() ? doc.object() : QJsonObject();
+        QJsonArray arr = doc.isArray() ? doc.array() : root.value("regions").toArray();
+        if (arr.size() >= 16) {
+            for (int i = 0; i < 16; ++i) {
+                QJsonObject o = arr.at(i).toObject();
+                ControllerRegion reg;
+                reg.x = o.value("x").toDouble(s_controllerRegionsBuiltin[i].x);
+                reg.y = o.value("y").toDouble(s_controllerRegionsBuiltin[i].y);
+                reg.w = o.value("w").toDouble(s_controllerRegionsBuiltin[i].w);
+                reg.h = o.value("h").toDouble(s_controllerRegionsBuiltin[i].h);
+                reg.r = o.value("r").toDouble(s_controllerRegionsBuiltin[i].r);
+                s_controllerRegions.append(reg);
+            }
+            return;
+        }
+    }
+    s_controllerRegionsLastModified = QDateTime();
+    for (int i = 0; i < 16; ++i)
+        s_controllerRegions.append(s_controllerRegionsBuiltin[i]);
+}
+
+// Inner ring radius in SVG space for stick indicator movement (fraction of region r).
+static const qreal s_stickInnerRadiusFraction = 0.6;
+// Stick indicator dot radius in SVG space (drawn at stick center + offset).
+static const qreal s_stickIndicatorRadiusSvg = 14.0;
+
+class ControllerViewItem : public QGraphicsRectItem {
+public:
+    ControllerViewItem(const QRectF &rect) : QGraphicsRectItem(rect) {
+        setBrush(Qt::NoBrush);
+        setPen(Qt::NoPen);
+        setFlag(QGraphicsItem::ItemStacksBehindParent, false);
+    }
+    void setFillColor(const QColor &c) { m_fillColor = c; update(); }
+    void setHighlightState(const QSet<int> &buttons, qreal leftTrigger, qreal rightTrigger) {
+        if (m_buttons == buttons && qFuzzyCompare(m_leftTrigger, leftTrigger) && qFuzzyCompare(m_rightTrigger, rightTrigger))
+            return;
+        m_buttons = buttons;
+        m_leftTrigger = leftTrigger;
+        m_rightTrigger = rightTrigger;
+        update();
+    }
+    void setLeftStick(qreal x, qreal y) {
+        if (qFuzzyCompare(m_leftStickX, x) && qFuzzyCompare(m_leftStickY, y)) return;
+        m_leftStickX = x; m_leftStickY = y; update();
+    }
+    void setRightStick(qreal x, qreal y) {
+        if (qFuzzyCompare(m_rightStickX, x) && qFuzzyCompare(m_rightStickY, y)) return;
+        m_rightStickX = x; m_rightStickY = y; update();
+    }
+    void setStickIndicatorColor(const QColor &c) { m_highlightColor = c; update(); }
+protected:
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) override {
+        const QRectF r = rect();
+        if (r.isEmpty()) return;
+        ensureControllerRegionsLoaded();
+        const qreal svgSize = 580;
+        QColor fillColor = m_fillColor.isValid() ? m_fillColor : Qt::black;
+        QSvgRenderer renderer(controllerSvgBytes(fillColor));
+        if (!renderer.isValid()) return;
+        painter->setRenderHint(QPainter::SmoothPixmapTransform);
+        renderer.render(painter, r);
+        const qreal sx = r.width() / svgSize, sy = r.height() / svgSize;
+        QColor highlightBrush = m_highlightColor.isValid() ? m_highlightColor : Qt::white;
+        painter->setBrush(highlightBrush);  // track color for buttons/d-pad/triggers
+        painter->setPen(Qt::NoPen);
+        // D-pad: rectangular base (s_dpadBaseWidth x s_dpadBaseHeight). Up/Down use that rect; Left/Right use same rect rotated 90° (baseHeight along X, baseWidth along Y).
+        const qreal halfW = s_dpadBaseWidth / 2.0;
+        auto drawDpadHouse = [&](qreal cx, qreal cy, int dir) {
+            QPolygonF poly;
+            switch (dir) {
+            case 0: poly << QPointF(cx, cy + s_dpadTipLength) << QPointF(cx + halfW, cy) << QPointF(cx + halfW, cy - s_dpadBaseHeight) << QPointF(cx - halfW, cy - s_dpadBaseHeight) << QPointF(cx - halfW, cy); break;
+            case 1: poly << QPointF(cx, cy - s_dpadTipLength) << QPointF(cx + halfW, cy) << QPointF(cx + halfW, cy + s_dpadBaseHeight) << QPointF(cx - halfW, cy + s_dpadBaseHeight) << QPointF(cx - halfW, cy); break;
+            case 2: poly << QPointF(cx + s_dpadTipLength, cy) << QPointF(cx, cy + halfW) << QPointF(cx - s_dpadBaseHeight, cy + halfW) << QPointF(cx - s_dpadBaseHeight, cy - halfW) << QPointF(cx, cy - halfW); break;
+            case 3: poly << QPointF(cx - s_dpadTipLength, cy) << QPointF(cx, cy + halfW) << QPointF(cx + s_dpadBaseHeight, cy + halfW) << QPointF(cx + s_dpadBaseHeight, cy - halfW) << QPointF(cx, cy - halfW); break;
+            default: return;
+            }
+            for (int i = 0; i < poly.size(); ++i)
+                poly[i] = QPointF(r.x() + poly[i].x() * sx, r.y() + poly[i].y() * sy);
+            painter->drawPolygon(poly);
+        };
+        // Rounded corner radii in SVG space (match controller SVG: triggers rx=6, bumpers rx=4).
+        const qreal triggerRx = 6.0, bumperRx = 4.0;
+        for (int bi : m_buttons) {
+            if (bi < 0 || bi > 15) continue;
+            const ControllerRegion &reg = s_controllerRegions.at(bi);
+            if (bi == 14 || bi == 15) continue; // triggers drawn below
+            if (bi >= 10 && bi <= 13) {
+                drawDpadHouse(reg.x, reg.y, bi - 10);
+                continue;
+            }
+            if (reg.r >= 0) {
+                painter->drawEllipse(QPointF(r.x() + reg.x * sx, r.y() + reg.y * sy), reg.r * sx, reg.r * sy);
+            } else {
+                QRectF rectItem(r.x() + reg.x * sx, r.y() + reg.y * sy, reg.w * sx, reg.h * sy);
+                qreal rx = qMin(bumperRx * sx, rectItem.width() / 2);
+                qreal ry = qMin(bumperRx * sy, rectItem.height() / 2);
+                painter->drawRoundedRect(rectItem, rx, ry, Qt::AbsoluteSize);
+            }
+        }
+        // Trigger fills: partial fill from bottom, rounded rect (radius 6 in SVG, capped to fit).
+        if (s_controllerRegions.size() > 15) {
+            const ControllerRegion &ltReg = s_controllerRegions.at(14);
+            const ControllerRegion &rtReg = s_controllerRegions.at(15);
+            auto drawTriggerFill = [&](qreal x, qreal y, qreal w, qreal h) {
+                if (h <= 0.5) return;
+                qreal rx = qMin(triggerRx * sx, qMin(w / 2, h / 2));
+                qreal ry = qMin(triggerRx * sy, qMin(w / 2, h / 2));
+                painter->drawRoundedRect(QRectF(x, y, w, h), rx, ry, Qt::AbsoluteSize);
+            };
+            qreal ltH = ltReg.h * sy * m_leftTrigger;
+            if (ltH > 0.5) {
+                drawTriggerFill(r.x() + ltReg.x * sx, r.y() + (ltReg.y + ltReg.h) * sy - ltH, ltReg.w * sx, ltH);
+            }
+            qreal rtH = rtReg.h * sy * m_rightTrigger;
+            if (rtH > 0.5) {
+                drawTriggerFill(r.x() + rtReg.x * sx, r.y() + (rtReg.y + rtReg.h) * sy - rtH, rtReg.w * sx, rtH);
+            }
+        }
+        // Stick indicators: use region 8 and 9 centers; invert Y like AngularViewer (stick up = dot up)
+        if (s_controllerRegions.size() >= 10) {
+            const ControllerRegion &leftReg = s_controllerRegions.at(8);
+            const ControllerRegion &rightReg = s_controllerRegions.at(9);
+            qreal leftCx = leftReg.x, leftCy = leftReg.y;
+            qreal rightCx = rightReg.x, rightCy = rightReg.y;
+            qreal leftInnerR = (leftReg.r >= 0 ? leftReg.r : 14) * s_stickInnerRadiusFraction;
+            qreal rightInnerR = (rightReg.r >= 0 ? rightReg.r : 21) * s_stickInnerRadiusFraction;
+            qreal lx = m_leftStickX, ly = m_leftStickY;
+            qreal n = lx * lx + ly * ly;
+            if (n > 1.0 && n > 1e-12) { qreal s = 1.0 / std::sqrt(n); lx *= s; ly *= s; }
+            qreal rx = m_rightStickX, ry = m_rightStickY;
+            n = rx * rx + ry * ry;
+            if (n > 1.0 && n > 1e-12) { qreal s = 1.0 / std::sqrt(n); rx *= s; ry *= s; }
+            painter->setBrush(m_highlightColor.isValid() ? m_highlightColor : Qt::white);  // track color for stick dots
+            qreal indR = s_stickIndicatorRadiusSvg;
+            painter->drawEllipse(QPointF(r.x() + (leftCx + lx * leftInnerR) * sx, r.y() + (leftCy + ly * leftInnerR) * sy), indR * sx, indR * sy);
+            painter->drawEllipse(QPointF(r.x() + (rightCx + rx * rightInnerR) * sx, r.y() + (rightCy + ry * rightInnerR) * sy), indR * sx, indR * sy);
+        }
+    }
+private:
+    QColor m_fillColor;
+    QSet<int> m_buttons;
+    qreal m_leftTrigger = 0, m_rightTrigger = 0;
+    qreal m_leftStickX = 0, m_leftStickY = 0, m_rightStickX = 0, m_rightStickY = 0;
+    QColor m_highlightColor;  // for stick indicator
+};
 }
 
 KeyboardWidget::KeyboardWidget(QWidget *parent) : QWidget(parent)
@@ -258,6 +451,7 @@ void KeyboardWidget::loadLayout(const QString &fileName, int retryCount)
         m_triggerValues.clear();
         m_mouseSpeedIndicators.clear();
         m_angularViewers.clear();
+        m_controllerOverlays.clear();
         if (m_mouseIndicatorTimer) m_mouseIndicatorTimer->stop();
         update();
         return;
@@ -307,6 +501,7 @@ void KeyboardWidget::loadLayoutFromData(const QByteArray &jsonData)
         m_triggerValues.clear();
         m_mouseSpeedIndicators.clear();
         m_angularViewers.clear();
+        m_controllerOverlays.clear();
         m_labelOverlays.clear();
         if (m_mouseIndicatorTimer) m_mouseIndicatorTimer->stop();
         update();
@@ -340,6 +535,7 @@ void KeyboardWidget::applyLayoutData(const QByteArray &jsonData)
     m_triggerValues.clear();
     m_mouseSpeedIndicators.clear();
     m_angularViewers.clear();
+    m_controllerOverlays.clear();
     m_labelOverlays.clear();
     if (m_mouseIndicatorTimer)
         m_mouseIndicatorTimer->stop();
@@ -397,6 +593,20 @@ void KeyboardWidget::applyLayoutData(const QByteArray &jsonData)
             overallMaxX = qMax(overallMaxX, lx + 80);
             overallMaxY = qMax(overallMaxY, ly + 20);
             hasBounds = true;
+        } else if (type == QLatin1String("Controller")) {
+            QJsonArray boundaries = keyData.value("Boundaries").toArray();
+            if (boundaries.size() >= 4) {
+                for (const QJsonValue &pv : boundaries) {
+                    QJsonObject po = pv.toObject();
+                    qreal px = po["X"].toDouble();
+                    qreal py = po["Y"].toDouble();
+                    overallMinX = qMin(overallMinX, px);
+                    overallMinY = qMin(overallMinY, py);
+                    overallMaxX = qMax(overallMaxX, px);
+                    overallMaxY = qMax(overallMaxY, py);
+                    hasBounds = true;
+                }
+            }
         }
     }
 
@@ -411,6 +621,8 @@ void KeyboardWidget::applyLayoutData(const QByteArray &jsonData)
             createAngularViewerOverlay(keyData);
         } else if (type == QLatin1String("Label")) {
             createLabelOverlay(keyData);
+        } else if (type == QLatin1String("Controller")) {
+            createControllerOverlay(keyData);
         }
     }
 
@@ -433,6 +645,7 @@ void KeyboardWidget::applyLayoutData(const QByteArray &jsonData)
         setMinimumSize(maxWidth, maxHeight);
     }
     updateLabelsForShiftState();
+    updateControllerOverlays();
     m_view->viewport()->update();
     update();
 }
@@ -754,6 +967,42 @@ void KeyboardWidget::createAngularViewerOverlay(const QJsonObject &keyData)
     m_angularViewers.append(entry);
 }
 
+void KeyboardWidget::createControllerOverlay(const QJsonObject &keyData)
+{
+    QJsonArray boundaries = keyData.value("Boundaries").toArray();
+    if (boundaries.size() < 4) return;
+    qreal minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    for (const QJsonValue &pv : boundaries) {
+        QJsonObject po = pv.toObject();
+        qreal px = po["X"].toDouble();
+        qreal py = po["Y"].toDouble();
+        minX = qMin(minX, px);
+        minY = qMin(minY, py);
+        maxX = qMax(maxX, px);
+        maxY = qMax(maxY, py);
+    }
+    qreal w = qMax(qreal(1), maxX - minX);
+    qreal h = qMax(qreal(1), maxY - minY);
+    int controllerIndex = keyData.value("ControllerIndex").toInt(0);
+    controllerIndex = qBound(0, controllerIndex, 3);
+
+    KeyStyle keyStyle = KeyStyle::fromJson(keyData);
+    // Outline color = controller body (SVG fill). Track color (keyColor) = highlights (pressed states).
+    QColor fillColor = keyStyle.outlineColor.isValid() ? keyStyle.outlineColor : m_keyColor;
+    QColor highlightColor = keyStyle.keyColor.isValid() ? keyStyle.keyColor : fillColor;
+    ControllerViewItem *item = new ControllerViewItem(QRectF(0, 0, w, h));
+    item->setFillColor(fillColor);
+    item->setStickIndicatorColor(highlightColor);
+    item->setPos(minX, minY);
+    item->setZValue(0.5);
+    m_scene->addItem(item);
+
+    ControllerOverlay entry;
+    entry.item = item;
+    entry.controllerIndex = controllerIndex;
+    m_controllerOverlays.append(entry);
+}
+
 void KeyboardWidget::createLabelOverlay(const QJsonObject &keyData)
 {
     qreal x = keyData.value("X").toDouble();
@@ -873,6 +1122,11 @@ void KeyboardWidget::onLeftStickChanged(int controllerIndex, qreal x, qreal y)
         qreal cy = entry.rect.y() + entry.rect.height() / 2;
         entry.indicatorItem->setPos(cx + ox, cy + oy);
     }
+    for (const ControllerOverlay &overlay : m_controllerOverlays) {
+        if (overlay.controllerIndex != controllerIndex) continue;
+        ControllerViewItem *ctrlItem = qgraphicsitem_cast<ControllerViewItem*>(overlay.item);
+        if (ctrlItem) ctrlItem->setLeftStick(x, y);
+    }
 }
 
 void KeyboardWidget::onRightStickChanged(int controllerIndex, qreal x, qreal y)
@@ -896,6 +1150,11 @@ void KeyboardWidget::onRightStickChanged(int controllerIndex, qreal x, qreal y)
         qreal cx = entry.rect.x() + entry.rect.width() / 2;
         qreal cy = entry.rect.y() + entry.rect.height() / 2;
         entry.indicatorItem->setPos(cx + ox, cy + oy);
+    }
+    for (const ControllerOverlay &overlay : m_controllerOverlays) {
+        if (overlay.controllerIndex != controllerIndex) continue;
+        ControllerViewItem *ctrlItem = qgraphicsitem_cast<ControllerViewItem*>(overlay.item);
+        if (ctrlItem) ctrlItem->setRightStick(x, y);
     }
 }
 
@@ -933,6 +1192,7 @@ void KeyboardWidget::onKeyPressed(int key)
         changeKeyColor(key, m_highlightColor, m_highlightedTextColor, true);
     }
     updateTriggerFills();
+    updateControllerOverlays();
 #else
     changeKeyColor(key, m_highlightColor, m_highlightedTextColor, true);
 #endif
@@ -946,6 +1206,7 @@ void KeyboardWidget::onKeyReleased(int key)
         changeKeyColor(key, m_keyColor, m_textColor, false);
     }
     updateTriggerFills();
+    updateControllerOverlays();
 #else
     changeKeyColor(key, m_keyColor, m_textColor, false);
 #endif
@@ -957,7 +1218,30 @@ void KeyboardWidget::onTriggersChanged(int controllerIndex, qreal leftTrigger, q
     m_triggerValues[gamepadCode(controllerIndex, GAMEPAD_LEFT_TRIGGER_BUTTON)] = leftTrigger;
     m_triggerValues[gamepadCode(controllerIndex, GAMEPAD_RIGHT_TRIGGER_BUTTON)] = rightTrigger;
     updateTriggerFills();
+    updateControllerOverlays();
 #endif
+}
+
+void KeyboardWidget::updateControllerOverlays()
+{
+    for (ControllerOverlay &overlay : m_controllerOverlays) {
+        QSet<int> buttons;
+        qreal lt = 0, rt = 0;
+#ifdef Q_OS_WIN
+        for (int code : m_pressedKeys) {
+            if (gamepadControllerIndex(code) == overlay.controllerIndex) {
+                int bi = gamepadButtonIndex(code);
+                if (bi >= 0 && bi <= 15)
+                    buttons.insert(bi);
+            }
+        }
+        lt = m_triggerValues.value(gamepadCode(overlay.controllerIndex, GAMEPAD_LEFT_TRIGGER_BUTTON), 0);
+        rt = m_triggerValues.value(gamepadCode(overlay.controllerIndex, GAMEPAD_RIGHT_TRIGGER_BUTTON), 0);
+#endif
+        ControllerViewItem *item = qgraphicsitem_cast<ControllerViewItem*>(overlay.item);
+        if (item)
+            item->setHighlightState(buttons, lt, rt);
+    }
 }
 
 void KeyboardWidget::updateTriggerFills()

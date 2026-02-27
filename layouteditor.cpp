@@ -18,6 +18,7 @@
 #include "keystyle.h"
 #include "mousespeedindicatoritem.h"
 #include "angularvieweritem.h"
+#include "controlleritem.h"
 
 // Minimum width so toolbar buttons (Open, New, Save, etc.) stay visible
 static const int kMinimumEditorWidth = 720;
@@ -166,6 +167,9 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     m_actLeftStick = m_angularViewerMenu->addAction(tr("Left joystick"));
     m_actRightStick = m_angularViewerMenu->addAction(tr("Right joystick"));
     m_addShapeMenu->addSeparator();
+    m_actController = m_addShapeMenu->addAction(tr("Controller"));
+    // Edit controller regions: dialog kept in code (ControllerRegionsDialog) for re-use with other layouts; menu entry removed.
+    m_addShapeMenu->addSeparator();
     m_actLabel = m_addShapeMenu->addAction(tr("Label"));
     addButton->setMenu(m_addShapeMenu);
 
@@ -211,6 +215,11 @@ LayoutEditor::LayoutEditor(QWidget *parent) : QWidget(parent)
     });
     connect(m_actRightStick, &QAction::triggered, this, [this]() {
         AngularViewerItem *item = addAngularViewer(AngularViewerSubType::RightStick, 200, 100, 80, 80, QString());
+        view->addRectAction(item);
+    });
+    connect(m_actController, &QAction::triggered, this, [this]() {
+        const qreal side = 120;
+        ControllerItem *item = addController(100, 100, side, side);
         view->addRectAction(item);
     });
     connect(m_actLabel, &QAction::triggered, this, [this]() {
@@ -389,6 +398,20 @@ void LayoutEditor::loadLayout(const QString &fileName){
                     hasBounds = true;
                 }
             }
+        } else if (type == QLatin1String("Controller")) {
+            QJsonArray boundaries = keyData.value("Boundaries").toArray();
+            if (boundaries.size() >= 4) {
+                for (const QJsonValue &pv : boundaries) {
+                    QJsonObject po = pv.toObject();
+                    qreal px = po["X"].toDouble();
+                    qreal py = po["Y"].toDouble();
+                    overallMinX = qMin(overallMinX, px);
+                    overallMinY = qMin(overallMinY, py);
+                    overallMaxX = qMax(overallMaxX, px);
+                    overallMaxY = qMax(overallMaxY, py);
+                    hasBounds = true;
+                }
+            }
         } else if (type == QLatin1String("Label")) {
             qreal lx = keyData.value("X").toDouble();
             qreal ly = keyData.value("Y").toDouble();
@@ -409,6 +432,8 @@ void LayoutEditor::loadLayout(const QString &fileName){
             createMouseSpeedIndicator(obj);
         } else if (type == QLatin1String("AngularViewer")) {
             createAngularViewer(obj);
+        } else if (type == QLatin1String("Controller")) {
+            createController(obj);
         } else if (type == QLatin1String("Label")) {
             createLabel(obj);
         }
@@ -718,6 +743,51 @@ AngularViewerItem* LayoutEditor::addAngularViewer(AngularViewerSubType subType, 
     return item;
 }
 
+ControllerItem* LayoutEditor::createController(const QJsonObject &keyData) {
+    QJsonArray boundaries = keyData.value("Boundaries").toArray();
+    if (boundaries.size() < 4) return nullptr;
+    qreal minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    for (const QJsonValue &pv : boundaries) {
+        QJsonObject po = pv.toObject();
+        qreal px = po["X"].toDouble();
+        qreal py = po["Y"].toDouble();
+        minX = qMin(minX, px);
+        minY = qMin(minY, py);
+        maxX = qMax(maxX, px);
+        maxY = qMax(maxY, py);
+    }
+    qreal w = maxX - minX;
+    qreal h = maxY - minY;
+    if (w < 20) w = 120;
+    if (h < 20) h = 120;
+    qreal s = qMin(w, h);
+    if (s < 20) s = 120;
+    KeyStyle keyStyle = KeyStyle::fromJson(keyData);
+    ControllerItem *item = new ControllerItem(QRectF(0, 0, s, s));
+    item->setKeyStyle(keyStyle);
+    if (keyData.contains("ControllerIndex"))
+        item->setControllerIndex(keyData.value("ControllerIndex").toInt(0));
+    qreal cx = minX + w / 2, cy = minY + h / 2;
+    item->setPos(cx - s / 2, cy - s / 2);
+    scene->addItem(item);
+    return item;
+}
+
+ControllerItem* LayoutEditor::addController(qreal x, qreal y, qreal w, qreal h) {
+    if (w < 20) w = 120;
+    if (h < 20) h = 120;
+    qreal s = qMin(w, h);
+    if (s < 20) s = 120;
+    ControllerItem *item = new ControllerItem(QRectF(0, 0, s, s));
+    KeyStyle defaultStyle;
+    defaultStyle.outlineColor = Qt::black;  // SVG outline
+    defaultStyle.keyColor = Qt::white;     // track color (controller fill + highlights)
+    item->setKeyStyle(defaultStyle);
+    scene->addItem(item);
+    item->setPos(x, y);
+    return item;
+}
+
 LabelItem* LayoutEditor::createLabel(const QJsonObject &keyData) {
     qreal x = keyData.value("X").toDouble();
     qreal y = keyData.value("Y").toDouble();
@@ -759,8 +829,9 @@ void LayoutEditor::updateMinimumSizeFromScene()
         ResizablePathItem *pathItem = dynamic_cast<ResizablePathItem *>(item);
         MouseSpeedIndicatorItem *mouseIndicatorItem = dynamic_cast<MouseSpeedIndicatorItem *>(item);
         AngularViewerItem *angularViewerItem = dynamic_cast<AngularViewerItem *>(item);
+        ControllerItem *controllerItem = dynamic_cast<ControllerItem *>(item);
         LabelItem *labelItem = dynamic_cast<LabelItem *>(item);
-        if (!rectItem && !ellipseItem && !polygonItem && !pathItem && !mouseIndicatorItem && !angularViewerItem && !labelItem)
+        if (!rectItem && !ellipseItem && !polygonItem && !pathItem && !mouseIndicatorItem && !angularViewerItem && !controllerItem && !labelItem)
             continue;
         QRectF sceneBr = item->sceneBoundingRect();
         maxX = qMax(maxX, sceneBr.right());
@@ -839,6 +910,7 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
         ResizablePathItem *pathItem = dynamic_cast<ResizablePathItem *>(item);
         MouseSpeedIndicatorItem *mouseIndicatorItem = dynamic_cast<MouseSpeedIndicatorItem *>(item);
         AngularViewerItem *angularViewerItem = dynamic_cast<AngularViewerItem *>(item);
+        ControllerItem *controllerItem = dynamic_cast<ControllerItem *>(item);
         LabelItem *labelItem = dynamic_cast<LabelItem *>(item);
 
         if (labelItem) {
@@ -929,6 +1001,39 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
                 elemObj.insert(it.key(), it.value());
             elementsArray.append(elemObj);
             QRectF sceneBr = angularViewerItem->sceneBoundingRect();
+            itemMinX = sceneBr.left(); itemMinY = sceneBr.top(); itemMaxX = sceneBr.right(); itemMaxY = sceneBr.bottom();
+            if (first) {
+                minX = itemMinX; minY = itemMinY; maxX = itemMaxX; maxY = itemMaxY;
+                first = false;
+            } else {
+                minX = qMin(minX, itemMinX);
+                minY = qMin(minY, itemMinY);
+                maxX = qMax(maxX, itemMaxX);
+                maxY = qMax(maxY, itemMaxY);
+            }
+            continue;
+        }
+
+        if (controllerItem) {
+            QRectF r = controllerItem->rect();
+            qreal w = r.width();
+            qreal h = r.height();
+            QPointF corners[4] = { QPointF(0, 0), QPointF(w, 0), QPointF(w, h), QPointF(0, h) };
+            QJsonArray boundaries;
+            for (const QPointF &p : corners) {
+                QPointF sc = controllerItem->mapToScene(p);
+                boundaries.append(QJsonObject{{"X", static_cast<int>(sc.x())}, {"Y", static_cast<int>(sc.y())}});
+            }
+            QJsonObject elemObj;
+            elemObj.insert("__type", "Controller");
+            elemObj.insert("Id", id++);
+            elemObj.insert("Boundaries", boundaries);
+            elemObj.insert("ControllerIndex", controllerItem->controllerIndex());
+            QJsonObject styleObj = controllerItem->keyStyle().toJson();
+            for (auto it = styleObj.begin(); it != styleObj.end(); ++it)
+                elemObj.insert(it.key(), it.value());
+            elementsArray.append(elemObj);
+            QRectF sceneBr = controllerItem->sceneBoundingRect();
             itemMinX = sceneBr.left(); itemMinY = sceneBr.top(); itemMaxX = sceneBr.right(); itemMaxY = sceneBr.bottom();
             if (first) {
                 minX = itemMinX; minY = itemMinY; maxX = itemMaxX; maxY = itemMaxY;
@@ -1228,6 +1333,7 @@ void LayoutEditor::copyKeyFromItem(QGraphicsItem *item) {
     QJsonObject keyObj;
     MouseSpeedIndicatorItem *mouseItem = dynamic_cast<MouseSpeedIndicatorItem*>(item);
     AngularViewerItem *angularItem = dynamic_cast<AngularViewerItem*>(item);
+    ControllerItem *controllerItemCopy = dynamic_cast<ControllerItem*>(item);
     LabelItem *labelItemCopy = dynamic_cast<LabelItem*>(item);
     if (mouseItem) {
         QPointF c = mouseItem->centerPos();
@@ -1262,6 +1368,22 @@ void LayoutEditor::copyKeyFromItem(QGraphicsItem *item) {
         keyObj.insert("TextPosition", QJsonObject{{"X", static_cast<int>(centerSc.x())}, {"Y", static_cast<int>(centerSc.y())}});
         keyObj.insert("ShiftText", angularItem->getShiftText());
         QJsonObject styleObj = angularItem->keyStyle().toJson();
+        for (auto it = styleObj.begin(); it != styleObj.end(); ++it)
+            keyObj.insert(it.key(), it.value());
+    } else if (controllerItemCopy) {
+        QRectF r = controllerItemCopy->rect();
+        qreal w = r.width();
+        qreal h = r.height();
+        QPointF corners[4] = { QPointF(0, 0), QPointF(w, 0), QPointF(w, h), QPointF(0, h) };
+        QJsonArray boundaries;
+        for (const QPointF &p : corners) {
+            QPointF sc = controllerItemCopy->mapToScene(p);
+            boundaries.append(QJsonObject{{"X", static_cast<int>(sc.x())}, {"Y", static_cast<int>(sc.y())}});
+        }
+        keyObj.insert("__type", "Controller");
+        keyObj.insert("Boundaries", boundaries);
+        keyObj.insert("ControllerIndex", controllerItemCopy->controllerIndex());
+        QJsonObject styleObj = controllerItemCopy->keyStyle().toJson();
         for (auto it = styleObj.begin(); it != styleObj.end(); ++it)
             keyObj.insert(it.key(), it.value());
     } else if (labelItemCopy) {
@@ -1344,6 +1466,32 @@ void LayoutEditor::pasteKey() {
         return;
     }
 
+    if (type == QLatin1String("Controller")) {
+        QJsonArray boundaries = keyObj["Boundaries"].toArray();
+        if (boundaries.isEmpty()) return;
+        qreal minX = 1e9, minY = 1e9;
+        for (const QJsonValue &v : boundaries) {
+            QJsonObject p = v.toObject();
+            minX = qMin(minX, p["X"].toDouble());
+            minY = qMin(minY, p["Y"].toDouble());
+        }
+        qreal dx = 100 - minX;
+        qreal dy = 100 - minY;
+        QJsonArray newBoundaries;
+        for (const QJsonValue &v : boundaries) {
+            QJsonObject p = v.toObject();
+            newBoundaries.append(QJsonObject{{"X", static_cast<int>(p["X"].toDouble() + dx)}, {"Y", static_cast<int>(p["Y"].toDouble() + dy)}});
+        }
+        keyObj["Boundaries"] = newBoundaries;
+        ControllerItem *added = createController(keyObj);
+        if (added) {
+            view->addRectAction(added);
+            scene->clearSelection();
+            added->setSelected(true);
+        }
+        return;
+    }
+
     if (type == QLatin1String("Label")) {
         qreal x = keyObj["X"].toDouble();
         qreal y = keyObj["Y"].toDouble();
@@ -1401,5 +1549,6 @@ void LayoutEditor::updateLanguage() {
     if (m_angularViewerMenu) m_angularViewerMenu->setTitle(tr("Angular viewer"));
     if (m_actLeftStick) m_actLeftStick->setText(tr("Left joystick"));
     if (m_actRightStick) m_actRightStick->setText(tr("Right joystick"));
+    if (m_actController) m_actController->setText(tr("Controller"));
     if (m_actLabel) m_actLabel->setText(tr("Label"));
 }

@@ -17,6 +17,7 @@
 #include "resizablepathitem.h"
 #include "mousespeedindicatoritem.h"
 #include "angularvieweritem.h"
+#include "controlleritem.h"
 #include "labelitem.h"
 #include "keystyle.h"
 
@@ -66,6 +67,7 @@ private:
     QMenu *m_angularViewerMenu = nullptr;
     QAction *m_actLeftStick = nullptr;
     QAction *m_actRightStick = nullptr;
+    QAction *m_actController = nullptr;
     QAction *m_actLabel = nullptr;
     QString _currentLayoutPath;
     bool m_dirty = false;
@@ -90,6 +92,8 @@ public slots:
     MouseSpeedIndicatorItem* addMouseSpeedIndicator(qreal centerX, qreal centerY, qreal radius, const QString &label = QString());
     AngularViewerItem* createAngularViewer(const QJsonObject &keyData);
     AngularViewerItem* addAngularViewer(AngularViewerSubType subType, qreal x, qreal y, qreal w, qreal h, const QString &label = QString());
+    ControllerItem* createController(const QJsonObject &keyData);
+    ControllerItem* addController(qreal x, qreal y, qreal w, qreal h);
     LabelItem* createLabel(const QJsonObject &keyData);
     LabelItem* addLabel(const QString &text, qreal x, qreal y);
     void updateLanguage();
