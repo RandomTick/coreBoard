@@ -28,7 +28,8 @@ const WORD BUTTON_BITS[] = {
     XINPUT_GAMEPAD_DPAD_LEFT,    // 12
     XINPUT_GAMEPAD_DPAD_RIGHT,   // 13
 };
-const int NUM_BUTTONS = 14;
+const int NUM_BUTTONS = 14;  // digital buttons only; triggers 14/15 handled separately
+const BYTE TRIGGER_THRESHOLD = 30;  // 0..255; above = "pressed" for binding
 
 const SHORT DEADZONE = 7843;  // ~24% of 32767; XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE is 7843
 
@@ -45,6 +46,8 @@ public:
     QTimer *timer = nullptr;
     WORD prevButtons[4] = {0, 0, 0, 0};
     bool prevConnected[4] = {false, false, false, false};
+    bool prevLT[4] = {false, false, false, false};
+    bool prevRT[4] = {false, false, false, false};
 };
 
 GamepadListener::GamepadListener(QObject *parent) : QObject(parent)
@@ -73,6 +76,29 @@ GamepadListener::GamepadListener(QObject *parent) : QObject(parent)
                 }
             }
             d->prevButtons[ci] = cur;
+
+            // Analog triggers (not in wButtons): emit digital key events for binding + analog for fill
+            BYTE lT = state.Gamepad.bLeftTrigger;
+            BYTE rT = state.Gamepad.bRightTrigger;
+            qreal lTNorm = qBound(0.0, lT / 255.0, 1.0);
+            qreal rTNorm = qBound(0.0, rT / 255.0, 1.0);
+            bool nowLT = (lT > TRIGGER_THRESHOLD);
+            bool nowRT = (rT > TRIGGER_THRESHOLD);
+            if (nowLT != d->prevLT[ci]) {
+                if (nowLT)
+                    emit keyPressed(gamepadCode(ci, GAMEPAD_LEFT_TRIGGER_BUTTON));
+                else
+                    emit keyReleased(gamepadCode(ci, GAMEPAD_LEFT_TRIGGER_BUTTON));
+                d->prevLT[ci] = nowLT;
+            }
+            if (nowRT != d->prevRT[ci]) {
+                if (nowRT)
+                    emit keyPressed(gamepadCode(ci, GAMEPAD_RIGHT_TRIGGER_BUTTON));
+                else
+                    emit keyReleased(gamepadCode(ci, GAMEPAD_RIGHT_TRIGGER_BUTTON));
+                d->prevRT[ci] = nowRT;
+            }
+            emit triggersChanged(ci, lTNorm, rTNorm);
 
             qreal lx = normalizeThumb(state.Gamepad.sThumbLX);
             qreal ly = -normalizeThumb(state.Gamepad.sThumbLY);  // Y up = positive

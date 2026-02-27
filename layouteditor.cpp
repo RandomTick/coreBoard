@@ -1031,7 +1031,9 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
         keyObj.insert("Boundaries", boundaries);
         keyObj.insert("KeyCodes", keyCodesArray);
         keyObj.insert("Text", text);
-        keyObj.insert("TextPosition", QJsonObject{{"X", static_cast<int>(centerX)}, {"Y", static_cast<int>(centerY)}});
+        bool hasCustomText = rectItem ? rectItem->hasCustomTextPosition() : (ellipseItem ? ellipseItem->hasCustomTextPosition() : (polygonItem ? polygonItem->hasCustomTextPosition() : pathItem->hasCustomTextPosition()));
+        if (hasCustomText)
+            keyObj.insert("TextPosition", QJsonObject{{"X", static_cast<int>(centerX)}, {"Y", static_cast<int>(centerY)}});
         keyObj.insert("ChangeOnCaps", false);
         keyObj.insert("ShiftText", shiftText.isEmpty() ? text : shiftText);
         if (pathItem) {
@@ -1151,7 +1153,9 @@ static QJsonObject keyItemToJson(QGraphicsItem *item) {
     keyObj.insert("Boundaries", boundaries);
     keyObj.insert("KeyCodes", keyCodesArray);
     keyObj.insert("Text", text);
-    keyObj.insert("TextPosition", QJsonObject{{"X", static_cast<int>(centerX)}, {"Y", static_cast<int>(centerY)}});
+    bool hasCustomText = rectItem ? rectItem->hasCustomTextPosition() : (ellipseItem ? ellipseItem->hasCustomTextPosition() : (polygonItem ? polygonItem->hasCustomTextPosition() : pathItem->hasCustomTextPosition()));
+    if (hasCustomText)
+        keyObj.insert("TextPosition", QJsonObject{{"X", static_cast<int>(centerX)}, {"Y", static_cast<int>(centerY)}});
     keyObj.insert("ChangeOnCaps", false);
     keyObj.insert("ShiftText", shiftText.isEmpty() ? text : shiftText);
     if (pathItem && !pathItem->holes().isEmpty()) {

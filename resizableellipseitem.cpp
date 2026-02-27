@@ -99,6 +99,11 @@ void ResizableEllipseItem::setTextPosition(const QPointF &pos) {
     centerText();
 }
 
+void ResizableEllipseItem::setTextPositionToCenter() {
+    m_hasCustomTextPosition = false;
+    centerText();
+}
+
 KeyStyle ResizableEllipseItem::keyStyle() const {
     KeyStyle s;
     s.outlineColor = pen().color();

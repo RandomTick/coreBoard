@@ -11,6 +11,9 @@ class QGraphicsScene;
 class QGraphicsView;
 class QGraphicsPolygonItem;
 class QGraphicsPathItem;
+class QDoubleSpinBox;
+class QLabel;
+class QCheckBox;
 
 class ShapeEditorDialog : public QDialog
 {
@@ -27,17 +30,27 @@ public:
     void addHole();
     void addCircularHole();
     void deleteHole(int holeIndex);
+    void setSelectedVertex(int holeIndex, int vertexIndex);
+    void updateOffsetLabel();  // public so TextAnchorDot can call when anchor is moved
+    void onAnchorMovedByUser();  // public so TextAnchorDot can call when user drags the anchor
 
 signals:
     void requestItemReplacement(QGraphicsItem *oldItem, int newType, const QPolygonF &outer,
                                 const QList<QPolygonF> &holes, const QPointF &textPosLocal,
                                 const QPointF &itemPos, qreal w, qreal h);
 
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
+
 private:
     void setupCanvas();
     void applyChanges();
     void rebuildVertexDots();
     void refreshDisplay();
+    void applyRotationToShape(qreal degrees);
+    void moveSelectedVertexBy(int dx, int dy);
+    QPointF shapeCenter() const;
+    void updateAnchorToCenterIfChecked();
 
     QGraphicsItem *m_shapeItem = nullptr;
     QGraphicsScene *m_scene = nullptr;
@@ -52,7 +65,15 @@ private:
     QGraphicsItem *m_textAnchorDot = nullptr;
     QGraphicsPolygonItem *m_polygonDisplay = nullptr;
     QGraphicsPathItem *m_pathDisplay = nullptr;
+    QGraphicsPathItem *m_pathOutline = nullptr;  // explicit outline so all edges draw after hole delete
     QList<QGraphicsItem*> m_vertexDots;
+    qreal m_rotationDegrees = 0;
+    QDoubleSpinBox *m_degreeSpinBox = nullptr;
+    QLabel *m_offsetLabel = nullptr;
+    QCheckBox *m_centerTextCheckBox = nullptr;
+    bool m_anchorSetByCode = false;
+    int m_selectedHoleIndex = -2;
+    int m_selectedVertexIndex = -1;
 };
 
 #endif // SHAPEEDITORDIALOG_H

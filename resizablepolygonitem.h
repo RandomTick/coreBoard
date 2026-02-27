@@ -27,6 +27,8 @@ public:
 
     QPointF textPosition() const;
     void setTextPosition(const QPointF &pos);
+    bool hasCustomTextPosition() const { return m_hasCustomTextPosition; }
+    void setTextPositionToCenter();
 
     void setPolygonDirect(const QPolygonF &polygon);
 

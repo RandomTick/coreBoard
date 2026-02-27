@@ -26,6 +26,8 @@ public:
 
     QPointF textPosition() const;
     void setTextPosition(const QPointF &pos);
+    bool hasCustomTextPosition() const { return m_hasCustomTextPosition; }
+    void setTextPositionToCenter();
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
 

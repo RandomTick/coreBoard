@@ -138,6 +138,11 @@ void ResizablePolygonItem::setTextPosition(const QPointF &pos) {
     centerText();
 }
 
+void ResizablePolygonItem::setTextPositionToCenter() {
+    m_hasCustomTextPosition = false;
+    centerText();
+}
+
 KeyStyle ResizablePolygonItem::keyStyle() const {
     KeyStyle s;
     s.outlineColor = pen().color();

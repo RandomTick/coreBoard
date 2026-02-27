@@ -31,6 +31,8 @@ public:
 
     QPointF textPosition() const;
     void setTextPosition(const QPointF &pos);
+    bool hasCustomTextPosition() const { return m_hasCustomTextPosition; }
+    void setTextPositionToCenter();
 
     QPolygonF outerPolygon() const;
     QList<QPolygonF> holes() const;

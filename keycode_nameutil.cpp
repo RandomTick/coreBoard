@@ -24,6 +24,8 @@ static const char *gamepadButtonName(int buttonIndex) {
     case 11: return "D-pad Down";
     case 12: return "D-pad Left";
     case 13: return "D-pad Right";
+    case 14: return "LT";
+    case 15: return "RT";
     default: return "?";
     }
 }

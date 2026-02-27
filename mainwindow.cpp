@@ -58,6 +58,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_gamepadListener, &GamepadListener::keyReleased, m_keyboardWidget, &KeyboardWidget::onKeyReleased);
     connect(m_gamepadListener, &GamepadListener::leftStickChanged, m_keyboardWidget, &KeyboardWidget::onLeftStickChanged);
     connect(m_gamepadListener, &GamepadListener::rightStickChanged, m_keyboardWidget, &KeyboardWidget::onRightStickChanged);
+    connect(m_gamepadListener, &GamepadListener::triggersChanged, m_keyboardWidget, &KeyboardWidget::onTriggersChanged);
 #endif
 
     QString lastPath = m_layoutSettings->lastLayoutPath();
@@ -198,7 +199,8 @@ void MainWindow::applyVisualizationColors()
     m_keyboardWidget->setTextColor(m_layoutSettings->textColor());
     m_keyboardWidget->setHighlightedTextColor(m_layoutSettings->highlightedTextColor());
     m_keyboardWidget->setLabelMode(m_layoutSettings->labelMode());
-    m_keyboardWidget->applyColors();
+    // Full reload when we have a path so the visualization is redrawn from scratch (no stale scene iteration).
+    m_keyboardWidget->reloadLayout();
 }
 
 void MainWindow::onSwitchToView()

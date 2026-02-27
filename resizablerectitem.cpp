@@ -112,6 +112,11 @@ void ResizableRectItem::setTextPosition(const QPointF &pos) {
     centerText();
 }
 
+void ResizableRectItem::setTextPositionToCenter() {
+    m_hasCustomTextPosition = false;
+    centerText();
+}
+
 KeyStyle ResizableRectItem::keyStyle() const {
     KeyStyle s;
     s.outlineColor = pen().color();

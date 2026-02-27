@@ -15,7 +15,14 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QGraphicsSceneContextMenuEvent>
+#include <QGraphicsSceneMouseEvent>
 #include <QMenu>
+#include <QKeyEvent>
+#include <QEvent>
+#include <QDoubleSpinBox>
+#include <QLabel>
+#include <QCheckBox>
+#include <QGroupBox>
 #include <algorithm>
 #include <cmath>
 
@@ -30,6 +37,25 @@ public:
         setPen(QPen(Qt::darkBlue, 1));
         setFlag(QGraphicsItem::ItemIsMovable);
         setFlag(QGraphicsItem::ItemSendsGeometryChanges);
+    }
+};
+
+class TextAnchorDot : public DraggableDot
+{
+public:
+    ShapeEditorDialog *m_dialog = nullptr;
+    explicit TextAnchorDot(qreal x, qreal y, ShapeEditorDialog *dialog, QGraphicsItem *parent = nullptr)
+        : DraggableDot(x, y, 6, parent)
+        , m_dialog(dialog)
+    {}
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value) override
+    {
+        QVariant result = DraggableDot::itemChange(change, value);
+        if (change == ItemPositionHasChanged && m_dialog) {
+            m_dialog->onAnchorMovedByUser();
+            m_dialog->updateOffsetLabel();
+        }
+        return result;
     }
 };
 
@@ -61,6 +87,13 @@ public:
             m_dialog->updatePolygonFromVertices(m_holeIndex, m_index, newPos);
         }
         return QGraphicsEllipseItem::itemChange(change, value);
+    }
+
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        QGraphicsEllipseItem::mousePressEvent(event);
+        if (event->button() == Qt::LeftButton && m_dialog)
+            m_dialog->setSelectedVertex(m_holeIndex, m_index);
     }
 
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override
@@ -182,6 +215,8 @@ void ShapeEditorDialog::setupCanvas()
     m_view->setRenderHint(QPainter::TextAntialiasing);
     m_view->setBackgroundBrush(QColor(50, 50, 50));
     m_view->setDragMode(QGraphicsView::NoDrag);
+    m_view->setFocusPolicy(Qt::StrongFocus);
+    m_view->installEventFilter(this);
 
     qreal margin = 20;
     QRectF viewRect = m_shapeRect.adjusted(-margin, -margin, margin, margin);
@@ -201,22 +236,88 @@ void ShapeEditorDialog::setupCanvas()
     } else if (m_shapeType == Path) {
         QPainterPath path;
         path.addPolygon(m_shapePolygon);
+        path.setFillRule(Qt::WindingFill);
         for (const QPolygonF &hole : m_shapeHoles) {
             QPainterPath holePath;
             holePath.addPolygon(hole);
+            holePath.setFillRule(Qt::WindingFill);
             path = path.subtracted(holePath);
         }
-        m_pathDisplay = m_scene->addPath(path, QPen(Qt::lightGray, 1), QBrush(QColor(80, 80, 80)));
+        m_pathDisplay = m_scene->addPath(path, QPen(Qt::NoPen), QBrush(QColor(80, 80, 80)));
         m_pathDisplay->setZValue(0);
+        QPainterPath outlinePath;
+        if (!m_shapePolygon.isEmpty()) {
+            outlinePath.moveTo(m_shapePolygon.first());
+            for (int i = 1; i < m_shapePolygon.size(); ++i)
+                outlinePath.lineTo(m_shapePolygon.at(i));
+            outlinePath.closeSubpath();
+            for (const QPolygonF &hole : m_shapeHoles) {
+                if (hole.size() >= 2) {
+                    outlinePath.moveTo(hole.first());
+                    for (int i = 1; i < hole.size(); ++i)
+                        outlinePath.lineTo(hole.at(i));
+                    outlinePath.closeSubpath();
+                }
+            }
+        }
+        m_pathOutline = m_scene->addPath(outlinePath, QPen(Qt::lightGray, 1), Qt::NoBrush);
+        m_pathOutline->setZValue(1);
         rebuildVertexDots();
     }
 
-    m_textAnchorDot = new DraggableDot(m_textAnchorLocal.x(), m_textAnchorLocal.y());
+    m_textAnchorDot = new TextAnchorDot(m_textAnchorLocal.x(), m_textAnchorLocal.y(), this);
     m_scene->addItem(m_textAnchorDot);
     m_textAnchorDot->setZValue(10);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(m_view);
+
+    // Rotation for Rect, Polygon, Path (not for Ellipse).
+    if (m_shapeType != Ellipse) {
+        QHBoxLayout *rotationRow = new QHBoxLayout();
+        rotationRow->addWidget(new QLabel(tr("Rotation (degrees):"), this));
+        m_degreeSpinBox = new QDoubleSpinBox(this);
+        m_degreeSpinBox->setRange(-360, 360);
+        m_degreeSpinBox->setValue(0);
+        m_degreeSpinBox->setSuffix(QStringLiteral(" \u00B0"));
+        m_degreeSpinBox->setDecimals(1);
+        rotationRow->addWidget(m_degreeSpinBox);
+        rotationRow->addStretch();
+        mainLayout->addLayout(rotationRow);
+        connect(m_degreeSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](qreal newDegrees) {
+            qreal delta = newDegrees - m_rotationDegrees;
+            m_rotationDegrees = newDegrees;
+            applyRotationToShape(delta);
+        });
+    }
+
+    // Center text: when checked, text stays at shape center (also when resizing in layout editor).
+    m_centerTextCheckBox = new QCheckBox(tr("Center text"), this);
+    bool initiallyCentered = true;
+    if (ResizableRectItem *r = dynamic_cast<ResizableRectItem*>(m_shapeItem))
+        initiallyCentered = !r->hasCustomTextPosition();
+    else if (ResizableEllipseItem *e = dynamic_cast<ResizableEllipseItem*>(m_shapeItem))
+        initiallyCentered = !e->hasCustomTextPosition();
+    else if (ResizablePolygonItem *p = dynamic_cast<ResizablePolygonItem*>(m_shapeItem))
+        initiallyCentered = !p->hasCustomTextPosition();
+    else if (ResizablePathItem *path = dynamic_cast<ResizablePathItem*>(m_shapeItem))
+        initiallyCentered = !path->hasCustomTextPosition();
+    m_centerTextCheckBox->setChecked(initiallyCentered);
+    mainLayout->addWidget(m_centerTextCheckBox);
+    connect(m_centerTextCheckBox, &QCheckBox::toggled, this, [this](bool checked) {
+        if (checked) {
+            updateAnchorToCenterIfChecked();
+        } else if (m_textAnchorDot) {
+            m_textAnchorDot->setFlag(QGraphicsItem::ItemIsMovable, true);
+        }
+    });
+    updateAnchorToCenterIfChecked();
+
+    if (m_shapeType == Polygon || m_shapeType == Path || m_shapeType == Rect) {
+        m_offsetLabel = new QLabel(tr("Select a point to see position (text anchor = 0,0). Arrow keys: 1 px; Shift+arrow: 10 px."), this);
+        m_offsetLabel->setStyleSheet(QStringLiteral("color: #aaa;"));
+        mainLayout->addWidget(m_offsetLabel);
+    }
 
     QHBoxLayout *buttons = new QHBoxLayout();
     if (m_shapeType == Polygon || m_shapeType == Path || m_shapeType == Rect) {
@@ -236,8 +337,76 @@ void ShapeEditorDialog::setupCanvas()
     mainLayout->addLayout(buttons);
 }
 
+void ShapeEditorDialog::applyRotationToShape(qreal deltaDegrees)
+{
+    if (qAbs(deltaDegrees) < 1e-6)
+        return;
+    qreal rad = deltaDegrees * M_PI / 180.0;
+    qreal c = std::cos(rad), s = std::sin(rad);
+
+    if (m_shapeType != Ellipse) {
+        QRectF br = m_shapePolygon.boundingRect();
+        for (const QPolygonF &h : m_shapeHoles)
+            br = br.united(h.boundingRect());
+        QPointF center = br.center();
+        auto rotate = [&](QPointF p) {
+            p -= center;
+            return center + QPointF(p.x() * c - p.y() * s, p.x() * s + p.y() * c);
+        };
+        for (int i = 0; i < m_shapePolygon.size(); ++i)
+            m_shapePolygon[i] = rotate(m_shapePolygon[i]);
+        for (int h = 0; h < m_shapeHoles.size(); ++h)
+            for (int i = 0; i < m_shapeHoles[h].size(); ++i)
+                m_shapeHoles[h][i] = rotate(m_shapeHoles[h][i]);
+        m_textAnchorLocal = rotate(m_textAnchorLocal);
+        if (m_textAnchorDot)
+            m_textAnchorDot->setPos(m_textAnchorLocal);
+        refreshDisplay();
+        rebuildVertexDots();
+    }
+    updateAnchorToCenterIfChecked();
+}
+
+QPointF ShapeEditorDialog::shapeCenter() const
+{
+    if (m_shapeType == Ellipse)
+        return m_shapeRect.center();
+    QRectF br = m_shapePolygon.boundingRect();
+    for (const QPolygonF &h : m_shapeHoles)
+        br = br.united(h.boundingRect());
+    return br.center();
+}
+
+void ShapeEditorDialog::updateAnchorToCenterIfChecked()
+{
+    if (!m_centerTextCheckBox || !m_centerTextCheckBox->isChecked() || !m_textAnchorDot)
+        return;
+    QPointF center = shapeCenter();
+    m_textAnchorLocal = center;
+    m_anchorSetByCode = true;
+    m_textAnchorDot->setPos(center);
+    m_textAnchorDot->setFlag(QGraphicsItem::ItemIsMovable, false);
+}
+
+void ShapeEditorDialog::onAnchorMovedByUser()
+{
+    if (m_anchorSetByCode) {
+        m_anchorSetByCode = false;
+        return;
+    }
+    if (m_centerTextCheckBox)
+        m_centerTextCheckBox->setChecked(false);
+    if (m_textAnchorDot)
+        m_textAnchorDot->setFlag(QGraphicsItem::ItemIsMovable, true);
+    if (m_textAnchorDot)
+        m_textAnchorLocal = m_textAnchorDot->pos();
+}
+
 void ShapeEditorDialog::rebuildVertexDots()
 {
+    m_selectedHoleIndex = -2;
+    m_selectedVertexIndex = -1;
+    updateOffsetLabel();
     for (QGraphicsItem *dot : m_vertexDots)
         m_scene->removeItem(dot);
     m_vertexDots.clear();
@@ -310,6 +479,85 @@ void ShapeEditorDialog::updatePolygonFromVertices(int holeIndex, int movedIndex,
     }
 
     refreshDisplay();
+    updateAnchorToCenterIfChecked();
+    updateOffsetLabel();
+}
+
+void ShapeEditorDialog::setSelectedVertex(int holeIndex, int vertexIndex)
+{
+    m_selectedHoleIndex = holeIndex;
+    m_selectedVertexIndex = vertexIndex;
+    if (m_view)
+        m_view->setFocus();
+    updateOffsetLabel();
+    for (QGraphicsItem *item : m_vertexDots) {
+        VertexDot *vd = dynamic_cast<VertexDot*>(item);
+        if (vd) {
+            bool sel = (vd->m_holeIndex == holeIndex && vd->m_index == vertexIndex);
+            vd->setPen(QPen(sel ? Qt::cyan : (vd->m_holeIndex >= 0 ? Qt::darkMagenta : Qt::darkYellow), sel ? 2 : 1));
+        }
+    }
+}
+
+void ShapeEditorDialog::updateOffsetLabel()
+{
+    if (!m_offsetLabel)
+        return;
+    if (m_selectedHoleIndex < -1 || m_selectedVertexIndex < 0) {
+        m_offsetLabel->setText(tr("Select a point to see position (text anchor = 0,0). Arrow keys: 1 px; Shift+arrow: 10 px."));
+        return;
+    }
+    VertexDot *vd = nullptr;
+    for (QGraphicsItem *item : m_vertexDots) {
+        VertexDot *d = dynamic_cast<VertexDot*>(item);
+        if (d && d->m_holeIndex == m_selectedHoleIndex && d->m_index == m_selectedVertexIndex) {
+            vd = d;
+            break;
+        }
+    }
+    if (!vd) {
+        m_offsetLabel->setText(tr("Select a point to see position (text anchor = 0,0)."));
+        return;
+    }
+    QPointF origin = m_textAnchorDot ? m_textAnchorDot->pos() : QPointF(0, 0);
+    QPointF p = vd->pos();
+    int px = qRound(p.x() - origin.x());
+    int py = qRound(p.y() - origin.y());
+    m_offsetLabel->setText(tr("Position: %1, %2  (text anchor = 0,0)").arg(px).arg(py));
+}
+
+void ShapeEditorDialog::moveSelectedVertexBy(int dx, int dy)
+{
+    if (m_selectedHoleIndex < -1 || m_selectedVertexIndex < 0)
+        return;
+    for (QGraphicsItem *item : m_vertexDots) {
+        VertexDot *vd = dynamic_cast<VertexDot*>(item);
+        if (vd && vd->m_holeIndex == m_selectedHoleIndex && vd->m_index == m_selectedVertexIndex) {
+            vd->setPos(vd->pos() + QPointF(dx, dy));
+            updatePolygonFromVertices(m_selectedHoleIndex, m_selectedVertexIndex, vd->pos());
+            return;
+        }
+    }
+}
+
+bool ShapeEditorDialog::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == m_view && event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        int key = keyEvent->key();
+        int dx = 0, dy = 0;
+        int step = (keyEvent->modifiers() & Qt::ShiftModifier) ? 10 : 1;
+        if (key == Qt::Key_Left) dx = -step;
+        else if (key == Qt::Key_Right) dx = step;
+        else if (key == Qt::Key_Up) dy = -step;
+        else if (key == Qt::Key_Down) dy = step;
+        if ((dx != 0 || dy != 0) && m_selectedHoleIndex >= -1 && m_selectedVertexIndex >= 0) {
+            moveSelectedVertexBy(dx, dy);
+            keyEvent->accept();
+            return true;
+        }
+    }
+    return QDialog::eventFilter(obj, event);
 }
 
 void ShapeEditorDialog::refreshDisplay()
@@ -331,6 +579,27 @@ void ShapeEditorDialog::refreshDisplay()
             }
         }
         m_pathDisplay->setPath(path);
+        QPainterPath outlinePath;
+        if (!m_shapePolygon.isEmpty()) {
+            outlinePath.moveTo(m_shapePolygon.first());
+            for (int i = 1; i < m_shapePolygon.size(); ++i)
+                outlinePath.lineTo(m_shapePolygon.at(i));
+            outlinePath.closeSubpath();
+            for (const QPolygonF &hole : m_shapeHoles) {
+                if (hole.size() >= 2) {
+                    outlinePath.moveTo(hole.first());
+                    for (int i = 1; i < hole.size(); ++i)
+                        outlinePath.lineTo(hole.at(i));
+                    outlinePath.closeSubpath();
+                }
+            }
+        }
+        if (!m_pathOutline) {
+            m_pathOutline = m_scene->addPath(outlinePath, QPen(Qt::lightGray, 1), Qt::NoBrush);
+            m_pathOutline->setZValue(1);
+        } else {
+            m_pathOutline->setPath(outlinePath);
+        }
     }
 }
 
@@ -348,6 +617,7 @@ void ShapeEditorDialog::addPointAfter(int holeIndex, int vertexIndex)
 
     refreshDisplay();
     rebuildVertexDots();
+    updateAnchorToCenterIfChecked();
 }
 
 void ShapeEditorDialog::deletePoint(int holeIndex, int vertexIndex)
@@ -365,6 +635,7 @@ void ShapeEditorDialog::deletePoint(int holeIndex, int vertexIndex)
 
     refreshDisplay();
     rebuildVertexDots();
+    updateAnchorToCenterIfChecked();
 }
 
 void ShapeEditorDialog::addHole()
@@ -398,6 +669,7 @@ void ShapeEditorDialog::addHole()
     }
     refreshDisplay();
     rebuildVertexDots();
+    updateAnchorToCenterIfChecked();
 }
 
 void ShapeEditorDialog::addCircularHole()
@@ -427,6 +699,7 @@ void ShapeEditorDialog::addCircularHole()
     m_holeIsCircular.append(true);
     refreshDisplay();
     rebuildVertexDots();
+    updateAnchorToCenterIfChecked();
 }
 
 void ShapeEditorDialog::moveHoleBy(int holeIndex, const QPointF &delta)
@@ -506,7 +779,10 @@ void ShapeEditorDialog::applyChanges()
             if (axisAligned && (x1 - x0) > 1 && (y1 - y0) > 1) {
                 rect->setRect(0, 0, x1 - x0, y1 - y0);
                 rect->setPos(rect->pos() + QPointF(x0, y0));
-                rect->setTextPosition(newTextPos - QPointF(x0, y0));
+                if (m_centerTextCheckBox && m_centerTextCheckBox->isChecked())
+                    rect->setTextPositionToCenter();
+                else
+                    rect->setTextPosition(newTextPos - QPointF(x0, y0));
                 return;
             }
         }
@@ -527,9 +803,12 @@ void ShapeEditorDialog::applyChanges()
         int replaceType = holesLocal.isEmpty() ? 3 : 4;
         emit requestItemReplacement(m_shapeItem, replaceType, outerLocal, holesLocal, newTextPos - tl, itemPos, br.width(), br.height());
         return;
-    } else if (ellipse)
-        ellipse->setTextPosition(newTextPos);
-    else if (polygon) {
+    } else if (ellipse) {
+        if (m_centerTextCheckBox && m_centerTextCheckBox->isChecked())
+            ellipse->setTextPositionToCenter();
+        else
+            ellipse->setTextPosition(newTextPos);
+    } else if (polygon) {
         if (m_shapeType == Path && !m_shapeHoles.isEmpty()) {
             QRectF br = m_shapePolygon.boundingRect();
             for (const QPolygonF &h : m_shapeHoles)
@@ -548,11 +827,17 @@ void ShapeEditorDialog::applyChanges()
             emit requestItemReplacement(m_shapeItem, 4, outerLocal, holesLocal, newTextPos - tl, itemPos, br.width(), br.height());
             return;
         }
-        polygon->setTextPosition(newTextPos);
+        if (m_centerTextCheckBox && m_centerTextCheckBox->isChecked())
+            polygon->setTextPositionToCenter();
+        else
+            polygon->setTextPosition(newTextPos);
         if (m_shapeType == Polygon && m_shapePolygon.size() >= 4)
             polygon->setPolygonDirect(m_shapePolygon);
     } else if (pathItem) {
-        pathItem->setTextPosition(newTextPos);
+        if (m_centerTextCheckBox && m_centerTextCheckBox->isChecked())
+            pathItem->setTextPositionToCenter();
+        else
+            pathItem->setTextPosition(newTextPos);
         pathItem->setPathFromOuterAndHoles(m_shapePolygon, m_shapeHoles);
     }
 }

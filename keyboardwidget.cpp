@@ -1,5 +1,8 @@
 #include "KeyboardWidget.h"
 #include "keystyle.h"
+#ifdef Q_OS_WIN
+#include "gamepadlistener.h"
+#endif
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QFile>
@@ -8,6 +11,7 @@
 #include <QGraphicsPolygonItem>
 #include <QGraphicsPathItem>
 #include <QPainterPath>
+#include <QPainterPathStroker>
 #include <QGraphicsTextItem>
 #include <QAbstractGraphicsShapeItem>
 #include <QTextDocument>
@@ -27,9 +31,110 @@ const int TextAlignmentRole = Qt::UserRole + 7;     // int: 0=left, 1=center, 2=
 const int KeyColorPressedRole = Qt::UserRole + 3;
 const int KeyTextColorRole = Qt::UserRole + 4;
 const int KeyTextColorPressedRole = Qt::UserRole + 5;
+const int KeyCodesRole = Qt::UserRole + 8;       // QList<int> all key codes for this key (for OR + trigger fill)
+const int TriggerCodesRole = Qt::UserRole + 9;   // QList<int> subset that are gamepad trigger codes
+const int AnalogFillRole = Qt::UserRole + 10;    // QGraphicsPathItem* child used for trigger fill (bottom-to-top)
 
 static Qt::Alignment alignmentFromInt(int a) {
     return (a == 0) ? Qt::AlignLeft : ((a == 2) ? Qt::AlignRight : Qt::AlignHCenter);
+}
+
+/// Returns the bounding rect of the shape path when stroked with the given pen width (for clipping the outline).
+static QRectF strokedPathBounds(const QPainterPath &path, qreal penWidth)
+{
+    if (path.isEmpty() || penWidth <= 0.0)
+        return path.boundingRect();
+    QPainterPathStroker stroker;
+    stroker.setWidth(penWidth);
+    stroker.setJoinStyle(Qt::MiterJoin);
+    stroker.setCapStyle(Qt::SquareCap);
+    return stroker.createStroke(path).boundingRect();
+}
+
+/// Returns the stroked path (fill region expanded by pen width) for path-based clipping so the clip follows the shape (e.g. trapezoid).
+static QPainterPath strokedPathForClip(const QPainterPath &path, qreal penWidth)
+{
+    if (path.isEmpty() || penWidth <= 0.0)
+        return path;
+    QPainterPathStroker stroker;
+    stroker.setWidth(penWidth);
+    stroker.setJoinStyle(Qt::MiterJoin);
+    stroker.setCapStyle(Qt::SquareCap);
+    stroker.setCurveThreshold(0.25);
+    QPainterPath stroke = stroker.createStroke(path);
+    stroke.setFillRule(Qt::WindingFill);
+    return stroke;
+}
+
+/// Clip polygon to rect (Sutherland-Hodgman). Used for trigger fill so we don't rely on
+/// QPainterPath::intersected(), which can misbehave for some trapezoids (e.g. Fine#2).
+/// Single-edge helper: keep vertices on the "inside" side of the edge, add intersections when crossing.
+static QPolygonF clipPolygonToRectOneEdge(const QPolygonF &in, int edgeKind, qreal edgeVal)
+{
+    QPolygonF out;
+    const int n = in.size();
+    for (int i = 0; i < n; ++i) {
+        const QPointF &p = in[i];
+        const QPointF &q = in[(i + 1) % n];
+        bool pIn = false, qIn = false;
+        if (edgeKind == 0) { pIn = p.x() >= edgeVal; qIn = q.x() >= edgeVal; }       // left
+        else if (edgeKind == 1) { pIn = p.x() <= edgeVal; qIn = q.x() <= edgeVal; }   // right
+        else if (edgeKind == 2) { pIn = p.y() <= edgeVal; qIn = q.y() <= edgeVal; }   // bottom
+        else { pIn = p.y() >= edgeVal; qIn = q.y() >= edgeVal; }                     // top
+        if (pIn && qIn)
+            out.append(q);
+        else if (pIn && !qIn) {
+            qreal t = 0;
+            if (edgeKind == 0 && qAbs(q.x() - p.x()) > 1e-9) { t = (edgeVal - p.x()) / (q.x() - p.x()); out.append(QPointF(edgeVal, p.y() + t * (q.y() - p.y()))); }
+            else if (edgeKind == 1 && qAbs(q.x() - p.x()) > 1e-9) { t = (edgeVal - p.x()) / (q.x() - p.x()); out.append(QPointF(edgeVal, p.y() + t * (q.y() - p.y()))); }
+            else if (edgeKind == 2 && qAbs(q.y() - p.y()) > 1e-9) { t = (edgeVal - p.y()) / (q.y() - p.y()); out.append(QPointF(p.x() + t * (q.x() - p.x()), edgeVal)); }
+            else if (edgeKind == 3 && qAbs(q.y() - p.y()) > 1e-9) { t = (edgeVal - p.y()) / (q.y() - p.y()); out.append(QPointF(p.x() + t * (q.x() - p.x()), edgeVal)); }
+        } else if (!pIn && qIn) {
+            qreal t = 0;
+            if (edgeKind == 0 && qAbs(q.x() - p.x()) > 1e-9) { t = (edgeVal - p.x()) / (q.x() - p.x()); out.append(QPointF(edgeVal, p.y() + t * (q.y() - p.y()))); }
+            else if (edgeKind == 1 && qAbs(q.x() - p.x()) > 1e-9) { t = (edgeVal - p.x()) / (q.x() - p.x()); out.append(QPointF(edgeVal, p.y() + t * (q.y() - p.y()))); }
+            else if (edgeKind == 2 && qAbs(q.y() - p.y()) > 1e-9) { t = (edgeVal - p.y()) / (q.y() - p.y()); out.append(QPointF(p.x() + t * (q.x() - p.x()), edgeVal)); }
+            else if (edgeKind == 3 && qAbs(q.y() - p.y()) > 1e-9) { t = (edgeVal - p.y()) / (q.y() - p.y()); out.append(QPointF(p.x() + t * (q.x() - p.x()), edgeVal)); }
+            out.append(q);
+        }
+    }
+    return out;
+}
+
+static QPolygonF clipPolygonToRect(const QPolygonF &poly, const QRectF &rect)
+{
+    if (poly.size() < 3)
+        return QPolygonF();
+    qreal xMin = rect.left(), xMax = rect.right(), yMin = rect.top(), yMax = rect.bottom();
+    QPolygonF work = poly;
+    work = clipPolygonToRectOneEdge(work, 0, xMin);
+    if (work.size() < 3) return QPolygonF();
+    work = clipPolygonToRectOneEdge(work, 1, xMax);
+    if (work.size() < 3) return QPolygonF();
+    work = clipPolygonToRectOneEdge(work, 2, yMax);
+    if (work.size() < 3) return QPolygonF();
+    work = clipPolygonToRectOneEdge(work, 3, yMin);
+    return work;
+}
+
+/// Returns the shape outline as QPainterPath in item local coords (for intersection with fill rect).
+/// Uses WindingFill so intersection and stroking behave consistently for all polygons (e.g. trapezoids).
+static QPainterPath shapePathFromItem(QGraphicsItem *item)
+{
+    QPainterPath path;
+    if (QGraphicsRectItem *rectItem = qgraphicsitem_cast<QGraphicsRectItem*>(item)) {
+        path.addRect(rectItem->rect());
+    } else if (QGraphicsEllipseItem *ellipseItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item)) {
+        path.addEllipse(ellipseItem->rect());
+    } else if (QGraphicsPolygonItem *polyItem = qgraphicsitem_cast<QGraphicsPolygonItem*>(item)) {
+        path.addPolygon(polyItem->polygon());
+    } else if (QGraphicsPathItem *pathItem = qgraphicsitem_cast<QGraphicsPathItem*>(item)) {
+        path = pathItem->path();
+    } else {
+        path.addRect(item->boundingRect());
+    }
+    path.setFillRule(Qt::WindingFill);
+    return path;
 }
 }
 
@@ -101,6 +206,9 @@ void KeyboardWidget::setShapeTextColor(QGraphicsItem *shapeItem, const QColor &c
 void KeyboardWidget::applyColors()
 {
     m_view->setBackgroundBrush(m_backgroundColor);
+    // When in editor mode the visualization is hidden; skip scene updates to avoid crashes.
+    if (!isVisible())
+        return;
     // Apply to all key shapes in the scene (including keys with no keycode)
     for (QGraphicsItem *item : m_scene->items()) {
         if (item->parentItem() != nullptr)
@@ -115,14 +223,39 @@ void KeyboardWidget::applyColors()
             setShapeTextColor(shape, effText);
         }
     }
+#ifdef Q_OS_WIN
+    for (QGraphicsItem *item : m_scene->items()) {
+        if (item->parentItem() != nullptr)
+            continue;
+        QGraphicsPathItem *fillItem = m_analogFillOverlays.value(item, nullptr);
+        if (fillItem) {
+            QColor c = item->data(KeyColorPressedRole).value<QColor>();
+            if (!c.isValid()) c = m_highlightColor;
+            fillItem->setBrush(c);
+        }
+        QGraphicsTextItem *highlightTextItem = m_analogHighlightedTextItems.value(item, nullptr);
+        if (highlightTextItem)
+            highlightTextItem->setDefaultTextColor(m_highlightedTextColor);
+    }
+#endif
 }
 
 void KeyboardWidget::loadLayout(const QString &fileName, int retryCount)
 {
     if (fileName.isEmpty()) {
+        m_lastLoadedPath.clear();
+        // Clear trigger-fill maps before scene clear so we never hold pointers to deleted items
+        m_itemsWithTriggerFill.clear();
+        m_analogFillOverlays.clear();
+        m_analogOutlineOverlays.clear();
+        m_analogOutlineClipParents.clear();
+        m_analogTextClipParents.clear();
+        m_analogHighlightedTextItems.clear();
         m_scene->clear();
         m_keys.clear();
         keyCounter.clear();
+        m_pressedKeys.clear();
+        m_triggerValues.clear();
         m_mouseSpeedIndicators.clear();
         m_angularViewers.clear();
         if (m_mouseIndicatorTimer) m_mouseIndicatorTimer->stop();
@@ -141,17 +274,37 @@ void KeyboardWidget::loadLayout(const QString &fileName, int retryCount)
         return;
     }
 
+    m_lastLoadedPath = fileName;
     QByteArray data = file.readAll();
     file.close();
     applyLayoutData(data);
 }
 
+void KeyboardWidget::reloadLayout()
+{
+    if (!m_lastLoadedPath.isEmpty()) {
+        // Clean redraw: clear maps first, then reload from file so we never touch stale scene items.
+        loadLayout(m_lastLoadedPath);
+    } else {
+        applyColors();
+    }
+}
+
 void KeyboardWidget::loadLayoutFromData(const QByteArray &jsonData)
 {
     if (jsonData.isEmpty()) {
+        m_lastLoadedPath.clear();
+        m_itemsWithTriggerFill.clear();
+        m_analogFillOverlays.clear();
+        m_analogOutlineOverlays.clear();
+        m_analogOutlineClipParents.clear();
+        m_analogTextClipParents.clear();
+        m_analogHighlightedTextItems.clear();
         m_scene->clear();
         m_keys.clear();
         keyCounter.clear();
+        m_pressedKeys.clear();
+        m_triggerValues.clear();
         m_mouseSpeedIndicators.clear();
         m_angularViewers.clear();
         m_labelOverlays.clear();
@@ -159,6 +312,7 @@ void KeyboardWidget::loadLayoutFromData(const QByteArray &jsonData)
         update();
         return;
     }
+    m_lastLoadedPath.clear();  // we loaded from data, not from file
     applyLayoutData(jsonData);
 }
 
@@ -172,9 +326,18 @@ void KeyboardWidget::applyLayoutData(const QByteArray &jsonData)
     QJsonObject rootObject = doc.object();
     elements = rootObject.value("Elements").toArray();
 
+    // Clear trigger-fill maps before scene clear so we never hold pointers to deleted items
+    m_itemsWithTriggerFill.clear();
+    m_analogFillOverlays.clear();
+    m_analogOutlineOverlays.clear();
+    m_analogOutlineClipParents.clear();
+    m_analogTextClipParents.clear();
+    m_analogHighlightedTextItems.clear();
     m_scene->clear();
     m_keys.clear();
     keyCounter.clear();
+    m_pressedKeys.clear();
+    m_triggerValues.clear();
     m_mouseSpeedIndicators.clear();
     m_angularViewers.clear();
     m_labelOverlays.clear();
@@ -444,11 +607,67 @@ void KeyboardWidget::createKey(const QJsonObject &keyData)
     textItem->setPos(textX, anchorLocal.y() - textBr.height() / 2);
     textItem->setZValue(1);
 
+    QList<int> codeList;
+    QList<int> triggerCodeList;
     for (int i = 0; i < kc.size(); ++i) {
         int code = static_cast<int>(kc[i].toDouble(0));
-        // Skip invalid/empty keycode (0); otherwise keys with no keycode show as pressed
-        if (code != 0)
-            m_keys[code].push_back(shapeItem);
+        if (code == 0)
+            continue;
+        m_keys[code].push_back(shapeItem);
+        codeList.append(code);
+#ifdef Q_OS_WIN
+        if (isGamepadTriggerCode(code))
+            triggerCodeList.append(code);
+#endif
+    }
+    shapeItem->setData(KeyCodesRole, QVariant::fromValue(codeList));
+    shapeItem->setData(TriggerCodesRole, QVariant::fromValue(triggerCodeList));
+
+    if (!triggerCodeList.isEmpty()) {
+        m_itemsWithTriggerFill.insert(shapeItem);
+        QGraphicsPathItem *fillPathItem = new QGraphicsPathItem(shapeItem);
+        fillPathItem->setBrush(shapeItem->data(KeyColorPressedRole).value<QColor>().isValid()
+                               ? shapeItem->data(KeyColorPressedRole).value<QColor>()
+                               : m_highlightColor);
+        fillPathItem->setPen(Qt::NoPen);  // no pen on fill so the horizontal "top cut" doesn't get a visible edge
+        fillPathItem->setZValue(0.5);
+        fillPathItem->setPos(0, 0);
+        m_analogFillOverlays[shapeItem] = fillPathItem;
+
+        QAbstractGraphicsShapeItem *shape = qgraphicsitem_cast<QAbstractGraphicsShapeItem*>(shapeItem);
+        if (shape && shape->pen().style() != Qt::NoPen) {
+            QGraphicsPathItem *clipParent = new QGraphicsPathItem(shapeItem);
+            clipParent->setPen(Qt::NoPen);
+            clipParent->setBrush(Qt::NoBrush);
+            clipParent->setFlag(QGraphicsItem::ItemClipsChildrenToShape);
+            clipParent->setZValue(0.55);
+            clipParent->setPos(0, 0);
+            QGraphicsPathItem *outlinePathItem = new QGraphicsPathItem(clipParent);
+            outlinePathItem->setBrush(Qt::NoBrush);
+            outlinePathItem->setPen(shape->pen());
+            outlinePathItem->setPath(shapePathFromItem(shapeItem));
+            outlinePathItem->setPos(0, 0);
+            m_analogOutlineOverlays[shapeItem] = outlinePathItem;
+            m_analogOutlineClipParents[shapeItem] = clipParent;
+        }
+        // Highlighted text clipped to fill region (half-and-half effect when trigger is partial)
+        QGraphicsPathItem *textClipParent = new QGraphicsPathItem(shapeItem);
+        textClipParent->setPen(Qt::NoPen);
+        textClipParent->setBrush(Qt::NoBrush);
+        textClipParent->setFlag(QGraphicsItem::ItemClipsChildrenToShape);
+        textClipParent->setZValue(1.05);
+        textClipParent->setPos(0, 0);
+        QGraphicsTextItem *highlightedTextItem = new QGraphicsTextItem(textClipParent);
+        highlightedTextItem->document()->setDocumentMargin(textItem->document()->documentMargin());
+        highlightedTextItem->document()->setDefaultTextOption(textItem->document()->defaultTextOption());
+        highlightedTextItem->setPlainText(textItem->toPlainText());
+        highlightedTextItem->setDefaultTextColor(m_highlightedTextColor);
+        highlightedTextItem->setFont(textItem->font());
+        highlightedTextItem->setTextWidth(textItem->textWidth());
+        highlightedTextItem->setPos(textItem->pos());
+        highlightedTextItem->setZValue(0);
+        m_analogTextClipParents[shapeItem] = textClipParent;
+        m_analogHighlightedTextItems[shapeItem] = highlightedTextItem;
     }
     keyCounter[label] = 0;
 }
@@ -708,12 +927,125 @@ void KeyboardWidget::resetCounter()
 
 void KeyboardWidget::onKeyPressed(int key)
 {
+#ifdef Q_OS_WIN
+    if (!isGamepadTriggerCode(key)) {
+        m_pressedKeys.insert(key);
+        changeKeyColor(key, m_highlightColor, m_highlightedTextColor, true);
+    }
+    updateTriggerFills();
+#else
     changeKeyColor(key, m_highlightColor, m_highlightedTextColor, true);
+#endif
 }
 
 void KeyboardWidget::onKeyReleased(int key)
 {
+#ifdef Q_OS_WIN
+    if (!isGamepadTriggerCode(key)) {
+        m_pressedKeys.remove(key);
+        changeKeyColor(key, m_keyColor, m_textColor, false);
+    }
+    updateTriggerFills();
+#else
     changeKeyColor(key, m_keyColor, m_textColor, false);
+#endif
+}
+
+void KeyboardWidget::onTriggersChanged(int controllerIndex, qreal leftTrigger, qreal rightTrigger)
+{
+#ifdef Q_OS_WIN
+    m_triggerValues[gamepadCode(controllerIndex, GAMEPAD_LEFT_TRIGGER_BUTTON)] = leftTrigger;
+    m_triggerValues[gamepadCode(controllerIndex, GAMEPAD_RIGHT_TRIGGER_BUTTON)] = rightTrigger;
+    updateTriggerFills();
+#endif
+}
+
+void KeyboardWidget::updateTriggerFills()
+{
+#ifdef Q_OS_WIN
+    if (!isVisible())
+        return;
+    for (QGraphicsItem *item : m_scene->items()) {
+        if (item->parentItem() != nullptr)
+            continue;
+        if (!m_itemsWithTriggerFill.contains(item) || !m_analogFillOverlays.contains(item))
+            continue;
+        QList<int> triggerCodes = item->data(TriggerCodesRole).value<QList<int>>();
+        QList<int> keyCodes = item->data(KeyCodesRole).value<QList<int>>();
+        qreal effective = 0.0;
+        for (int code : triggerCodes) {
+            if (m_triggerValues.contains(code))
+                effective = qMax(effective, m_triggerValues[code]);
+        }
+        for (int code : keyCodes) {
+            if (!isGamepadTriggerCode(code) && m_pressedKeys.contains(code)) {
+                effective = 1.0;
+                break;
+            }
+        }
+        QGraphicsPathItem *fillPathItem = m_analogFillOverlays.value(item);
+        if (!fillPathItem)
+            continue;
+        effective = qBound(0.0, effective, 1.0);
+        QPainterPath shapePath = shapePathFromItem(item);
+        QRectF pathBr = shapePath.boundingRect();
+        qreal w = pathBr.width();
+        qreal h = pathBr.height();
+        if (w < 1e-6 || h < 1e-6)
+            continue;
+        QRectF bandRect(pathBr.x(), pathBr.bottom() - h * effective, w, h * effective);
+
+        QPainterPath fillPath;
+        QGraphicsPolygonItem *polyItem = qgraphicsitem_cast<QGraphicsPolygonItem*>(item);
+        if (polyItem) {
+            // Use explicit polygon-rect clip for polygons so trapezoids (e.g. Fine#2) don't get wrong fill from QPainterPath::intersected().
+            QPolygonF clipped = clipPolygonToRect(polyItem->polygon(), bandRect);
+            if (clipped.size() >= 3) {
+                fillPath.addPolygon(clipped);
+                fillPath.setFillRule(Qt::WindingFill);
+            }
+        } else {
+            QPainterPath bottomRectPath;
+            bottomRectPath.addRect(bandRect);
+            bottomRectPath.setFillRule(Qt::WindingFill);
+            fillPath = shapePath.intersected(bottomRectPath);
+            fillPath.setFillRule(Qt::WindingFill);
+            if (!fillPath.isEmpty()) {
+                QPainterPath simplified = fillPath.simplified();
+                if (!simplified.isEmpty())
+                    fillPath = simplified;
+            }
+        }
+        fillPathItem->setPath(fillPath);
+        const bool showFill = effective > 0.0 && !fillPath.isEmpty();
+        fillPathItem->setVisible(showFill);
+
+        QGraphicsPathItem *textClipParent = m_analogTextClipParents.value(item);
+        QGraphicsTextItem *highlightedTextItem = m_analogHighlightedTextItems.value(item);
+        if (textClipParent && highlightedTextItem) {
+            textClipParent->setVisible(showFill);
+            if (showFill) {
+                textClipParent->setPath(fillPath);
+            }
+        }
+
+        QGraphicsPathItem *outlinePathItem = m_analogOutlineOverlays.value(item);
+        QGraphicsPathItem *outlineClipParent = m_analogOutlineClipParents.value(item);
+        if (outlinePathItem && outlineClipParent) {
+            outlineClipParent->setVisible(showFill);
+            if (showFill) {
+                qreal penW = outlinePathItem->pen().widthF();
+                if (penW <= 0.0) penW = 1.0;
+                // Clip to a path that follows the fill/shape (stroked), not a rectangle, so angled
+                // edges (e.g. trapezoid) are never cut off.
+                QPainterPath clipPath = (effective >= 1.0)
+                    ? strokedPathForClip(shapePath, penW + 1.0)   // full fill: clip to stroked shape + margin
+                    : strokedPathForClip(fillPath, penW);         // partial: clip to stroked fill region
+                outlineClipParent->setPath(clipPath);
+            }
+        }
+    }
+#endif
 }
 
 void KeyboardWidget::setLabelMode(LabelMode mode)

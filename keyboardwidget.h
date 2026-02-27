@@ -8,6 +8,8 @@
 #include <QGraphicsScene>
 #include <QGraphicsItem>
 #include <QGraphicsEllipseItem>
+#include <QGraphicsPathItem>
+#include <QGraphicsRectItem>
 #include <QGraphicsTextItem>
 #include <map>
 #include <vector>
@@ -15,6 +17,8 @@
 #include <QRectF>
 #include <QColor>
 #include <QTimer>
+#include <QSet>
+#include <QMap>
 #include "layoutsettings.h"
 
 struct MouseSpeedIndicatorOverlay {
@@ -63,6 +67,8 @@ public:
     void setTextColor(const QColor &color);
     void setHighlightedTextColor(const QColor &color);
     void applyColors();  // re-apply current colors to all keys and scene
+    /// Reload layout from last path (clean redraw); if no path, falls back to applyColors().
+    void reloadLayout();
 
     void setLabelMode(LabelMode mode);
     void setShiftState(bool pressed);
@@ -77,6 +83,7 @@ private:
     void changeKeyColor(const int &keyCode, const QColor &brushColor, const QColor &textColor, bool isPressed);
     static void setShapeTextColor(QGraphicsItem *shapeItem, const QColor &color);
     void updateLabelsForShiftState();
+    void updateTriggerFills();
     void resetCounter();
     void updateMouseIndicatorsFromCursor();
 
@@ -84,11 +91,20 @@ private:
     QGraphicsScene *m_scene = nullptr;
     std::map<int, std::vector<QGraphicsItem*>> m_keys;
     std::map<QString, int> keyCounter;
+    QSet<int> m_pressedKeys;
+    QMap<int, qreal> m_triggerValues;  // gamepad trigger code -> 0..1
+    QSet<QGraphicsItem*> m_itemsWithTriggerFill;
+    QMap<QGraphicsItem*, QGraphicsPathItem*> m_analogFillOverlays;
+    QMap<QGraphicsItem*, QGraphicsPathItem*> m_analogOutlineOverlays;   // shape path stroked
+    QMap<QGraphicsItem*, QGraphicsPathItem*> m_analogOutlineClipParents;  // path = stroked fill/shape, clips outline to match shape
+    QMap<QGraphicsItem*, QGraphicsPathItem*> m_analogTextClipParents;   // path = fill path, clips highlighted text
+    QMap<QGraphicsItem*, QGraphicsTextItem*> m_analogHighlightedTextItems; // text in highlighted color, clipped to fill
     QColor m_keyColor;
     QColor m_highlightColor;
     QColor m_backgroundColor;
     QColor m_textColor;
     QColor m_highlightedTextColor;
+    QString m_lastLoadedPath;  // path last used in loadLayout(), for clean redraw on color change
     LabelMode m_labelMode = LabelMode::FollowCapsAndShift;
     bool m_shiftPressed = false;
     bool m_capsLockOn = false;
@@ -103,6 +119,7 @@ public slots:
     void onKeyReleased(int key);
     void onLeftStickChanged(int controllerIndex, qreal x, qreal y);
     void onRightStickChanged(int controllerIndex, qreal x, qreal y);
+    void onTriggersChanged(int controllerIndex, qreal leftTrigger, qreal rightTrigger);
 };
 
 #endif // KEYBOARDWIDGET_H

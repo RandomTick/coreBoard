@@ -155,6 +155,12 @@ void ResizablePathItem::setTextPosition(const QPointF &pos)
     centerText();
 }
 
+void ResizablePathItem::setTextPositionToCenter()
+{
+    m_hasCustomTextPosition = false;
+    centerText();
+}
+
 QPolygonF ResizablePathItem::outerPolygon() const
 {
     return m_outer;
