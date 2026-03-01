@@ -146,60 +146,32 @@ static QPainterPath shapePathFromItem(QGraphicsItem *item)
 
 // Controller overlay: draws SVG and highlights for gamepad buttons (indices 0..15; 14=LT, 15=RT).
 // Region data in SVG space (viewBox 0 0 580.032 580.032). Circle: (x,y)=center, r=radius. Rect: r<0 then (x,y,w,h).
-// Region positions and D-pad shape are hardcoded; ControllerRegionsDialog can be re-enabled to edit/save for other layouts.
+// Regions and D-pad shape integrated from controller_regions.json so installer builds work without external file.
 struct ControllerRegion { qreal x, y, w, h, r; };
 static const ControllerRegion s_controllerRegionsBuiltin[16] = {
-    { 365.3, 299, 0, 0, 19 },      // 0 A
-    { 438.047, 251.421, 0, 0, 18.77 },  // 1 B
-    { 399.932, 211.323, 0, 0, 18.77 },  // 2 X
-    { 438.047, 173.226, 0, 0, 18.77 },  // 3 Y
-    { 88, 106, 65, 18, -1 },       // 4 LB
-    { 427, 106, 65, 18, -1 },      // 5 RB
-    { 236, 278, 32, 28, -1 },      // 6 Back
-    { 312, 278, 32, 28, -1 },      // 7 Start
-    { 155.7, 196.78, 0, 0, 14 },  // 8 LStick
-    { 386.78, 278.42, 0, 0, 21 }, // 9 RStick
-    { 256, 270, 0, 0, 11 },       // 10 D-pad up
-    { 256, 314, 0, 0, 11 },       // 11 D-pad down
-    { 234, 292, 0, 0, 11 },       // 12 D-pad left
-    { 278, 292, 0, 0, 11 },       // 13 D-pad right
-    { 88, 70, 65, 28, -1 },       // 14 LT
-    { 427, 70, 65, 28, -1 },      // 15 RT
+    { 438.047, 251.421, 0, 0, 19 },    // 0 A
+    { 479.162, 211.323, 0, 0, 18.77 }, // 1 B
+    { 399.932, 211.323, 0, 0, 18.77 }, // 2 X
+    { 438.047, 173.226, 0, 0, 18.77 }, // 3 Y
+    { 88, 106, 65, 18, -1 },          // 4 LB
+    { 427, 106, 65, 18, -1 },         // 5 RB
+    { 248, 211, 0, 0, 10 },            // 6 Back
+    { 331.5, 211, 0, 0, 10 },          // 7 Start
+    { 142, 210, 0, 0, 20 },            // 8 LStick
+    { 365.5, 300, 0, 0, 20 },          // 9 RStick
+    { 216, 296, 0, 0, 11 },            // 10 D-pad up
+    { 216, 314, 0, 0, 11 },            // 11 D-pad down
+    { 206, 305, 0, 0, 11 },            // 12 D-pad left
+    { 226, 305, 0, 0, 11 },            // 13 D-pad right
+    { 88, 70, 65, 28, -1 },            // 14 LT
+    { 427, 70, 65, 28, -1 },           // 15 RT
 };
 static QVector<ControllerRegion> s_controllerRegions;
-static QDateTime s_controllerRegionsLastModified;
-// Hardcoded D-pad shape (20x26, tip 10). Region positions loaded from controller_regions.json when present.
 static const qreal s_dpadBaseWidth = 20.0;
 static const qreal s_dpadBaseHeight = 26.0;
 static const qreal s_dpadTipLength = 10.0;
 static void ensureControllerRegionsLoaded() {
-    QString path = QCoreApplication::applicationDirPath() + QLatin1String("/controller_regions.json");
-    QFileInfo fi(path);
-    if (fi.exists() && fi.lastModified() > s_controllerRegionsLastModified)
-        s_controllerRegions.clear();
     if (!s_controllerRegions.isEmpty()) return;
-    QFile f(path);
-    if (f.open(QIODevice::ReadOnly)) {
-        s_controllerRegionsLastModified = QFileInfo(path).lastModified();
-        QJsonParseError err;
-        QJsonDocument doc = QJsonDocument::fromJson(f.readAll(), &err);
-        QJsonObject root = doc.isObject() ? doc.object() : QJsonObject();
-        QJsonArray arr = doc.isArray() ? doc.array() : root.value("regions").toArray();
-        if (arr.size() >= 16) {
-            for (int i = 0; i < 16; ++i) {
-                QJsonObject o = arr.at(i).toObject();
-                ControllerRegion reg;
-                reg.x = o.value("x").toDouble(s_controllerRegionsBuiltin[i].x);
-                reg.y = o.value("y").toDouble(s_controllerRegionsBuiltin[i].y);
-                reg.w = o.value("w").toDouble(s_controllerRegionsBuiltin[i].w);
-                reg.h = o.value("h").toDouble(s_controllerRegionsBuiltin[i].h);
-                reg.r = o.value("r").toDouble(s_controllerRegionsBuiltin[i].r);
-                s_controllerRegions.append(reg);
-            }
-            return;
-        }
-    }
-    s_controllerRegionsLastModified = QDateTime();
     for (int i = 0; i < 16; ++i)
         s_controllerRegions.append(s_controllerRegionsBuiltin[i]);
 }
