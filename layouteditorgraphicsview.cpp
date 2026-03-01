@@ -432,6 +432,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                             s.type = 4;
                             s.polygon = path->outerPolygon();
                             s.holes = path->holes();
+                            s.holeIsCircular = path->holeIsCircular();
                             s.textPos = path->textPosition();
                         }
                         return s;
@@ -439,7 +440,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                     EditShapeState oldState = captureEditState(keyItem);
                     QGraphicsItem *editKeyItem = keyItem;
                     ShapeEditorDialog *shapeDialog = new ShapeEditorDialog(this, keyItem);
-                    connect(shapeDialog, &ShapeEditorDialog::requestItemReplacement, this, [this, &editKeyItem, rect, ellipse, polygon, pathItem](QGraphicsItem *oldItem, int newType, const QPolygonF &outer, const QList<QPolygonF> &holes, const QPointF &textPosLocal, const QPointF &itemPos, qreal w, qreal h) {
+                    connect(shapeDialog, &ShapeEditorDialog::requestItemReplacement, this, [this, &editKeyItem, rect, ellipse, polygon, pathItem](QGraphicsItem *oldItem, int newType, const QPolygonF &outer, const QList<QPolygonF> &holes, const QList<bool> &holeIsCircular, const QPointF &textPosLocal, const QPointF &itemPos, qreal w, qreal h) {
                         auto getText = [oldItem]() {
                             if (auto *r = dynamic_cast<ResizableRectItem*>(oldItem)) return r->getText();
                             if (auto *e = dynamic_cast<ResizableEllipseItem*>(oldItem)) return e->getText();
@@ -470,7 +471,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                             poly->setTextPosition(textPosLocal);
                             newItem = poly;
                         } else {
-                            ResizablePathItem *path = layoutEditor->addPathItem(outer, holes, getText(), itemPos.x(), itemPos.y(), w, h, getKeycodes(), style);
+                            ResizablePathItem *path = layoutEditor->addPathItem(outer, holes, getText(), itemPos.x(), itemPos.y(), w, h, getKeycodes(), style, holeIsCircular);
                             path->setShiftText(getShiftText());
                             path->setTextPosition(textPosLocal);
                             newItem = path;
@@ -1085,7 +1086,7 @@ void LayoutEditorGraphicsView::doAction(Action *action){
                 }
             } else if (ResizablePathItem *path = dynamic_cast<ResizablePathItem*>(it)) {
                 if (st.type == 4) {
-                    path->setPathFromOuterAndHoles(st.polygon, st.holes);
+                    path->setPathFromOuterAndHoles(st.polygon, st.holes, st.holeIsCircular);
                     path->setTextPosition(st.textPos);
                 }
             }

@@ -36,8 +36,8 @@ public:
 
 signals:
     void requestItemReplacement(QGraphicsItem *oldItem, int newType, const QPolygonF &outer,
-                                const QList<QPolygonF> &holes, const QPointF &textPosLocal,
-                                const QPointF &itemPos, qreal w, qreal h);
+                                const QList<QPolygonF> &holes, const QList<bool> &holeIsCircular,
+                                const QPointF &textPosLocal, const QPointF &itemPos, qreal w, qreal h);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;

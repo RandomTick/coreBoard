@@ -190,7 +190,9 @@ ShapeEditorDialog::ShapeEditorDialog(QWidget *parent, QGraphicsItem *shapeItem)
         m_shapeType = Path;
         m_shapePolygon = pathItem->outerPolygon();
         m_shapeHoles = pathItem->holes();
-        m_holeIsCircular.resize(m_shapeHoles.size(), false);  // loaded holes are polygon
+        m_holeIsCircular = pathItem->holeIsCircular();
+        if (m_holeIsCircular.size() != m_shapeHoles.size())
+            m_holeIsCircular.resize(m_shapeHoles.size(), false);
         m_shapeRect = m_shapePolygon.boundingRect();
         for (const QPolygonF &h : m_shapeHoles) {
             m_shapeRect = m_shapeRect.united(h.boundingRect());
@@ -801,7 +803,7 @@ void ShapeEditorDialog::applyChanges()
         }
         QPointF itemPos = rect->mapToScene(tl);
         int replaceType = holesLocal.isEmpty() ? 3 : 4;
-        emit requestItemReplacement(m_shapeItem, replaceType, outerLocal, holesLocal, newTextPos - tl, itemPos, br.width(), br.height());
+        emit requestItemReplacement(m_shapeItem, replaceType, outerLocal, holesLocal, m_holeIsCircular, newTextPos - tl, itemPos, br.width(), br.height());
         return;
     } else if (ellipse) {
         if (m_centerTextCheckBox && m_centerTextCheckBox->isChecked())
@@ -824,7 +826,7 @@ void ShapeEditorDialog::applyChanges()
                 holesLocal << hl;
             }
             QPointF itemPos = polygon->mapToScene(tl);
-            emit requestItemReplacement(m_shapeItem, 4, outerLocal, holesLocal, newTextPos - tl, itemPos, br.width(), br.height());
+            emit requestItemReplacement(m_shapeItem, 4, outerLocal, holesLocal, m_holeIsCircular, newTextPos - tl, itemPos, br.width(), br.height());
             return;
         }
         if (m_centerTextCheckBox && m_centerTextCheckBox->isChecked())
@@ -838,6 +840,6 @@ void ShapeEditorDialog::applyChanges()
             pathItem->setTextPositionToCenter();
         else
             pathItem->setTextPosition(newTextPos);
-        pathItem->setPathFromOuterAndHoles(m_shapePolygon, m_shapeHoles);
+        pathItem->setPathFromOuterAndHoles(m_shapePolygon, m_shapeHoles, m_holeIsCircular);
     }
 }

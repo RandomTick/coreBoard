@@ -573,6 +573,7 @@ QGraphicsItem* LayoutEditor::createKey(const QJsonObject &keyData){
                 outerPoly << QPointF(p.x() - minX, p.y() - minY);
             }
             QList<QPolygonF> holesList;
+            QList<bool> holeIsCircularList;
             if (keyData.contains("Holes")) {
                 QJsonArray holesArray = keyData["Holes"].toArray();
                 for (const QJsonValue &holeVal : holesArray) {
@@ -585,9 +586,15 @@ QGraphicsItem* LayoutEditor::createKey(const QJsonObject &keyData){
                     if (holePoly.size() >= 3)
                         holesList.append(holePoly);
                 }
+                if (keyData.contains("HoleIsCircular")) {
+                    for (const QJsonValue &v : keyData["HoleIsCircular"].toArray())
+                        holeIsCircularList.append(v.toBool());
+                    if (holeIsCircularList.size() != holesList.size())
+                        holeIsCircularList.clear();
+                }
             }
             if (!holesList.isEmpty()) {
-                ResizablePathItem *pathItem = addPathItem(outerPoly, holesList, label, minX, minY, w, h, keyCodes, keyStyle);
+                ResizablePathItem *pathItem = addPathItem(outerPoly, holesList, label, minX, minY, w, h, keyCodes, keyStyle, holeIsCircularList);
                 pathItem->setShiftText(shiftText);
                 if (keyData.contains("TextPosition")) {
                     QJsonObject tp = keyData["TextPosition"].toObject();
@@ -657,8 +664,10 @@ ResizableRectItem * LayoutEditor::addRectangle(const QString &text, qreal h, qre
     return rect;
 }
 
-ResizablePathItem * LayoutEditor::addPathItem(const QPolygonF &outer, const QList<QPolygonF> &holes, const QString &text, qreal x, qreal y, qreal w, qreal h, const std::list<int> keyCodes, const KeyStyle &keyStyle) {
-    ResizablePathItem *pathItem = new ResizablePathItem(outer, holes, text, keyCodes);
+ResizablePathItem * LayoutEditor::addPathItem(const QPolygonF &outer, const QList<QPolygonF> &holes, const QString &text, qreal x, qreal y, qreal w, qreal h, const std::list<int> keyCodes, const KeyStyle &keyStyle, const QList<bool> &holeIsCircular) {
+    ResizablePathItem *pathItem = (holeIsCircular.size() == static_cast<int>(holes.size()))
+        ? new ResizablePathItem(outer, holes, holeIsCircular, text, keyCodes)
+        : new ResizablePathItem(outer, holes, text, keyCodes);
     pathItem->setKeyStyle(keyStyle);
     scene->addItem(pathItem);
     pathItem->setRect(x, y, w, h);
@@ -1151,8 +1160,16 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
                 }
                 holesArray.append(holeArr);
             }
-            if (!holesArray.isEmpty())
+            if (!holesArray.isEmpty()) {
                 keyObj.insert("Holes", holesArray);
+                QList<bool> circ = pathItem->holeIsCircular();
+                if (circ.size() == holesArray.size()) {
+                    QJsonArray circArray;
+                    for (bool b : circ)
+                        circArray.append(b);
+                    keyObj.insert("HoleIsCircular", circArray);
+                }
+            }
         }
         QJsonObject styleObj = itemStyle.toJson();
         for (auto it = styleObj.begin(); it != styleObj.end(); ++it)
@@ -1274,6 +1291,13 @@ static QJsonObject keyItemToJson(QGraphicsItem *item) {
             holesArray.append(holeArr);
         }
         keyObj.insert("Holes", holesArray);
+        QList<bool> circ = pathItem->holeIsCircular();
+        if (circ.size() == static_cast<int>(holesArray.size())) {
+            QJsonArray circArray;
+            for (bool b : circ)
+                circArray.append(b);
+            keyObj.insert("HoleIsCircular", circArray);
+        }
     }
     QJsonObject styleObj = itemStyle.toJson();
     for (auto it = styleObj.begin(); it != styleObj.end(); ++it)

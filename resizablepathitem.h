@@ -15,6 +15,9 @@ class ResizablePathItem : public QGraphicsPathItem
 public:
     ResizablePathItem(const QPolygonF &outer, const QList<QPolygonF> &holes,
                       const QString &text, const std::list<int> keycodes, QGraphicsItem *parent = nullptr);
+    ResizablePathItem(const QPolygonF &outer, const QList<QPolygonF> &holes,
+                      const QList<bool> &holeIsCircular,
+                      const QString &text, const std::list<int> keycodes, QGraphicsItem *parent = nullptr);
 
     void setText(const QString &text);
     QString getText();
@@ -36,7 +39,8 @@ public:
 
     QPolygonF outerPolygon() const;
     QList<QPolygonF> holes() const;
-    void setPathFromOuterAndHoles(const QPolygonF &outer, const QList<QPolygonF> &holes);
+    QList<bool> holeIsCircular() const;
+    void setPathFromOuterAndHoles(const QPolygonF &outer, const QList<QPolygonF> &holes, const QList<bool> &holeIsCircular = QList<bool>());
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
 
@@ -46,6 +50,7 @@ private:
 
     QPolygonF m_outer;
     QList<QPolygonF> m_holes;
+    QList<bool> m_holeIsCircular;  // parallel to m_holes; true = hole is circular (edit shape shows center dot only)
     QGraphicsTextItem *textItem = nullptr;
     QString m_shiftText;
     std::list<int> keyCodes;

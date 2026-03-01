@@ -14,6 +14,7 @@ struct EditShapeState {
     QRectF rect;
     QPolygonF polygon;
     QList<QPolygonF> holes;
+    QList<bool> holeIsCircular;
     QPointF textPos;
 };
 

@@ -7,9 +7,17 @@
 
 ResizablePathItem::ResizablePathItem(const QPolygonF &outer, const QList<QPolygonF> &holes,
                                      const QString &text, const std::list<int> keycodes, QGraphicsItem *parent)
+    : ResizablePathItem(outer, holes, QList<bool>(), text, keycodes, parent)
+{
+}
+
+ResizablePathItem::ResizablePathItem(const QPolygonF &outer, const QList<QPolygonF> &holes,
+                                     const QList<bool> &holeIsCircular,
+                                     const QString &text, const std::list<int> keycodes, QGraphicsItem *parent)
     : QGraphicsPathItem(parent)
     , m_outer(outer)
     , m_holes(holes)
+    , m_holeIsCircular(holeIsCircular)
     , keyCodes(keycodes)
 {
     setFlag(QGraphicsItem::ItemIsSelectable);
@@ -111,6 +119,7 @@ void ResizablePathItem::setRect(qreal x, qreal y, qreal w, qreal h)
     }
     m_outer = scaledOuter;
     m_holes = scaledHoles;
+    // m_holeIsCircular unchanged by scaling
     rebuildPath();
     centerText();
 }
@@ -171,10 +180,18 @@ QList<QPolygonF> ResizablePathItem::holes() const
     return m_holes;
 }
 
-void ResizablePathItem::setPathFromOuterAndHoles(const QPolygonF &outer, const QList<QPolygonF> &holes)
+QList<bool> ResizablePathItem::holeIsCircular() const
+{
+    return m_holeIsCircular;
+}
+
+void ResizablePathItem::setPathFromOuterAndHoles(const QPolygonF &outer, const QList<QPolygonF> &holes, const QList<bool> &holeIsCircular)
 {
     m_outer = outer;
     m_holes = holes;
+    m_holeIsCircular = holeIsCircular.size() == static_cast<int>(holes.size())
+        ? holeIsCircular
+        : QList<bool>(holes.size(), false);
     rebuildPath();
     centerText();
 }
