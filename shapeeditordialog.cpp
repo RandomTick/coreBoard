@@ -19,10 +19,15 @@
 #include <QMenu>
 #include <QKeyEvent>
 #include <QEvent>
+#include <QWheelEvent>
 #include <QDoubleSpinBox>
 #include <QLabel>
 #include <QCheckBox>
 #include <QGroupBox>
+#include <QShortcut>
+#include <QIcon>
+#include <QTransform>
+#include <QTimer>
 #include <algorithm>
 #include <cmath>
 
@@ -56,6 +61,13 @@ public:
             m_dialog->updateOffsetLabel();
         }
         return result;
+    }
+
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        DraggableDot::mousePressEvent(event);
+        if (event->button() == Qt::LeftButton && m_dialog)
+            m_dialog->onAnchorPressByUser();
     }
 };
 
@@ -92,8 +104,10 @@ public:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override
     {
         QGraphicsEllipseItem::mousePressEvent(event);
-        if (event->button() == Qt::LeftButton && m_dialog)
+        if (event->button() == Qt::LeftButton && m_dialog) {
+            m_dialog->pushUndo();
             m_dialog->setSelectedVertex(m_holeIndex, m_index);
+        }
     }
 
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override
@@ -144,6 +158,15 @@ public:
             m_dialog->moveHoleBy(m_holeIndex, delta);
         }
         return QGraphicsEllipseItem::itemChange(change, value);
+    }
+
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        QGraphicsEllipseItem::mousePressEvent(event);
+        if (event->button() == Qt::LeftButton && m_dialog) {
+            m_dialog->pushUndo();
+            m_dialog->setSelectedHoleForScale(m_holeIndex);
+        }
     }
 
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override
@@ -220,6 +243,10 @@ void ShapeEditorDialog::setupCanvas()
     m_view->setFocusPolicy(Qt::StrongFocus);
     m_view->installEventFilter(this);
 
+    m_arrowCommitTimer = new QTimer(this);
+    m_arrowCommitTimer->setSingleShot(true);
+    connect(m_arrowCommitTimer, &QTimer::timeout, this, &ShapeEditorDialog::commitArrowKeyMoveSegment);
+
     qreal margin = 20;
     QRectF viewRect = m_shapeRect.adjusted(-margin, -margin, margin, margin);
     m_scene->setSceneRect(viewRect);
@@ -274,6 +301,34 @@ void ShapeEditorDialog::setupCanvas()
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(m_view);
 
+    // Undo/Redo (session-scoped)
+    QString buttonStyleSheet = QStringLiteral("QPushButton { background-color: transparent; } QPushButton:hover { background-color: rgba(150, 51, 150, 0.4); } QPushButton:checked { background-color: rgba(150, 51, 150, 0.7); }");
+    QHBoxLayout *undoRedoRow = new QHBoxLayout();
+    m_undoButton = new QPushButton(QString(), this);
+    m_undoButton->setIcon(QIcon(QStringLiteral(":/icons/undo.png")));
+    m_undoButton->setIconSize(QSize(18, 18));
+    m_undoButton->setFixedSize(24, 24);
+    m_undoButton->setStyleSheet(buttonStyleSheet);
+    m_undoButton->setToolTip(tr("Undo (Ctrl+Z)"));
+    m_undoButton->setEnabled(false);
+    m_redoButton = new QPushButton(QString(), this);
+    m_redoButton->setIcon(QIcon(QStringLiteral(":/icons/redo.png")));
+    m_redoButton->setIconSize(QSize(18, 18));
+    m_redoButton->setFixedSize(24, 24);
+    m_redoButton->setStyleSheet(buttonStyleSheet);
+    m_redoButton->setToolTip(tr("Redo (Ctrl+Y)"));
+    m_redoButton->setEnabled(false);
+    connect(m_undoButton, &QPushButton::clicked, this, &ShapeEditorDialog::undo);
+    connect(m_redoButton, &QPushButton::clicked, this, &ShapeEditorDialog::redo);
+    QShortcut *undoShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Z), this);
+    connect(undoShortcut, &QShortcut::activated, this, &ShapeEditorDialog::undo);
+    QShortcut *redoShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Y), this);
+    connect(redoShortcut, &QShortcut::activated, this, &ShapeEditorDialog::redo);
+    undoRedoRow->addWidget(m_undoButton);
+    undoRedoRow->addWidget(m_redoButton);
+    undoRedoRow->addStretch();
+    mainLayout->addLayout(undoRedoRow);
+
     // Rotation for Rect, Polygon, Path (not for Ellipse).
     if (m_shapeType != Ellipse) {
         QHBoxLayout *rotationRow = new QHBoxLayout();
@@ -287,10 +342,64 @@ void ShapeEditorDialog::setupCanvas()
         rotationRow->addStretch();
         mainLayout->addLayout(rotationRow);
         connect(m_degreeSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](qreal newDegrees) {
+            pushUndo();
             qreal delta = newDegrees - m_rotationDegrees;
             m_rotationDegrees = newDegrees;
             applyRotationToShape(delta);
         });
+
+        // Scale entire shape (50%–200%)
+        QHBoxLayout *scaleShapeRow = new QHBoxLayout();
+        scaleShapeRow->addWidget(new QLabel(tr("Scale shape (%):"), this));
+        m_scaleShapeSpinBox = new QDoubleSpinBox(this);
+        m_scaleShapeSpinBox->setRange(50, 200);
+        m_scaleShapeSpinBox->setValue(100);
+        m_scaleShapeSpinBox->setSuffix(QStringLiteral("%"));
+        m_scaleShapeSpinBox->setDecimals(0);
+        m_scaleShapeSpinBox->setSingleStep(10);
+        scaleShapeRow->addWidget(m_scaleShapeSpinBox);
+        scaleShapeRow->addStretch();
+        mainLayout->addLayout(scaleShapeRow);
+        connect(m_scaleShapeSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](qreal newPercent) {
+            if (qAbs(newPercent - m_lastScaleShapePercent) < 0.01)
+                return;
+            pushUndo();
+            qreal factor = newPercent / m_lastScaleShapePercent;
+            m_lastScaleShapePercent = newPercent;
+            scaleShapeBy(factor);
+        });
+    }
+
+    // Scale selected hole (when shape can have holes; row visible only when at least one hole exists)
+    if (m_shapeType == Polygon || m_shapeType == Path || m_shapeType == Rect) {
+        m_scaleHoleRow = new QWidget(this);
+        QHBoxLayout *scaleHoleLayout = new QHBoxLayout(m_scaleHoleRow);
+        scaleHoleLayout->setContentsMargins(0, 0, 0, 0);
+        scaleHoleLayout->addWidget(new QLabel(tr("Scale selected hole (%):"), m_scaleHoleRow));
+        m_scaleHoleSpinBox = new QDoubleSpinBox(m_scaleHoleRow);
+        m_scaleHoleSpinBox->setRange(50, 200);
+        m_scaleHoleSpinBox->setValue(100);
+        m_scaleHoleSpinBox->setSuffix(QStringLiteral("%"));
+        m_scaleHoleSpinBox->setDecimals(0);
+        m_scaleHoleSpinBox->setSingleStep(10);
+        scaleHoleLayout->addWidget(m_scaleHoleSpinBox);
+        scaleHoleLayout->addStretch();
+        mainLayout->addWidget(m_scaleHoleRow);
+        m_scaleHoleRow->setVisible(!m_shapeHoles.isEmpty());
+        m_scaleHoleSpinBox->setEnabled(false);  // enabled when a hole is selected via setSelectedHoleForScale
+        connect(m_scaleHoleSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](qreal newPercent) {
+            if (m_selectedHoleForScaleIndex < 0 || m_selectedHoleForScaleIndex >= m_shapeHoles.size())
+                return;
+            if (qAbs(newPercent - m_lastScaleHolePercent) < 0.01)
+                return;
+            pushUndo();
+            qreal factor = newPercent / m_lastScaleHolePercent;
+            m_lastScaleHolePercent = newPercent;
+            scaleHoleBy(m_selectedHoleForScaleIndex, factor);
+        });
+    } else {
+        m_scaleHoleRow = nullptr;
+        m_scaleHoleSpinBox = nullptr;
     }
 
     // Center text: when checked, text stays at shape center (also when resizing in layout editor).
@@ -332,8 +441,8 @@ void ShapeEditorDialog::setupCanvas()
     }
     QPushButton *cancelBtn = new QPushButton(tr("Cancel"), this);
     QPushButton *applyBtn = new QPushButton(tr("Apply"), this);
-    connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
-    connect(applyBtn, &QPushButton::clicked, this, [this]() { applyChanges(); accept(); });
+    connect(cancelBtn, &QPushButton::clicked, this, [this]() { m_undoStack.clear(); m_redoStack.clear(); reject(); });
+    connect(applyBtn, &QPushButton::clicked, this, [this]() { m_undoStack.clear(); m_redoStack.clear(); applyChanges(); accept(); });
     buttons->addWidget(cancelBtn);
     buttons->addWidget(applyBtn);
     mainLayout->addLayout(buttons);
@@ -377,6 +486,176 @@ QPointF ShapeEditorDialog::shapeCenter() const
     for (const QPolygonF &h : m_shapeHoles)
         br = br.united(h.boundingRect());
     return br.center();
+}
+
+ShapeEditorState ShapeEditorDialog::captureState() const
+{
+    ShapeEditorState s;
+    s.shapeType = static_cast<int>(m_shapeType);
+    s.shapeRect = m_shapeRect;
+    s.shapePolygon = m_shapePolygon;
+    s.shapeHoles = m_shapeHoles;
+    s.holeIsCircular = m_holeIsCircular;
+    s.textAnchorLocal = m_textAnchorLocal;
+    s.rotationDegrees = m_rotationDegrees;
+    s.scaleShapePercent = m_lastScaleShapePercent;
+    s.scaleHolePercent = m_lastScaleHolePercent;
+    s.selectedHoleForScaleIndex = m_selectedHoleForScaleIndex;
+    return s;
+}
+
+void ShapeEditorDialog::restoreState(const ShapeEditorState &s)
+{
+    m_shapeType = static_cast<ShapeType>(s.shapeType);
+    m_shapeRect = s.shapeRect;
+    m_shapePolygon = s.shapePolygon;
+    m_shapeHoles = s.shapeHoles;
+    m_holeIsCircular = s.holeIsCircular;
+    m_textAnchorLocal = s.textAnchorLocal;
+    m_rotationDegrees = s.rotationDegrees;
+    m_lastScaleShapePercent = s.scaleShapePercent;
+    m_lastScaleHolePercent = s.scaleHolePercent;
+    m_selectedHoleForScaleIndex = s.selectedHoleForScaleIndex;
+    if (m_degreeSpinBox)
+        m_degreeSpinBox->setValue(m_rotationDegrees);
+    if (m_scaleShapeSpinBox)
+        m_scaleShapeSpinBox->setValue(m_lastScaleShapePercent);
+    if (m_scaleHoleSpinBox) {
+        m_scaleHoleSpinBox->setValue(m_lastScaleHolePercent);
+        m_scaleHoleSpinBox->setEnabled(m_selectedHoleForScaleIndex >= 0 && m_selectedHoleForScaleIndex < m_shapeHoles.size());
+    }
+    if (m_textAnchorDot)
+        m_textAnchorDot->setPos(m_textAnchorLocal);
+    refreshDisplay();
+    rebuildVertexDots();
+    updateAnchorToCenterIfChecked();
+    updateOffsetLabel();
+    updateUndoRedoButtons();
+}
+
+void ShapeEditorDialog::pushUndo()
+{
+    m_undoStack.append(captureState());
+    m_redoStack.clear();
+    updateUndoRedoButtons();
+}
+
+void ShapeEditorDialog::undo()
+{
+    if (m_undoStack.isEmpty())
+        return;
+    m_redoStack.append(captureState());
+    ShapeEditorState prev = m_undoStack.takeLast();
+    restoreState(prev);
+}
+
+void ShapeEditorDialog::redo()
+{
+    if (m_redoStack.isEmpty())
+        return;
+    m_undoStack.append(captureState());
+    ShapeEditorState next = m_redoStack.takeLast();
+    restoreState(next);
+}
+
+void ShapeEditorDialog::updateUndoRedoButtons()
+{
+    if (m_undoButton)
+        m_undoButton->setEnabled(!m_undoStack.isEmpty());
+    if (m_redoButton)
+        m_redoButton->setEnabled(!m_redoStack.isEmpty());
+}
+
+void ShapeEditorDialog::commitArrowKeyMoveSegment()
+{
+    if (m_arrowDirection != 0) {
+        m_undoStack.append(m_arrowSegmentStartState);
+        m_redoStack.clear();
+        updateUndoRedoButtons();
+    }
+    m_arrowDirection = 0;
+}
+
+void ShapeEditorDialog::onAnchorPressByUser()
+{
+    pushUndo();
+}
+
+void ShapeEditorDialog::scaleShapeBy(qreal factor)
+{
+    if (qAbs(factor - 1.0) < 1e-6)
+        return;
+    QPointF center = shapeCenter();
+    auto scalePoint = [&](QPointF p) {
+        return center + (p - center) * factor;
+    };
+    for (int i = 0; i < m_shapePolygon.size(); ++i)
+        m_shapePolygon[i] = scalePoint(m_shapePolygon[i]);
+    for (int h = 0; h < m_shapeHoles.size(); ++h) {
+        for (int i = 0; i < m_shapeHoles[h].size(); ++i)
+            m_shapeHoles[h][i] = scalePoint(m_shapeHoles[h][i]);
+    }
+    m_textAnchorLocal = scalePoint(m_textAnchorLocal);
+    if (m_shapeType == Ellipse) {
+        QPointF c = m_shapeRect.center();
+        qreal w = m_shapeRect.width() * factor;
+        qreal h = m_shapeRect.height() * factor;
+        m_shapeRect = QRectF(c.x() - w / 2, c.y() - h / 2, w, h);
+    }
+    if (m_textAnchorDot)
+        m_textAnchorDot->setPos(m_textAnchorLocal);
+    refreshDisplay();
+    rebuildVertexDots();
+    updateAnchorToCenterIfChecked();
+}
+
+void ShapeEditorDialog::scaleHoleBy(int holeIndex, qreal factor)
+{
+    if (holeIndex < 0 || holeIndex >= m_shapeHoles.size() || qAbs(factor - 1.0) < 1e-6)
+        return;
+    QPolygonF &hole = m_shapeHoles[holeIndex];
+    if (hole.isEmpty())
+        return;
+    qreal cx = 0, cy = 0;
+    for (const QPointF &p : hole) {
+        cx += p.x();
+        cy += p.y();
+    }
+    cx /= hole.size();
+    cy /= hole.size();
+    QPointF holeCenter(cx, cy);
+    bool isCircular = (holeIndex < m_holeIsCircular.size() && m_holeIsCircular[holeIndex]);
+    if (isCircular) {
+        qreal r = 0;
+        for (const QPointF &p : hole)
+            r += std::sqrt((p.x() - cx) * (p.x() - cx) + (p.y() - cy) * (p.y() - cy));
+        r /= hole.size();
+        r *= factor;
+        const int n = hole.size();
+        hole.clear();
+        for (int i = 0; i < n; ++i) {
+            qreal a = 2.0 * M_PI * i / n;
+            hole << QPointF(cx + r * std::cos(a), cy + r * std::sin(a));
+        }
+    } else {
+        for (int i = 0; i < hole.size(); ++i)
+            hole[i] = holeCenter + (hole[i] - holeCenter) * factor;
+    }
+    refreshDisplay();
+    rebuildVertexDots();
+    updateAnchorToCenterIfChecked();
+}
+
+void ShapeEditorDialog::setSelectedHoleForScale(int holeIndex)
+{
+    if (m_shapeType != Path || holeIndex < 0 || holeIndex >= m_shapeHoles.size())
+        return;
+    m_selectedHoleForScaleIndex = holeIndex;
+    m_lastScaleHolePercent = 100.0;
+    if (m_scaleHoleSpinBox) {
+        m_scaleHoleSpinBox->setEnabled(true);
+        m_scaleHoleSpinBox->setValue(100);
+    }
 }
 
 void ShapeEditorDialog::updateAnchorToCenterIfChecked()
@@ -544,18 +823,47 @@ void ShapeEditorDialog::moveSelectedVertexBy(int dx, int dy)
 
 bool ShapeEditorDialog::eventFilter(QObject *obj, QEvent *event)
 {
-    if (obj == m_view && event->type() == QEvent::KeyPress) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-        int key = keyEvent->key();
-        int dx = 0, dy = 0;
-        int step = (keyEvent->modifiers() & Qt::ShiftModifier) ? 10 : 1;
-        if (key == Qt::Key_Left) dx = -step;
-        else if (key == Qt::Key_Right) dx = step;
-        else if (key == Qt::Key_Up) dy = -step;
-        else if (key == Qt::Key_Down) dy = step;
-        if ((dx != 0 || dy != 0) && m_selectedHoleIndex >= -1 && m_selectedVertexIndex >= 0) {
-            moveSelectedVertexBy(dx, dy);
-            keyEvent->accept();
+    if (obj == m_view) {
+        if (event->type() == QEvent::KeyPress) {
+            QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+            int key = keyEvent->key();
+            int dx = 0, dy = 0;
+            int direction = 0;
+            int step = (keyEvent->modifiers() & Qt::ShiftModifier) ? 10 : 1;
+            if (key == Qt::Key_Left) { direction = 1; dx = -step; }
+            else if (key == Qt::Key_Right) { direction = 2; dx = step; }
+            else if (key == Qt::Key_Up) { direction = 3; dy = -step; }
+            else if (key == Qt::Key_Down) { direction = 4; dy = step; }
+            if ((dx != 0 || dy != 0) && m_selectedHoleIndex >= -1 && m_selectedVertexIndex >= 0) {
+                m_arrowCommitTimer->stop();
+                if (direction != m_arrowDirection) {
+                    commitArrowKeyMoveSegment();
+                    m_arrowDirection = direction;
+                    m_arrowSegmentStartState = captureState();
+                }
+                moveSelectedVertexBy(dx, dy);
+                keyEvent->accept();
+                return true;
+            }
+        } else if (event->type() == QEvent::KeyRelease) {
+            QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+            int key = keyEvent->key();
+            if (key == Qt::Key_Left || key == Qt::Key_Right || key == Qt::Key_Up || key == Qt::Key_Down)
+                m_arrowCommitTimer->start(250);
+        } else if (event->type() == QEvent::FocusOut) {
+            m_arrowCommitTimer->stop();
+            commitArrowKeyMoveSegment();
+        } else if (event->type() == QEvent::Wheel) {
+            QWheelEvent *wheelEvent = static_cast<QWheelEvent*>(event);
+            qreal delta = wheelEvent->angleDelta().y();
+            qreal zoomStep = 1.25;
+            if (delta > 0)
+                m_viewZoomFactor *= zoomStep;
+            else if (delta < 0)
+                m_viewZoomFactor /= zoomStep;
+            if (m_viewZoomFactor < 0.01)
+                m_viewZoomFactor = 0.01;
+            m_view->setTransform(QTransform::fromScale(m_viewZoomFactor, m_viewZoomFactor));
             return true;
         }
     }
@@ -609,6 +917,7 @@ void ShapeEditorDialog::addPointAfter(int holeIndex, int vertexIndex)
 {
     if (m_shapeType != Polygon && m_shapeType != Path && m_shapeType != Rect)
         return;
+    pushUndo();
 
     QPolygonF *target = (holeIndex < 0) ? &m_shapePolygon : (holeIndex < m_shapeHoles.size() ? &m_shapeHoles[holeIndex] : nullptr);
     if (!target || vertexIndex < 0 || vertexIndex >= target->size())
@@ -626,6 +935,7 @@ void ShapeEditorDialog::deletePoint(int holeIndex, int vertexIndex)
 {
     if (m_shapeType != Polygon && m_shapeType != Path && m_shapeType != Rect)
         return;
+    pushUndo();
 
     QPolygonF *target = (holeIndex < 0) ? &m_shapePolygon : (holeIndex < m_shapeHoles.size() ? &m_shapeHoles[holeIndex] : nullptr);
     if (!target || vertexIndex < 0 || vertexIndex >= target->size())
@@ -644,6 +954,7 @@ void ShapeEditorDialog::addHole()
 {
     if (m_shapeType != Path && m_shapeType != Polygon && m_shapeType != Rect)
         return;
+    pushUndo();
     if (m_shapeType == Polygon || m_shapeType == Rect) {
         m_shapeType = Path;
         if (m_polygonDisplay) {
@@ -672,12 +983,15 @@ void ShapeEditorDialog::addHole()
     refreshDisplay();
     rebuildVertexDots();
     updateAnchorToCenterIfChecked();
+    if (m_scaleHoleRow)
+        m_scaleHoleRow->setVisible(true);
 }
 
 void ShapeEditorDialog::addCircularHole()
 {
     if (m_shapeType != Path && m_shapeType != Polygon && m_shapeType != Rect)
         return;
+    pushUndo();
     if (m_shapeType == Polygon || m_shapeType == Rect) {
         if (!m_pathDisplay) {
             m_shapeType = Path;
@@ -702,6 +1016,8 @@ void ShapeEditorDialog::addCircularHole()
     refreshDisplay();
     rebuildVertexDots();
     updateAnchorToCenterIfChecked();
+    if (m_scaleHoleRow)
+        m_scaleHoleRow->setVisible(true);
 }
 
 void ShapeEditorDialog::moveHoleBy(int holeIndex, const QPointF &delta)
@@ -723,9 +1039,21 @@ void ShapeEditorDialog::deleteHole(int holeIndex)
 {
     if (m_shapeType != Path || holeIndex < 0 || holeIndex >= m_shapeHoles.size())
         return;
+    pushUndo();
     m_shapeHoles.removeAt(holeIndex);
     if (holeIndex < m_holeIsCircular.size())
         m_holeIsCircular.removeAt(holeIndex);
+    if (m_selectedHoleForScaleIndex == holeIndex)
+        m_selectedHoleForScaleIndex = -1;
+    else if (m_selectedHoleForScaleIndex > holeIndex)
+        --m_selectedHoleForScaleIndex;
+    if (m_shapeHoles.isEmpty() && m_scaleHoleRow) {
+        m_scaleHoleRow->setVisible(false);
+        m_selectedHoleForScaleIndex = -1;
+        if (m_scaleHoleSpinBox)
+            m_scaleHoleSpinBox->setEnabled(false);
+    } else if (m_scaleHoleSpinBox)
+        m_scaleHoleSpinBox->setEnabled(m_selectedHoleForScaleIndex >= 0 && m_selectedHoleForScaleIndex < m_shapeHoles.size());
     rebuildVertexDots();
     refreshDisplay();
     if (m_view && m_view->viewport())

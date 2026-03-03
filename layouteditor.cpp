@@ -494,6 +494,40 @@ QGraphicsItem* LayoutEditor::createKey(const QJsonObject &keyData){
             maxX = qMax(maxX, px);
             maxY = qMax(maxY, py);
         }
+        qreal w = maxX - minX;
+        qreal h = maxY - minY;
+        // Path with holes: 4-boundary key that has Holes must be loaded as path, not rect/polygon
+        if (keyData.contains("Holes") && keyData["Holes"].toArray().size() > 0) {
+            QPolygonF outerPoly;
+            for (const QPointF &p : fourPoints)
+                outerPoly << QPointF(p.x() - minX, p.y() - minY);
+            QList<QPolygonF> holesList;
+            QList<bool> holeIsCircularList;
+            QJsonArray holesArray = keyData["Holes"].toArray();
+            for (const QJsonValue &holeVal : holesArray) {
+                QJsonArray holeArr = holeVal.toArray();
+                QPolygonF holePoly;
+                for (const QJsonValue &pv : holeArr) {
+                    QJsonObject po = pv.toObject();
+                    holePoly << QPointF(po["X"].toDouble() - minX, po["Y"].toDouble() - minY);
+                }
+                if (holePoly.size() >= 3)
+                    holesList.append(holePoly);
+            }
+            if (keyData.contains("HoleIsCircular")) {
+                for (const QJsonValue &v : keyData["HoleIsCircular"].toArray())
+                    holeIsCircularList.append(v.toBool());
+                if (holeIsCircularList.size() != holesList.size())
+                    holeIsCircularList.clear();
+            }
+            ResizablePathItem *pathItem = addPathItem(outerPoly, holesList, label, minX, minY, w, h, keyCodes, keyStyle, holeIsCircularList);
+            pathItem->setShiftText(shiftText);
+            if (keyData.contains("TextPosition")) {
+                QJsonObject tp = keyData["TextPosition"].toObject();
+                pathItem->setTextPosition(pathItem->mapFromScene(QPointF(tp["X"].toDouble(), tp["Y"].toDouble())));
+            }
+            return pathItem;
+        }
         // Only treat as rectangle if the 4 points form an axis-aligned rectangle (not a trapezoid etc.)
         bool isAxisAlignedRect = true;
         for (const QPointF &p : fourPoints) {
@@ -502,12 +536,8 @@ QGraphicsItem* LayoutEditor::createKey(const QJsonObject &keyData){
                 break;
             }
         }
-        if (isAxisAlignedRect && (maxX - minX) > 0 && (maxY - minY) > 0) {
-            qreal x = minX;
-            qreal y = minY;
-            qreal width = maxX - minX;
-            qreal height = maxY - minY;
-            ResizableRectItem *rect = addRectangle(label, width, height, x, y, keyCodes, keyStyle);
+        if (isAxisAlignedRect && w > 0 && h > 0) {
+            ResizableRectItem *rect = addRectangle(label, w, h, minX, minY, keyCodes, keyStyle);
             rect->setShiftText(shiftText);
             if (keyData.contains("TextPosition")) {
                 QJsonObject tp = keyData["TextPosition"].toObject();
@@ -517,8 +547,6 @@ QGraphicsItem* LayoutEditor::createKey(const QJsonObject &keyData){
             }
             return rect;
         } else {
-            qreal w = maxX - minX;
-            qreal h = maxY - minY;
             QPolygonF templatePolygon;
             for (const QPointF &p : fourPoints) {
                 templatePolygon << QPointF(p.x() - minX, p.y() - minY);
