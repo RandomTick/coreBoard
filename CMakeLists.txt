@@ -15,55 +15,54 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTool
 set(TS_FILES translations/CoreBoard_en_US.ts translations/CoreBoard_fr_FR.ts translations/CoreBoard_de_DE.ts)
 
 set(TRANSLATABLE_SOURCES
-    mainwindow.ui
-    labelsettingsdialog.cpp
-    layouteditor.h layouteditor.cpp
-    main.cpp
-    mainwindow.cpp mainwindow.h
-    versioninfo.h
-    version_info.ui
-    keyboardwidget.h keyboardwidget.cpp
-    windowskeylistener.h windowskeylistener.cpp
-    layouteditorgraphicsview.h layouteditorgraphicsview.cpp
-    settingsdialog.cpp
-    dialogstyle.cpp
-    dialoglabelstyle.cpp
-    dialogtextchange.cpp
-    dialogkeycodechange.cpp
-    shapeeditordialog.cpp
-    languagesettingsdialog.cpp
-    welcomedialog.cpp
-    keycode_nameutil.h keycode_nameutil.cpp
-    windowsmouselistener.h windowsmouselistener.cpp
-    controllerregionsdialog.cpp
+    src/mainwindow.ui
+    src/labelsettingsdialog.cpp
+    src/layouteditor.h src/layouteditor.cpp
+    src/main.cpp
+    src/mainwindow.cpp src/mainwindow.h
+    src/versioninfo.h
+    src/version_info.ui
+    src/keyboardwidget.h src/keyboardwidget.cpp
+    src/windowskeylistener.h src/windowskeylistener.cpp
+    src/layouteditorgraphicsview.h src/layouteditorgraphicsview.cpp
+    src/settingsdialog.cpp
+    src/dialogstyle.cpp
+    src/dialoglabelstyle.cpp
+    src/dialogtextchange.cpp
+    src/dialogkeycodechange.cpp
+    src/shapeeditordialog.cpp
+    src/languagesettingsdialog.cpp
+    src/welcomedialog.cpp
+    src/keycode_nameutil.h src/keycode_nameutil.cpp
+    src/windowsmouselistener.h src/windowsmouselistener.cpp
+    src/controllerregionsdialog.cpp
 )
 
 set(GAMEPAD_SOURCES)
 if(WIN32)
-    list(APPEND GAMEPAD_SOURCES gamepadlistener.h gamepadlistener.cpp)
+    list(APPEND GAMEPAD_SOURCES src/gamepadlistener.h src/gamepadlistener.cpp)
 endif()
 
 set(PROJECT_SOURCES
         icons/redo.png icons/undo.png
         resources.qrc
-        resizableellipseitem.h resizableellipseitem.cpp
-        resizablepolygonitem.h resizablepolygonitem.cpp
-        resizablepathitem.h resizablepathitem.cpp
-        mousespeedindicatoritem.h mousespeedindicatoritem.cpp
-        angularvieweritem.h angularvieweritem.cpp
-        controlleritem.h controlleritem.cpp
-        labelitem.h labelitem.cpp
+        src/resizableellipseitem.h src/resizableellipseitem.cpp
+        src/resizablepolygonitem.h src/resizablepolygonitem.cpp
+        src/resizablepathitem.h src/resizablepathitem.cpp
+        src/mousespeedindicatoritem.h src/mousespeedindicatoritem.cpp
+        src/angularvieweritem.h src/angularvieweritem.cpp
+        src/controlleritem.h src/controlleritem.cpp
+        src/labelitem.h src/labelitem.cpp
         ${GAMEPAD_SOURCES}
-        layoutsettings.h layoutsettings.cpp
-        settingsdialog.h settingsdialog.cpp
-        labelsettingsdialog.h labelsettingsdialog.cpp
-        languagesettingsdialog.h languagesettingsdialog.cpp
-        welcomedialog.h welcomedialog.cpp
-        dialogstyle.h dialogstyle.cpp
-        dialoglabelstyle.h dialoglabelstyle.cpp
-        controllerregionsdialog.h controllerregionsdialog.cpp
-    shapeeditordialog.h shapeeditordialog.cpp
-        resizablepathitem.h resizablepathitem.cpp
+        src/layoutsettings.h src/layoutsettings.cpp
+        src/settingsdialog.h src/settingsdialog.cpp
+        src/labelsettingsdialog.h src/labelsettingsdialog.cpp
+        src/languagesettingsdialog.h src/languagesettingsdialog.cpp
+        src/welcomedialog.h src/welcomedialog.cpp
+        src/dialogstyle.h src/dialogstyle.cpp
+        src/dialoglabelstyle.h src/dialoglabelstyle.cpp
+        src/controllerregionsdialog.h src/controllerregionsdialog.cpp
+        src/shapeeditordialog.h src/shapeeditordialog.cpp
         ${TRANSLATABLE_SOURCES}
         ${TS_FILES}
 )
@@ -74,14 +73,9 @@ qt_add_executable(CoreBoard
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         CoreBoard.rc
-        resizablerectitem.h resizablerectitem.cpp
-        dialogtextchange.h dialogtextchange.cpp
-        dialogkeycodechange.h
-        dialogkeycodechange.cpp
-        keycode_nameutil.h
-        keycode_nameutil.cpp
-        windowsmouselistener.h
-        windowsmouselistener.cpp
+        src/resizablerectitem.h src/resizablerectitem.cpp
+        src/dialogtextchange.h src/dialogtextchange.cpp
+        src/dialogkeycodechange.h src/dialogkeycodechange.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET CoreBoard APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
@@ -107,6 +101,7 @@ else()
 endif()
 
 
+target_include_directories(CoreBoard PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(CoreBoard PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Svg Qt${QT_VERSION_MAJOR}::Network)
 if(WIN32)
     target_link_libraries(CoreBoard PRIVATE xinput)

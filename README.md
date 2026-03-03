@@ -1,99 +1,139 @@
 # coreBoard
 
-A keyboard visualization and layout editor for streaming and recording. Display key presses on-screen in real time and design custom layouts—all with **full NohBoard layout compatibility**.
+**Keyboard, mouse, and controller overlay for streamers.** Show every key press, mouse move, and gamepad input on screen in real time—and design fully custom layouts with a built-in editor. Full **NohBoard** compatibility.
 
-![License](https://img.shields.io/badge/license-GPL--3.0-blue)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE) [![Releases](https://img.shields.io/badge/Releases-GitHub-green)](https://github.com/RandomTick/coreBoard/releases)
+
+---
+
+## Preview
+
+<p align="center">
+  <img src="docs/images/example_layout.png" alt="coreBoard layout preview" width="600">
+</p>
 
 ---
 
 ## What is coreBoard?
 
-For streaming, speedrunning, or video content, an on-screen keyboard overlay helps viewers see exactly which keys you're pressing. **coreBoard** gives you a fast, customizable overlay that works with OBS, Streamlabs, and similar tools.
+An **on-screen input overlay** for streaming, speedrunning, or recording. Viewers see exactly what you press and how you move—keyboard, mouse, and gamepad. Capture the **View** tab in OBS, Streamlabs, or similar tools.
 
-You can use your existing **NohBoard layouts as-is**—no conversion needed. coreBoard reads and writes the same JSON format, so layouts are fully interchangeable.
+- **Full input support** — Keyboard, mouse buttons, mouse speed, and gamepad (buttons, sticks, triggers).
+- **NohBoard compatible** — Use existing `.json` layouts as-is. No conversion.
+- **Built-in editor** — Create and tweak layouts without leaving the app.
+- **Highly customizable** — Per-key colors and fonts, global theme colors, shapes, labels, and more.
 
-> **Security note:** The app receives keyboard input for visualization. Do not type passwords while it is visible or while key capture is active. Use only in trusted setups.
+> **Security:** The app receives keyboard (and optionally mouse/gamepad) input for visualization. Do not type passwords while it is visible. Use only in trusted setups.
 
 ---
 
-## Features
+## Input & overlay support
 
-| Feature | Description |
-|--------|-------------|
-| **Live overlay** | Real-time key press/release highlighting via Windows key listener |
-| **Layout editor** | Rectangles, circles, stars, diamonds, hexagons, triangles, and advanced shapes (polygons with holes). Resize, rebind, and edit shapes (vertices, text anchor, corner radius). |
-| **Copy / paste & style** | Copy a key then paste onto another; pick style from one key and apply to others |
-| **Per-key colors** | Optional idle/pressed colors per key (key and text) in Edit Style |
-| **NohBoard compatible** | Load and save the same `.json` layouts—switch seamlessly from NohBoard |
-| **Undo/Redo** | Full history for layout and shape edits |
-| **Languages** | English, Deutsch, Français (Settings → Language) |
-| **Settings persistence** | Remembers last layout, recent files, and view/editor tab |
-| **Cross-platform ready** | Qt-based; Windows supported, others possible |
+| Input | What’s shown |
+|-------|----------------|
+| **Keyboard** | Key press/release highlighting, Shift and Caps Lock–aware labels. |
+| **Mouse** | Left/right/middle and extra buttons; optional **mouse speed indicator** (movement intensity). |
+| **Gamepad** | All buttons (A, B, X, Y, bumpers, D-pad, sticks, Back, Start). **Analog sticks** as direction viewers. **Triggers** with fill level (LT/RT). Optional **full controller** overlay with editable button regions. |
+
+Layouts can mix keys, mouse indicators, stick viewers, trigger fills, controller overlays, and **labels** (custom text, with optional shift variant). Everything is optional and customizable.
+
+---
+
+## Maximum customizability
+
+coreBoard is built so you can match your stream’s look and show exactly what you want.
+
+### Global appearance (View tab)
+
+- **Colors** (Settings → Colors): key idle, key pressed (highlight), background, text, and pressed text. One theme for the whole overlay.
+- **Label display** (Settings → Label display): **Follow Caps Lock and Shift**, **All uppercase**, or **All lowercase** for key labels.
+
+### Per-key / per-element control (Edit Layout)
+
+- **Edit style** (right‑click a key): per-key **idle** and **pressed** colors, **text** and **pressed text** colors, **font family** and **size**, **border** (width + color). Overrides global colors for that key.
+- **Edit shape**: resize, **scale** (%), **rotate**, **text anchor** (position inside shape or center). For polygons: **add/remove vertices**, **polygon holes**, scale holes. Full control over shape and text placement.
+- **Rebind**: attach any key code (keyboard or mouse) or multiple codes (OR logic) to a key. Rebind gamepad buttons and triggers to shapes.
+- **Edit text**: change main and shift label for the key.
+
+### Shapes and elements
+
+- **Shapes:** Rectangle, Circle, Star, Diamond, Hexagon, Triangle, or **custom polygon** (with optional holes). Resize and edit vertices in the shape editor.
+- **Special elements:** **Mouse speed indicator**, **Angular viewer** (left/right stick direction), **Controller** (full gamepad with editable regions), **Label** (standalone text).
+- **Copy / paste & style:** Copy a key and paste elsewhere; **Pick style** then **Apply** to copy colors/font/border to other keys.
+
+### Layout and format
+
+- **NohBoard .json** — Load and save the same format. Use layouts in NohBoard or coreBoard. (coreBoard adds optional elements like stick viewers and controller overlays that NohBoard may ignore.)
+- **Undo/Redo** — Full history for layout and shape edits.
+- **Persistence** — Remembers last layout, recent files, view/editor tab, colors, and language.
+
+### Language and UX
+
+- **Languages** — English, Deutsch, Français (Settings → Language).
+- **Help** — Getting started, NohBoard layouts, check for updates, report a problem.
+
+---
+
+## Features (summary)
+
+- **Live overlay** — Real-time keyboard, mouse, and gamepad visualization (Windows).
+- **Full keyboard** — Any key code, Shift/Caps aware labels.
+- **Mouse** — Buttons + optional speed indicator.
+- **Gamepad** — Buttons, sticks (angular viewer), triggers (analog fill), optional full controller overlay with editable regions.
+- **Layout editor** — All shapes above; per-key style (colors, font, border); rebind; text anchor; copy/paste and pick/apply style.
+- **Global theme** — Key, highlight, background, text colors; label mode (Caps/Shift, upper, lower).
+- **NohBoard .json** — Load/save same format; switch between apps without conversion.
+- **Undo/Redo** — Layout and shape edits.
+- **Languages** — EN, DE, FR.
 
 ---
 
 ## Quick Start
 
-A **Windows installer** for the latest version is available under [Releases](https://github.com/RandomTick/coreBoard/releases).
+**Windows:** Download the latest installer from [Releases](https://github.com/RandomTick/coreBoard/releases).
 
-### Build from source
-
-**Requirements:** CMake 3.5+, Qt 5 or 6 (Widgets, Svg, LinguistTools), C++17 compiler
+**From source** (CMake 3.5+, Qt 5 or 6 with Widgets + Svg + LinguistTools, C++17):
 
 ```bash
 git clone https://github.com/RandomTick/coreBoard.git
 cd coreBoard
-
 cmake -B build -DCMAKE_PREFIX_PATH=<path-to-Qt>
 cmake --build build
 ```
 
-The executable is in `build/` (e.g. `build/CoreBoard.exe` on Windows). Run from the project root so layout files and resources are found.
+Run the executable from the project root (e.g. `build/CoreBoard.exe`).  
+**View** = overlay to capture in OBS. **Edit Layout** = open, create, or edit layouts (including NohBoard `.json`).
 
-### Run
-
-1. **View mode** — Shows the current layout and highlights keys as you press them. Use this for streaming or recording.
-2. **Editor tab** — Open, create, or edit layouts. Use **File → Open** to load any NohBoard `.json` layout, or start from the included default WASD layout.
+**Project layout:** `src/` = application source; `docs/` = documentation and images; `translations/`, `icons/`, `installer/` = resources.
 
 ---
 
 ## Usage
 
-- **Open** — Load a `.json` layout (NohBoard format).
-- **New** — Start a blank layout.
-- **Add shape** — Rectangle, circle, star, diamond, hexagon, triangle, or advanced shapes (custom polygons, with optional holes). Assign text and key codes. Right‑click a key for **Edit style…**, **Edit shape…**, rebind, or delete.
-- **Copy / Paste key** — Copy a key, then click where to paste. **Pick style** from a key, then **Apply** to others.
-- **Save / Save as** — Write the layout to a JSON file (same format NohBoard uses).
-
-Layout and window settings (last layout, recent layouts, tab) are restored on next launch.
+| Action | Description |
+|--------|-------------|
+| **Open** | Load a `.json` layout (NohBoard format). |
+| **New** | Start a blank layout. |
+| **Add shape** | Add rectangle, circle, star, diamond, hexagon, triangle, or custom polygon. Or add Mouse speed indicator, Angular viewer (stick), Controller, or Label. Right‑click a key for Edit style, Edit shape, Rebind, Edit text, or Delete. |
+| **Copy / Paste key** | Copy a key, then click where to paste. **Pick style** then **Apply** to copy appearance to other keys. |
+| **Save / Save as** | Write layout to JSON (same format as NohBoard). |
 
 ---
 
 ## Switching from NohBoard?
 
-See the **[NohBoard Migration Guide](docs/NOHBOARD_MIGRATION.md)** for a quick step-by-step guide. In short: your layouts work as-is.
-
----
-
-## Project Structure
-
-- **Keyboard widget** — Renders the layout and key states (including per-key colors)
-- **Layout editor** — Scene-based editor: shapes, resize, rebind, shape editor (vertices, holes, text anchor), undo/redo
-- **Layout settings** — Persists last layout, recent files, tab index
-- **Windows key listener** — Feeds key press/release events to the overlay
+Your layouts work as-is. See **[NohBoard Migration Guide](docs/NOHBOARD_MIGRATION.md)** for a short step-by-step.
 
 ---
 
 ## Contributing
 
-Contributions welcome: bug reports, feature ideas, or pull requests. Translations (en/de/fr) are in `translations/`—help is appreciated there too.
+Bug reports, feature ideas, and pull requests are welcome. Translation help (en/de/fr in `translations/`) is appreciated.
 
 ---
 
-## License
+## License & Thanks
 
 **coreBoard** is released under the [GNU General Public License v3.0](LICENSE).
 
-## Acknowledgements
-
-Inspired by **NohBoard**. coreBoard aims for full layout compatibility while adding a built-in editor and improved performance. We acknowledge NohBoard's work and build on it for streamers and content creators.
+Inspired by **NohBoard**. We aim for full layout compatibility while adding a built-in editor, keyboard + mouse + controller support, and maximum customizability.
