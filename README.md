@@ -33,7 +33,7 @@ An **on-screen input overlay** for streaming, speedrunning, or recording. Viewer
 |-------|----------------|
 | **Keyboard** | Key press/release highlighting, Shift and Caps Lock–aware labels. |
 | **Mouse** | Left/right/middle and extra buttons; optional **mouse speed indicator** (movement intensity). |
-| **Gamepad** | All buttons (A, B, X, Y, bumpers, D-pad, sticks, Back, Start). **Analog sticks** as direction viewers. **Triggers** with fill level (LT/RT). Optional **full controller** overlay with editable button regions. |
+| **Gamepad** | All buttons (A, B, X, Y, bumpers, D-pad, sticks, Back, Start). **Analog sticks** as direction viewers. **Triggers** with fill level (LT/RT). **Full controller** overlay . |
 
 Layouts can mix keys, mouse indicators, stick viewers, trigger fills, controller overlays, and **labels** (custom text, with optional shift variant). Everything is optional and customizable.
 
@@ -58,7 +58,7 @@ coreBoard is built so you can match your stream’s look and show exactly what y
 ### Shapes and elements
 
 - **Shapes:** Rectangle, Circle, Star, Diamond, Hexagon, Triangle, or **custom polygon** (with optional holes). Resize and edit vertices in the shape editor.
-- **Special elements:** **Mouse speed indicator**, **Angular viewer** (left/right stick direction), **Controller** (full gamepad with editable regions), **Label** (standalone text).
+- **Special elements:** **Mouse speed indicator**, **Angular viewer** (left/right stick direction), **Controller**, **Label** (standalone text).
 - **Copy / paste & style:** Copy a key and paste elsewhere; **Pick style** then **Apply** to copy colors/font/border to other keys.
 
 ### Layout and format
@@ -79,7 +79,7 @@ coreBoard is built so you can match your stream’s look and show exactly what y
 - **Live overlay** — Real-time keyboard, mouse, and gamepad visualization (Windows).
 - **Full keyboard** — Any key code, Shift/Caps aware labels.
 - **Mouse** — Buttons + optional speed indicator.
-- **Gamepad** — Buttons, sticks (angular viewer), triggers (analog fill), optional full controller overlay with editable regions.
+- **Gamepad** — Buttons, sticks (angular viewer), triggers (analog fill), full controller overlay.
 - **Layout editor** — All shapes above; per-key style (colors, font, border); rebind; text anchor; copy/paste and pick/apply style.
 - **Global theme** — Key, highlight, background, text colors; label mode (Caps/Shift, upper, lower).
 - **NohBoard .json** — Load/save same format; switch between apps without conversion.
