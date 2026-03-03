@@ -1,4 +1,4 @@
 // versioninfo.h
 #pragma once
 
-constexpr auto APP_VERSION = "0.6.4-beta";
+constexpr auto APP_VERSION = "1.0.0";
