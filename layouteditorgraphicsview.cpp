@@ -65,6 +65,8 @@ LayoutEditorGraphicsView::LayoutEditorGraphicsView(QWidget *parent) : QGraphicsV
     edgeOffset = QPointF(0, 0);
     setDragMode(QGraphicsView::RubberBandDrag);
     setFocusPolicy(Qt::StrongFocus);
+    // Fixed background so labels and key text remain visible regardless of Windows theme (issue #5)
+    setBackgroundBrush(QColor(0x2d, 0x2d, 0x2d));
     m_arrowDirection = 0;
     m_arrowCommitTimer = new QTimer(this);
     m_arrowCommitTimer->setSingleShot(true);
@@ -193,7 +195,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
             AngularViewerItem *angularViewerItem = dynamic_cast<AngularViewerItem*>(item);
             if (angularViewerItem) {
                 QMenu menu;
-                QAction *actionRename = menu.addAction(tr("Rename"));
+                // No Rename for angular viewer; label is hidden in editor and visualization (issue #7)
                 QAction *actionStyle = menu.addAction(tr("Edit style..."));
                 QMenu *controllerMenu = menu.addMenu(tr("Select controller"));
                 QAction *controllerActions[4];
@@ -211,25 +213,7 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 menu.addSeparator();
                 QAction *actionDelete = menu.addAction(tr("Delete"));
                 QAction *selectedAction = menu.exec(QCursor::pos());
-                if (selectedAction == actionRename) {
-                    QString oldText = angularViewerItem->getText();
-                    QString oldShiftText = angularViewerItem->getShiftText();
-                    DialogTextChange *dialog = new DialogTextChange(this, oldText, oldShiftText);
-                    if (dialog->exec() == QDialog::Accepted) {
-                        angularViewerItem->setText(dialog->getText());
-                        angularViewerItem->setShiftText(dialog->getShiftText());
-                    }
-                    delete dialog;
-                    QString newText = angularViewerItem->getText();
-                    QString newShiftText = angularViewerItem->getShiftText();
-                    if (newText != oldText || newShiftText != oldShiftText) {
-                        Action *action = new Action(Actions::ChangeText, angularViewerItem, oldText, newText, oldShiftText, newShiftText);
-                        undoActions.push_back(action);
-                        redoActions.clear();
-                        layoutEditor->markDirty();
-                        layoutEditor->updateButtons(!undoActions.empty(), !redoActions.empty());
-                    }
-                } else if (selectedAction == actionStyle) {
+                if (selectedAction == actionStyle) {
                     KeyStyle current = angularViewerItem->keyStyle();
                     DialogStyle *dialog = new DialogStyle(this, current, angularViewerItem->getText(), false, true);
                     if (dialog->exec() == QDialog::Accepted) {

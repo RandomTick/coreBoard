@@ -38,6 +38,8 @@ AngularViewerItem::AngularViewerItem(const QRectF &rect, AngularViewerSubType su
     textItem->setFont(m_keyStyle.font());
     const qreal margin = 8;
     textItem->setTextWidth(qMax(0.0, rect.width() - margin));
+    // Hide label in editor; visualization does not show it either (issue #7)
+    textItem->setVisible(false);
     centerText();
 }
 
