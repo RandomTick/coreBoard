@@ -9,7 +9,7 @@
 ## Preview
 
 <p align="center">
-  <img src="docs/images/example_layout.png" alt="coreBoard layout preview" width="600">
+  <img src="docs/images/example_layout.gif" alt="coreBoard layout preview" width="600">
 </p>
 
 ---
