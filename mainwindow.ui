@@ -47,6 +47,9 @@
     <addaction name="actionGettingStarted"/>
     <addaction name="actionNohBoardLayouts"/>
     <addaction name="actionReportProblem"/>
+    <addaction name="actionHelpSeparator"/>
+    <addaction name="actionCheckForUpdate"/>
+    <addaction name="actionAutoUpdateCheck"/>
    </widget>
    <addaction name="menuHelp"/>
    <addaction name="actionAbout"/>
@@ -90,6 +93,24 @@
   <action name="actionReportProblem">
    <property name="text">
     <string>Report a problem</string>
+   </property>
+  </action>
+  <action name="actionHelpSeparator">
+   <property name="separator">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="actionCheckForUpdate">
+   <property name="text">
+    <string>Check for Update</string>
+   </property>
+  </action>
+  <action name="actionAutoUpdateCheck">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Auto update</string>
    </property>
   </action>
   <action name="actionAbout">

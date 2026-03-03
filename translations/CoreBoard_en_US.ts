@@ -6,84 +6,84 @@
     <message>
         <location filename="../controllerregionsdialog.cpp" line="+130"/>
         <source>Edit controller regions</source>
-        <translation>Edit controller regions</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+15"/>
         <source>Index</source>
-        <translation>Index</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Name</source>
-        <translation>Name</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+15"/>
         <source>D-pad shape (SVG pixels)</source>
-        <translation>D-pad shape (SVG pixels)</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+5"/>
         <location line="+4"/>
         <location line="+4"/>
         <source> px</source>
-        <translation> px</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Base width:</source>
-        <translation>Base width:</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Base height:</source>
-        <translation>Base height:</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Tip length:</source>
-        <translation>Tip length:</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Load from file</source>
-        <translation>Load from file</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Save to file</source>
-        <translation>Save to file</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Reset to built-in</source>
-        <translation>Reset to built-in</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Close</source>
-        <translation>Close</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+80"/>
         <source>Saved</source>
-        <translation>Saved</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Saved to %1</source>
-        <translation>Saved to %1</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Error</source>
-        <translation>Error</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Could not write %1</source>
-        <translation>Could not write %1</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -406,18 +406,18 @@
     <name>LayoutEditor</name>
     <message>
         <location filename="../layouteditor.cpp" line="+91"/>
-        <location line="+1442"/>
+        <location line="+1494"/>
         <source>Open Layout</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1439"/>
-        <location line="+1440"/>
+        <location line="-1491"/>
+        <location line="+1492"/>
         <source>New Layout</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1432"/>
+        <location line="-1484"/>
         <source>Undo (Ctrl+Z)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -428,128 +428,128 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+1414"/>
+        <location line="+1466"/>
         <source>Add Shape</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1405"/>
+        <location line="-1457"/>
         <source>Copy key (click, then click a key to copy)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+8"/>
-        <location line="+1403"/>
+        <location line="+1455"/>
         <source>Paste key</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1394"/>
-        <location line="+1395"/>
+        <location line="-1446"/>
+        <location line="+1447"/>
         <source>Pick style from a key</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1387"/>
-        <location line="+1388"/>
+        <location line="-1439"/>
+        <location line="+1440"/>
         <source>Apply picked style to key(s)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1384"/>
-        <location line="+1385"/>
+        <location line="-1436"/>
+        <location line="+1437"/>
         <source>Rectangle</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1384"/>
-        <location line="+1385"/>
+        <location line="-1436"/>
+        <location line="+1437"/>
         <source>Circle</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1383"/>
-        <location line="+1384"/>
+        <location line="-1435"/>
+        <location line="+1436"/>
         <source>Advanced shapes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1383"/>
-        <location line="+1384"/>
+        <location line="-1435"/>
+        <location line="+1436"/>
         <source>Star</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1383"/>
-        <location line="+1384"/>
+        <location line="-1435"/>
+        <location line="+1436"/>
         <source>Diamond</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1383"/>
-        <location line="+1384"/>
+        <location line="-1435"/>
+        <location line="+1436"/>
         <source>Hexagon</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1383"/>
-        <location line="+1384"/>
+        <location line="-1435"/>
+        <location line="+1436"/>
         <source>Triangle</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1382"/>
-        <location line="+1383"/>
+        <location line="-1434"/>
+        <location line="+1435"/>
         <source>Mouse speed indicator</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1382"/>
-        <location line="+1383"/>
+        <location line="-1434"/>
+        <location line="+1435"/>
         <source>Angular viewer</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1382"/>
-        <location line="+1383"/>
+        <location line="-1434"/>
+        <location line="+1435"/>
         <source>Left joystick</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1382"/>
-        <location line="+1383"/>
+        <location line="-1434"/>
+        <location line="+1435"/>
         <source>Right joystick</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1381"/>
-        <location line="+1382"/>
+        <location line="-1433"/>
+        <location line="+1434"/>
         <source>Controller</source>
-        <translation>Controller</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1379"/>
+        <location line="-1431"/>
         <location line="+53"/>
-        <location line="+569"/>
+        <location line="+606"/>
         <location line="+11"/>
-        <location line="+747"/>
+        <location line="+762"/>
         <source>Label</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1377"/>
-        <location line="+1359"/>
+        <location line="-1429"/>
+        <location line="+1411"/>
         <source>Save</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1356"/>
-        <location line="+1357"/>
+        <location line="-1408"/>
+        <location line="+1409"/>
         <source>Save As</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1225"/>
+        <location line="-1277"/>
         <source>Open...</source>
         <translation type="unfinished"></translation>
     </message>
@@ -565,12 +565,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+546"/>
+        <location line="+583"/>
         <source>Layout Files (*.json);;All Files (*)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-534"/>
+        <location line="-571"/>
         <source>Layout not found</source>
         <translation type="unfinished"></translation>
     </message>
@@ -584,7 +584,7 @@ It has been removed from the recent list.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+522"/>
+        <location line="+559"/>
         <location line="+21"/>
         <source>Save failed</source>
         <translation type="unfinished"></translation>
@@ -621,7 +621,7 @@ Possible causes:
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+652"/>
+        <location line="+667"/>
         <source>Copy key</source>
         <translation type="unfinished"></translation>
     </message>
@@ -629,61 +629,60 @@ Possible causes:
 <context>
     <name>LayoutEditorGraphicsView</name>
     <message>
-        <location filename="../layouteditorgraphicsview.cpp" line="+102"/>
+        <location filename="../layouteditorgraphicsview.cpp" line="+104"/>
         <location line="+36"/>
         <location line="+59"/>
-        <location line="+81"/>
+        <location line="+63"/>
         <location line="+54"/>
         <source>Edit style...</source>
-        <translation>Edit style...</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-228"/>
+        <location line="-210"/>
         <location line="+36"/>
         <location line="+72"/>
-        <location line="+75"/>
+        <location line="+57"/>
         <location line="+48"/>
         <source>Delete</source>
-        <translation>Delete</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-198"/>
-        <location line="+59"/>
-        <location line="+134"/>
+        <location line="-180"/>
+        <location line="+175"/>
         <source>Rename</source>
-        <translation>Rename</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-132"/>
-        <location line="+81"/>
+        <location line="-114"/>
+        <location line="+63"/>
         <source>Select controller</source>
-        <translation>Select controller</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-78"/>
-        <location line="+81"/>
+        <location line="-60"/>
+        <location line="+63"/>
         <source>Controller %1</source>
-        <translation>Controller %1</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-77"/>
+        <location line="-59"/>
         <source>Flip left/right</source>
-        <translation>Flip left/right</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Flip up/down</source>
-        <translation>Flip up/down</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+123"/>
+        <location line="+105"/>
         <source>Rebind</source>
-        <translation>Rebind</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Edit shape...</source>
-        <translation>Edit shape...</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -709,7 +708,7 @@ Possible causes:
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+15"/>
         <source>Visualization</source>
         <translation type="unfinished"></translation>
     </message>
@@ -740,7 +739,7 @@ Possible causes:
     </message>
     <message>
         <location line="+5"/>
-        <location filename="../mainwindow.cpp" line="+184"/>
+        <location filename="../mainwindow.cpp" line="+192"/>
         <source>NohBoard layouts</source>
         <translation type="unfinished"></translation>
     </message>
@@ -750,9 +749,91 @@ Possible causes:
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+10"/>
+        <location filename="../mainwindow.cpp" line="+69"/>
+        <location line="+9"/>
+        <location line="+11"/>
+        <location line="+11"/>
+        <source>Check for Update</source>
+        <translation>Check for Update</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Auto update</source>
+        <translation>Auto update</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="-30"/>
+        <source>Could not check for updates. Please check your internet connection or try again later.</source>
+        <translation>Could not check for updates. Please check your internet connection or try again later.</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Could not read update information. Please try again later.</source>
+        <translation>Could not read update information. Please try again later.</translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>A new version is available: %1 (you have %2).</source>
+        <translation>A new version is available: %1 (you have %2).</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Open the release page in your browser to download it.</source>
+        <translation>Open the release page in your browser to download it.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Open release page</source>
+        <translation>Open release page</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Later</source>
+        <translation>Later</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>You&apos;re up to date. (Version %1)</source>
+        <translation>You&apos;re up to date. (Version %1)</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.ui" line="+5"/>
         <location filename="../version_info.ui" line="+65"/>
         <source>Info</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="-159"/>
+        <source>About coreBoard</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;h3&gt;coreBoard&lt;/h3&gt;&lt;p&gt;coreBoard is a keyboard, mouse, and controller visualization tool for streaming and video. It displays key presses and input on screen in real time and is designed to be fast and easy to capture with OBS or similar software.&lt;/p&gt;&lt;h4&gt;Features&lt;/h4&gt;&lt;p&gt;&lt;b&gt;Layout editor (Edit Layout):&lt;/b&gt; Add and edit shapes — rectangles, circles, polygons (star, diamond, hexagon, triangle), free-form paths, mouse speed indicator, and left/right joystick viewers. Per key shape: rebind (keyboard, mouse, or controller), rename, edit style, edit shape. Mouse/joystick elements: rename, edit style. Edit style: outline color and width, corner radius, font family/size/bold/italic, per-key colors. Open, new, save, recent files, undo/redo, copy/paste, move and resize.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Visualization (View):&lt;/b&gt; Real-time key, mouse, and controller display; global colors and label display.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Settings:&lt;/b&gt; Colors, label display (follow caps/shift, uppercase, lowercase), language.&lt;/p&gt;&lt;h4&gt;Compatibility&lt;/h4&gt;&lt;p&gt;&lt;b&gt;NohBoard → coreBoard:&lt;/b&gt; You can open NohBoard .json layouts in coreBoard (Edit Layout → Open Layout). Very custom NohBoard layouts might not be fully supported; please report issues (Help → Report a problem).&lt;/p&gt;&lt;p&gt;&lt;b&gt;coreBoard → NohBoard:&lt;/b&gt; Layouts saved from coreBoard may not be fully functional in NohBoard, since coreBoard adds features such as joystick (angular) viewers and controller button bindings that NohBoard does not support.&lt;/p&gt;&lt;p&gt;Built with C++ and Qt. All source code is publicly available under the GPL-3.0 license:&lt;br&gt;&lt;a href=&quot;https://github.com/RandomTick/coreBoard&quot;&gt;https://github.com/RandomTick/coreBoard&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Version %1&lt;/p&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+58"/>
+        <source>To use a NohBoard layout: switch to &lt;b&gt;Edit Layout&lt;/b&gt;, click &lt;b&gt;Open Layout&lt;/b&gt;, then choose your .json file. No conversion needed.
+
+Very custom NohBoard layouts might not be fully supported; if something doesn&apos;t look right, report it (Help → Report a problem).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+154"/>
+        <location line="+16"/>
+        <source>Unsaved changes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-15"/>
+        <source>Save changes to the layout before switching?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>Save changes to the layout before closing?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -779,39 +860,6 @@ Possible causes:
     <message>
         <location line="+5"/>
         <source>Binding</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../mainwindow.cpp" line="-58"/>
-        <source>About coreBoard</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>&lt;h3&gt;coreBoard&lt;/h3&gt;&lt;p&gt;coreBoard is a keyboard, mouse, and controller visualization tool for streaming and video. It displays key presses and input on screen in real time and is designed to be fast and easy to capture with OBS or similar software.&lt;/p&gt;&lt;h4&gt;Features&lt;/h4&gt;&lt;p&gt;&lt;b&gt;Layout editor (Edit Layout):&lt;/b&gt; Add and edit shapes — rectangles, circles, polygons (star, diamond, hexagon, triangle), free-form paths, mouse speed indicator, and left/right joystick viewers. Per key shape: rebind (keyboard, mouse, or controller), rename, edit style, edit shape. Mouse/joystick elements: rename, edit style. Edit style: outline color and width, corner radius, font family/size/bold/italic, per-key colors. Open, new, save, recent files, undo/redo, copy/paste, move and resize.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Visualization (View):&lt;/b&gt; Real-time key, mouse, and controller display; global colors and label display.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Settings:&lt;/b&gt; Colors, label display (follow caps/shift, uppercase, lowercase), language.&lt;/p&gt;&lt;h4&gt;Compatibility&lt;/h4&gt;&lt;p&gt;&lt;b&gt;NohBoard → coreBoard:&lt;/b&gt; You can open NohBoard .json layouts in coreBoard (Edit Layout → Open Layout). Very custom NohBoard layouts might not be fully supported; please report issues (Help → Report a problem).&lt;/p&gt;&lt;p&gt;&lt;b&gt;coreBoard → NohBoard:&lt;/b&gt; Layouts saved from coreBoard may not be fully functional in NohBoard, since coreBoard adds features such as joystick (angular) viewers and controller button bindings that NohBoard does not support.&lt;/p&gt;&lt;p&gt;Built with C++ and Qt. All source code is publicly available under the GPL-3.0 license:&lt;br&gt;&lt;a href=&quot;https://github.com/RandomTick/coreBoard&quot;&gt;https://github.com/RandomTick/coreBoard&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Version %1&lt;/p&gt;</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+58"/>
-        <source>To use a NohBoard layout: switch to &lt;b&gt;Edit Layout&lt;/b&gt;, click &lt;b&gt;Open Layout&lt;/b&gt;, then choose your .json file. No conversion needed.
-
-Very custom NohBoard layouts might not be fully supported; if something doesn&apos;t look right, report it (Help → Report a problem).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+54"/>
-        <location line="+16"/>
-        <source>Unsaved changes</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="-15"/>
-        <source>Save changes to the layout before switching?</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+16"/>
-        <source>Save changes to the layout before closing?</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -885,28 +933,48 @@ Very custom NohBoard layouts might not be fully supported; if something doesn&ap
 <context>
     <name>ShapeEditorDialog</name>
     <message>
-        <location filename="../shapeeditordialog.cpp" line="+165"/>
+        <location filename="../shapeeditordialog.cpp" line="+188"/>
         <source>Edit shape</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+113"/>
+        <location line="+124"/>
+        <source>Undo (Ctrl+Z)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Redo (Ctrl+Y)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>Rotation (degrees):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+18"/>
+        <source>Scale shape (%):</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+25"/>
+        <source>Scale selected hole (%):</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+28"/>
         <source>Center text</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+22"/>
-        <location line="+190"/>
+        <location line="+360"/>
         <source>Select a point to see position (text anchor = 0,0). Arrow keys: 1 px; Shift+arrow: 10 px.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-183"/>
+        <location line="-353"/>
         <source>Add polygon hole</source>
         <translation type="unfinished"></translation>
     </message>
@@ -926,7 +994,7 @@ Very custom NohBoard layouts might not be fully supported; if something doesn&ap
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+187"/>
+        <location line="+357"/>
         <source>Select a point to see position (text anchor = 0,0).</source>
         <translation type="unfinished"></translation>
     </message>

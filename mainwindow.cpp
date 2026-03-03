@@ -16,6 +16,11 @@
 #include <QApplication>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
 #ifdef Q_OS_WIN
 #include "windowskeylistener.h"
 #include "windowsmouselistener.h"
@@ -89,7 +94,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::onAbout);
     connect(ui->actionGettingStarted, &QAction::triggered, this, &MainWindow::onGettingStarted);
     connect(ui->actionNohBoardLayouts, &QAction::triggered, this, &MainWindow::onNohBoardLayouts);
+    connect(ui->actionCheckForUpdate, &QAction::triggered, this, &MainWindow::onCheckForUpdate);
+    connect(ui->actionAutoUpdateCheck, &QAction::toggled, this, &MainWindow::onAutoUpdateCheckToggled);
     connect(ui->actionReportProblem, &QAction::triggered, this, &MainWindow::onReportProblem);
+    ui->actionAutoUpdateCheck->setChecked(m_layoutSettings->autoUpdateCheck());
     applyVisualizationColors();
     connect(m_layoutEditor, &LayoutEditor::layoutLoaded, this, &MainWindow::reloadVisualizationLayout);
     connect(m_layoutEditor, &LayoutEditor::layoutLoaded, this, [this]() {
@@ -186,6 +194,106 @@ void MainWindow::onNohBoardLayouts()
            "Very custom NohBoard layouts might not be fully supported; if something doesn't look right, report it (Help → Report a problem)."));
 }
 
+void MainWindow::onCheckForUpdate()
+{
+    runUpdateCheck(false);
+}
+
+void MainWindow::onAutoUpdateCheckToggled(bool checked)
+{
+    m_layoutSettings->setAutoUpdateCheck(checked);
+    m_layoutSettings->save();
+}
+
+void MainWindow::runUpdateCheck(bool isAuto)
+{
+    if (m_updateCheckReply) {
+        m_updateCheckReply->abort();
+        m_updateCheckReply->deleteLater();
+        m_updateCheckReply = nullptr;
+    }
+    m_updateCheckIsAuto = isAuto;
+    if (!m_networkAccessManager)
+        m_networkAccessManager = new QNetworkAccessManager(this);
+    QNetworkRequest request(QUrl(QStringLiteral("https://api.github.com/repos/RandomTick/coreBoard/releases/latest")));
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("coreBoard"));
+    m_updateCheckReply = m_networkAccessManager->get(request);
+    connect(m_updateCheckReply, &QNetworkReply::finished, this, &MainWindow::onUpdateCheckFinished);
+}
+
+static QList<int> versionParts(const QString &s)
+{
+    QList<int> parts;
+    for (const QString &seg : s.trimmed().split(QLatin1Char('.'))) {
+        bool ok = false;
+        int n = seg.toInt(&ok);
+        parts.append(ok ? n : 0);
+    }
+    return parts.isEmpty() ? QList<int>() << 0 : parts;
+}
+
+// Returns true if a > b (e.g. 1.0.1 > 1.0.0)
+static bool versionGreaterThan(const QString &a, const QString &b)
+{
+    const QList<int> va = versionParts(a);
+    const QList<int> vb = versionParts(b);
+    for (int i = 0; i < qMax(va.size(), vb.size()); ++i) {
+        int na = i < va.size() ? va[i] : 0;
+        int nb = i < vb.size() ? vb[i] : 0;
+        if (na != nb)
+            return na > nb;
+    }
+    return false;
+}
+
+void MainWindow::onUpdateCheckFinished()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
+    if (reply != m_updateCheckReply)
+        return;
+    m_updateCheckReply->deleteLater();
+    m_updateCheckReply = nullptr;
+
+    const bool isAuto = m_updateCheckIsAuto;
+
+    if (reply->error() != QNetworkReply::NoError) {
+        if (!isAuto)
+            QMessageBox::information(this, tr("Check for Update"),
+                tr("Could not check for updates. Please check your internet connection or try again later."));
+        return;
+    }
+    QByteArray data = reply->readAll();
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(data, &parseError);
+    if (!doc.isObject() || parseError.error != QJsonParseError::NoError) {
+        if (!isAuto)
+            QMessageBox::information(this, tr("Check for Update"),
+                tr("Could not read update information. Please try again later."));
+        return;
+    }
+    QString tagName = doc.object().value(QLatin1String("tag_name")).toString();
+    if (tagName.startsWith(QLatin1Char('v')))
+        tagName = tagName.mid(1);
+    QString htmlUrl = doc.object().value(QLatin1String("html_url")).toString();
+    QString currentVersion = QLatin1String(APP_VERSION);
+    if (versionGreaterThan(tagName, currentVersion)) {
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle(tr("Check for Update"));
+        msgBox.setText(tr("A new version is available: %1 (you have %2).").arg(tagName, currentVersion));
+        msgBox.setInformativeText(tr("Open the release page in your browser to download it."));
+        msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+        msgBox.setDefaultButton(QMessageBox::Ok);
+        msgBox.button(QMessageBox::Ok)->setText(tr("Open release page"));
+        msgBox.button(QMessageBox::Cancel)->setText(tr("Later"));
+        if (msgBox.exec() == QMessageBox::Ok && !htmlUrl.isEmpty())
+            QDesktopServices::openUrl(QUrl(htmlUrl));
+    } else {
+        if (!isAuto)
+            QMessageBox::information(this, tr("Check for Update"),
+                tr("You're up to date. (Version %1)").arg(QLatin1String(APP_VERSION)));
+    }
+}
+
 void MainWindow::onReportProblem()
 {
     QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/RandomTick/coreBoard/issues")));
@@ -277,6 +385,10 @@ void MainWindow::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
     if (!m_layoutSettings->welcomeDialogShown())
         QTimer::singleShot(200, this, [this]() { WelcomeDialog::showIfNeeded(m_layoutSettings, this); });
+    if (m_layoutSettings->autoUpdateCheck() && !m_autoUpdateCheckDone) {
+        m_autoUpdateCheckDone = true;
+        QTimer::singleShot(500, this, [this]() { runUpdateCheck(true); });
+    }
     if (m_stackedWidget->currentIndex() == 1)
         QTimer::singleShot(100, this, &MainWindow::ensureWindowFitsLayoutEditor);
 }

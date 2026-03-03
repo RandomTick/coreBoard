@@ -15,6 +15,7 @@ static const char kHighlightedTextColorKey[] = "highlightedTextColor";
 static const char kLabelModeKey[] = "labelMode";
 static const char kLanguageCodeKey[] = "languageCode";
 static const char kWelcomeDialogShownKey[] = "welcomeDialogShown";
+static const char kAutoUpdateCheckKey[] = "autoUpdateCheck";
 
 LayoutSettings::LayoutSettings()
 {
@@ -157,6 +158,16 @@ void LayoutSettings::setWelcomeDialogShown(bool shown)
     m_welcomeDialogShown = shown;
 }
 
+bool LayoutSettings::autoUpdateCheck() const
+{
+    return m_autoUpdateCheck;
+}
+
+void LayoutSettings::setAutoUpdateCheck(bool check)
+{
+    m_autoUpdateCheck = check;
+}
+
 void LayoutSettings::save()
 {
     QSettings s(kOrg, kApp);
@@ -170,6 +181,7 @@ void LayoutSettings::save()
     s.setValue(kLabelModeKey, static_cast<int>(m_labelMode));
     s.setValue(kLanguageCodeKey, m_languageCode);
     s.setValue(kWelcomeDialogShownKey, m_welcomeDialogShown);
+    s.setValue(kAutoUpdateCheckKey, m_autoUpdateCheck);
     s.beginWriteArray(kRecentGroup);
     for (int i = 0; i < m_recentLayouts.size(); ++i) {
         s.setArrayIndex(i);
@@ -210,6 +222,7 @@ void LayoutSettings::load()
     }
     m_languageCode = s.value(kLanguageCodeKey).toString();
     m_welcomeDialogShown = s.value(kWelcomeDialogShownKey, false).toBool();
+    m_autoUpdateCheck = s.value(kAutoUpdateCheckKey, false).toBool();
     m_recentLayouts.clear();
     int n = s.beginReadArray(kRecentGroup);
     for (int i = 0; i < n; ++i) {

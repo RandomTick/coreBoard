@@ -15,6 +15,8 @@ QT_END_NAMESPACE
 class LayoutEditor;
 class QStackedWidget;
 class WindowsKeyListener;
+class QNetworkAccessManager;
+class QNetworkReply;
 #ifdef Q_OS_WIN
 class WindowsMouseListener;
 class GamepadListener;
@@ -52,13 +54,17 @@ private slots:
     void onLanguage();
     void onGettingStarted();
     void onNohBoardLayouts();
+    void onCheckForUpdate();
+    void onAutoUpdateCheckToggled(bool checked);
     void onReportProblem();
+    void onUpdateCheckFinished();
     void reloadVisualizationLayout(const QString &path);
     void ensureWindowFitsLayoutEditor();
 
 private:
     void applyVisualizationColors();
     bool confirmLeaveEditor();
+    void runUpdateCheck(bool isAuto);
 
     KeyboardWidget *m_keyboardWidget = nullptr;
     LayoutEditor *m_layoutEditor = nullptr;
@@ -69,5 +75,9 @@ private:
     WindowsMouseListener *m_mouseListener = nullptr;
     GamepadListener *m_gamepadListener = nullptr;
 #endif
+    QNetworkAccessManager *m_networkAccessManager = nullptr;
+    QNetworkReply *m_updateCheckReply = nullptr;
+    bool m_updateCheckIsAuto = false;
+    bool m_autoUpdateCheckDone = false;
 };
 #endif // MAINWINDOW_H

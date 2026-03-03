@@ -50,6 +50,9 @@ public:
     bool welcomeDialogShown() const;
     void setWelcomeDialogShown(bool shown);
 
+    bool autoUpdateCheck() const;
+    void setAutoUpdateCheck(bool check);
+
 private:
     void load();
 
@@ -66,6 +69,7 @@ private:
     LabelMode m_labelMode = LabelMode::FollowCapsAndShift;
     QString m_languageCode;
     bool m_welcomeDialogShown = false;
+    bool m_autoUpdateCheck = false;
 };
 
 #endif // LAYOUTSETTINGS_H
