@@ -20,6 +20,8 @@ This document lists **all** user-facing strings in the application for translati
 | actionGettingStarted | action | Getting started |
 | actionNohBoardLayouts | action | NohBoard layouts |
 | actionReportProblem | action | Report a problem |
+| actionCheckForUpdate | action | Check for Update |
+| actionAutoUpdateCheck | action (checkable) | Auto update |
 | actionAbout | action | Info |
 
 ---
@@ -32,6 +34,14 @@ This document lists **all** user-facing strings in the application for translati
 | onAbout | body | coreBoard description, Features, Compatibility (two-way NohBoard), GPL-3.0, GitHub URL, Version %1 |
 | onNohBoardLayouts | QMessageBox title | NohBoard layouts |
 | onNohBoardLayouts | body | To use a NohBoard layout: switch to Edit Layout, click Open Layout, then choose your .json file. No conversion needed. Very custom NohBoard layouts disclaimer. |
+| onCheckForUpdate / onUpdateCheckFinished | QMessageBox title | Check for Update |
+| onUpdateCheckFinished (error) | body | Could not check for updates. Please check your internet connection or try again later. |
+| onUpdateCheckFinished (parse error) | body | Could not read update information. Please try again later. |
+| onUpdateCheckFinished (update available) | body | A new version is available: %1 (you have %2). |
+| onUpdateCheckFinished (update available) | informativeText | Open the release page in your browser to download it. |
+| onUpdateCheckFinished (update available) | button Ok | Open release page |
+| onUpdateCheckFinished (update available) | button Cancel | Later |
+| onUpdateCheckFinished (up to date) | body | You're up to date. (Version %1) |
 | confirmLeaveEditor | QMessageBox title | Unsaved changes |
 | confirmLeaveEditor | body | Save changes to the layout before switching? |
 | closeEvent | QMessageBox title | Unsaved changes |
@@ -215,7 +225,7 @@ Note: Symbol buttons (⇧ ↵ ⇑ ⇓) are Unicode symbols and typically not tra
 
 | Constant | Value |
 |----------|-------|
-| APP_VERSION | 1.0.0 |
+| APP_VERSION | 1.0.1 |
 
 ---
 
