@@ -225,7 +225,7 @@ Note: Symbol buttons (⇧ ↵ ⇑ ⇓) are Unicode symbols and typically not tra
 
 | Constant | Value |
 |----------|-------|
-| APP_VERSION | 1.0.1 |
+| APP_VERSION | 1.0.2 |
 
 ---
 
