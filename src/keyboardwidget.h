@@ -8,6 +8,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsItem>
 #include <QGraphicsEllipseItem>
+#include <QGraphicsLineItem>
 #include <QGraphicsPathItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsTextItem>
@@ -36,9 +37,12 @@ struct AngularViewerOverlay {
     bool isLeftStick = true;
     bool flipX = false;
     bool flipY = true;
+    bool crosshair = false;
     QRectF rect;
     QGraphicsEllipseItem *trackItem = nullptr;
     QGraphicsEllipseItem *indicatorItem = nullptr;
+    QGraphicsLineItem *crosshairLineH = nullptr;
+    QGraphicsLineItem *crosshairLineV = nullptr;
 };
 
 struct ControllerOverlay {

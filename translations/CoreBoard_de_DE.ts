@@ -695,6 +695,11 @@ Mögliche Ursachen:
         <translation>Oben/unten spiegeln</translation>
     </message>
     <message>
+        <location line="+4"/>
+        <source>Crosshair</source>
+        <translation>Fadenkreuz</translation>
+    </message>
+    <message>
         <location line="+105"/>
         <source>Rebind</source>
         <translation>Neubelegen</translation>

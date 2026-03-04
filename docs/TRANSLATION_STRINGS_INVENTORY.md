@@ -99,6 +99,9 @@ Note: QMessageBox buttons (Save, Discard, Cancel) are Qt standard and translated
 | context menu | menu item | Rebind |
 | context menu | menu item | Edit style... |
 | context menu | menu item | Delete |
+| context menu (angular viewer) | menu item | Flip left/right |
+| context menu (angular viewer) | menu item | Flip up/down |
+| context menu (angular viewer) | menu item (checkable) | Crosshair |
 | alignment/size helpers | suffix |  px (e.g. "42 px") |
 
 Note: " px" appears in drawAlignmentLine and updateSizeHelpers. Consider `tr("%1 px").arg(value)` if localizing unit suffixes.

@@ -675,6 +675,11 @@ Possible causes:
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+4"/>
+        <source>Crosshair</source>
+        <translation>Crosshair</translation>
+    </message>
+    <message>
         <location line="+105"/>
         <source>Rebind</source>
         <translation type="unfinished"></translation>

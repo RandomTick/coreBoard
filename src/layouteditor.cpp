@@ -760,6 +760,7 @@ AngularViewerItem* LayoutEditor::createAngularViewer(const QJsonObject &keyData)
     if (keyData.contains("ControllerIndex")) item->setControllerIndex(keyData.value("ControllerIndex").toInt(0));
     if (keyData.contains("FlipX")) item->setFlipX(keyData.value("FlipX").toBool(false));
     if (keyData.contains("FlipY")) item->setFlipY(keyData.value("FlipY").toBool(true));
+    if (keyData.contains("Crosshair")) item->setCrosshair(keyData.value("Crosshair").toBool(false));
     if (keyData.contains("ShiftText")) item->setShiftText(keyData.value("ShiftText").toString());
     if (keyData.contains("TextPosition")) {
         QJsonObject tp = keyData["TextPosition"].toObject();
@@ -1028,6 +1029,7 @@ bool LayoutEditor::writeLayoutToFile(const QString &fileName) {
             elemObj.insert("ControllerIndex", angularViewerItem->controllerIndex());
             elemObj.insert("FlipX", angularViewerItem->flipX());
             elemObj.insert("FlipY", angularViewerItem->flipY());
+            elemObj.insert("Crosshair", angularViewerItem->crosshair());
             elemObj.insert("Boundaries", boundaries);
             elemObj.insert("Text", angularViewerItem->getText());
             QPointF centerSc = angularViewerItem->mapToScene(angularViewerItem->textPosition());
@@ -1414,6 +1416,7 @@ void LayoutEditor::copyKeyFromItem(QGraphicsItem *item) {
         keyObj.insert("ControllerIndex", angularItem->controllerIndex());
         keyObj.insert("FlipX", angularItem->flipX());
         keyObj.insert("FlipY", angularItem->flipY());
+        keyObj.insert("Crosshair", angularItem->crosshair());
         keyObj.insert("Boundaries", boundaries);
         keyObj.insert("Text", angularItem->getText());
         QPointF centerSc = angularItem->mapToScene(angularItem->textPosition());

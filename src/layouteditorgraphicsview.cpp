@@ -210,6 +210,9 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                 QAction *actionFlipY = menu.addAction(tr("Flip up/down"));
                 actionFlipY->setCheckable(true);
                 actionFlipY->setChecked(!angularViewerItem->flipY());  // UI: unchecked = normal (internal flipY=true corrects axis)
+                QAction *actionCrosshair = menu.addAction(tr("Crosshair"));
+                actionCrosshair->setCheckable(true);
+                actionCrosshair->setChecked(angularViewerItem->crosshair());
                 menu.addSeparator();
                 QAction *actionDelete = menu.addAction(tr("Delete"));
                 QAction *selectedAction = menu.exec(QCursor::pos());
@@ -233,6 +236,9 @@ void LayoutEditorGraphicsView::mousePressEvent(QMouseEvent *event) {
                     layoutEditor->markDirty();
                 } else if (selectedAction == actionFlipY) {
                     angularViewerItem->setFlipY(!actionFlipY->isChecked());  // invert: user "normal" unchecked -> internal flipY true
+                    layoutEditor->markDirty();
+                } else if (selectedAction == actionCrosshair) {
+                    angularViewerItem->setCrosshair(!angularViewerItem->crosshair());
                     layoutEditor->markDirty();
                 } else {
                     for (int i = 0; i < 4; ++i) {

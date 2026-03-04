@@ -15,6 +15,7 @@
 #include <QFile>
 #include <QGraphicsRectItem>
 #include <QGraphicsEllipseItem>
+#include <QGraphicsLineItem>
 #include <QGraphicsPolygonItem>
 #include <QGraphicsPathItem>
 #include <QPainterPath>
@@ -911,6 +912,7 @@ void KeyboardWidget::createAngularViewerOverlay(const QJsonObject &keyData)
     controllerIndex = qBound(0, controllerIndex, 3);
     bool flipX = keyData.value("FlipX").toBool(false);
     bool flipY = keyData.value("FlipY").toBool(true);
+    bool crosshair = keyData.value("Crosshair").toBool(false);
     KeyStyle keyStyle = KeyStyle::fromJson(keyData);
 
     QGraphicsEllipseItem *track = new QGraphicsEllipseItem(0, 0, w, h);
@@ -928,14 +930,29 @@ void KeyboardWidget::createAngularViewerOverlay(const QJsonObject &keyData)
     indicator->setZValue(1);
     m_scene->addItem(indicator);
 
+    QGraphicsLineItem *crosshairLineH = nullptr;
+    QGraphicsLineItem *crosshairLineV = nullptr;
+    if (crosshair) {
+        qreal cx = minX + w / 2;
+        qreal cy = minY + h / 2;
+        QPen crossPen = keyStyle.pen();
+        crosshairLineH = m_scene->addLine(QLineF(minX, cy, minX + w, cy), crossPen);
+        crosshairLineV = m_scene->addLine(QLineF(cx, minY, cx, minY + h), crossPen);
+        crosshairLineH->setZValue(0.5);
+        crosshairLineV->setZValue(0.5);
+    }
+
     AngularViewerOverlay entry;
     entry.controllerIndex = controllerIndex;
     entry.isLeftStick = isLeftStick;
     entry.flipX = flipX;
     entry.flipY = flipY;
+    entry.crosshair = crosshair;
     entry.rect = QRectF(minX, minY, w, h);
     entry.trackItem = track;
     entry.indicatorItem = indicator;
+    entry.crosshairLineH = crosshairLineH;
+    entry.crosshairLineV = crosshairLineV;
     m_angularViewers.append(entry);
 }
 

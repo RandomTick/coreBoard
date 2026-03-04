@@ -26,6 +26,10 @@ public:
     bool flipY() const { return m_flipY; }
     void setFlipY(bool on) { m_flipY = on; }
 
+    /** Show center crosshair in the stick circle (visualization only). */
+    bool crosshair() const { return m_crosshair; }
+    void setCrosshair(bool on) { m_crosshair = on; }
+
     void setRect(const QRectF &rect);
     void setRect(qreal x, qreal y, qreal w, qreal h);
 
@@ -49,6 +53,7 @@ private:
     int m_controllerIndex = 0;
     bool m_flipX = false;
     bool m_flipY = true;
+    bool m_crosshair = false;
     KeyStyle m_keyStyle;
     bool m_hasCustomTextPosition = false;
     QPointF m_textPosition;

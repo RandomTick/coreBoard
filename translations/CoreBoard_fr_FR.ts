@@ -695,6 +695,11 @@ Causes possibles :
         <translation>Retourner haut/bas</translation>
     </message>
     <message>
+        <location line="+4"/>
+        <source>Crosshair</source>
+        <translation>Réticule</translation>
+    </message>
+    <message>
         <location line="+105"/>
         <source>Rebind</source>
         <translation>Réassigner</translation>
