@@ -1,5 +1,6 @@
 #include "gamepadlistener.h"
 #include <QTimer>
+#include <cmath>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -37,6 +38,20 @@ static inline qreal normalizeThumb(SHORT v) {
     if (v > 0 && v < DEADZONE) return 0;
     if (v < 0 && v > -DEADZONE) return 0;
     return qBound(-1.0, v / 32767.0, 1.0);
+}
+
+// Radial deadzone for stick position (angle viewer). No per-axis zeroing so the true angle is shown.
+const qreal RADIAL_DEADZONE = 0.15;  // below this magnitude, treat as center
+
+static void stickRawNormalized(SHORT vx, SHORT vy, qreal &outX, qreal &outY) {
+    outX = qBound(-1.0, vx / 32767.0, 1.0);
+    outY = qBound(-1.0, -vy / 32767.0, 1.0);  // Y up = positive
+    qreal mag = std::sqrt(outX * outX + outY * outY);
+    if (mag <= RADIAL_DEADZONE) {
+        outX = 0;
+        outY = 0;
+    }
+    // else preserve exact angle and magnitude (no snap to cardinals)
 }
 
 } // namespace
@@ -100,10 +115,9 @@ GamepadListener::GamepadListener(QObject *parent) : QObject(parent)
             }
             emit triggersChanged(ci, lTNorm, rTNorm);
 
-            qreal lx = normalizeThumb(state.Gamepad.sThumbLX);
-            qreal ly = -normalizeThumb(state.Gamepad.sThumbLY);  // Y up = positive
-            qreal rx = normalizeThumb(state.Gamepad.sThumbRX);
-            qreal ry = -normalizeThumb(state.Gamepad.sThumbRY);
+            qreal lx, ly, rx, ry;
+            stickRawNormalized(state.Gamepad.sThumbLX, state.Gamepad.sThumbLY, lx, ly);
+            stickRawNormalized(state.Gamepad.sThumbRX, state.Gamepad.sThumbRY, rx, ry);
             emit leftStickChanged(ci, lx, ly);
             emit rightStickChanged(ci, rx, ry);
         }
